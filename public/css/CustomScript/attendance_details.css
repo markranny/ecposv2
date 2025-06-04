@@ -1,0 +1,17 @@
+.float-right{
+    width: 15%;
+  }
+  .table-csv{
+    background: #00700a !important;
+    color: #ffff !important;
+    margin-top: 50px !important;
+  }
+  table.dataTable thead tr {
+      background-color: green;
+      color: #ffff;
+    }
+    .msg-container{
+    position:absolute;
+    bottom:0;
+    right:20px;
+  }

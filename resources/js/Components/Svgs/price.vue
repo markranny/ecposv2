@@ -1,0 +1,3 @@
+<template>
+    <svg fill="#000000" viewBox="0 0 24 24" id="price-tag" data-name="Line Color" xmlns="http://www.w3.org/2000/svg" class="icon line-color"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><line id="secondary-upstroke" x1="16.45" y1="7.5" x2="16.55" y2="7.5" style="fill: none; stroke: #2c3cba; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></line><path id="primary" d="M21,10V4a1,1,0,0,0-1-1H14L3.68,13.26a1,1,0,0,0,0,1.41l5.66,5.66a1,1,0,0,0,1.41,0Z" style="fill: none; stroke: #0400ff; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path></g></svg>
+</template>

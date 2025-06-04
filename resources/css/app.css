@@ -1,0 +1,169 @@
+
+@import 'datatables.net-dt';
+/* @import 'datatables.net-fixedcolumns'; */
+@import 'datatables.net-fixedcolumns-bs5';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+[x-cloak] {
+    display: none;
+}
+
+.carousel__prev--disabled, .carousel__next--disabled{
+    opacity: 100% !important;
+}
+/* .carousel__prev{
+    margin-left: -5px !important;
+}
+.carousel__next{
+    margin-right: -5px !important;
+} */
+
+.carousel__prev, .carousel__next{
+    width: 18px !important;
+    height: 18px !important;
+    background-color: white !important;
+    padding: 2px !important;
+    border-radius: 50% !important;
+    border: 1px solid #007bff !important;
+    cursor: pointer;
+    color: #007bff !important;
+}
+
+.carousel__prev:hover, .carousel__next:hover {
+    background-color: #007bff !important;
+    color: white !important;
+}
+
+.carousel__prev:hover, .carousel__next:hover {
+  background-color: #0056b3 !important;
+}
+
+
+.dt-empty{
+    text-align: center !important;
+}
+.dt-info{
+    color: black;
+    font-size: small;
+    padding: 15px 5px;
+}
+.dt-input{
+    border: 1px solid rgb(229, 231, 235);
+}
+.dt-input:focus{
+    border: 1px solid navy;
+}
+td{
+  text-align: left !important;
+  white-space: nowrap;
+  font-size: 12px;
+}
+th{
+  text-align: left !important;
+  font-size: 15px;
+}
+/* .dt-scroll-body thead tr[role="row"]{
+    visibility: collapse !important;
+} */
+
+.dt-layout-cell .dt-end{
+    width: 100%;
+}
+.dt-search label{
+    font-size: small;
+}
+.dt-search .dt-input{
+    padding: 2px;
+    margin: 5px;
+    margin-top: 10px;
+    border-radius: 3px;
+    color: black;
+}
+
+/* Width */
+/* For WebKit browsers */
+/* ::-webkit-scrollbar {
+  background: white;
+  width: 10px;
+  height: 10px;
+} */
+
+/* Track */
+/* For WebKit browsers */
+/* ::-webkit-scrollbar-track {
+  background: white;
+  width: 10px;
+  height: 10px;
+} */
+
+/* Handle */
+/* For WebKit browsers */
+
+::-webkit-scrollbar-thumb {
+  background: rgb(226, 226, 226);
+}
+
+/* For non-WebKit browsers */
+.table-container::-webkit-scrollbar-thumb {
+  background: rgb(216, 216, 216);
+}
+
+.my-datatable th {
+    background-color: blue;
+    color: white;
+}
+
+/*
+table tr:nth-child(even){
+    background-color: rgb(239, 246, 255);
+} */
+
+.coffee{
+    background-color: #FEFAF6;
+}
+
+.greenlantern{
+    background-color: #005c14 !important;
+}
+
+table.dataTable thead > tr > th.dt-orderable-asc, table.dataTable thead > tr > th.dt-orderable-desc, table.dataTable thead > tr > td.dt-orderable-asc, table.dataTable thead > tr > td.dt-orderable-desc{
+    background-color: blue;
+    color:#FEFAF6;
+}
+
+.adjust{
+    margin-top: -10px;
+    z-index: 10;
+}
+
+/* .carousel__prev {
+    left: 0.5rem !important;
+}
+.carousel__next {
+    right: 0.5rem !important;
+} */
+
+/* [type='text'], input:where(:not([type])), [type='email'], [type='url'], [type='password'], [type='number'], [type='date'], [type='datetime-local'], [type='month'], [type='search'], [type='tel'], [type='time'], [type='week'], [multiple], textarea, select{
+    border-color: transparent !important;
+}
+
+.input.grow{
+    border-color: transparent !important;
+} */
+
+.input input{
+    border-color: white;
+}
+
+.input input :hover{
+    border-color: white;
+}
+
+/* .bgDaksMode{
+    background-color: black;
+} */
+
+
+
+ 

@@ -1,0 +1,1078 @@
+<script setup>
+import { defineProps, defineEmits } from 'vue';
+import { useForm } from '@inertiajs/vue3';
+import Main from "@/Layouts/AdminPanel.vue";
+import TableContainer from "@/Components/Tables/TableContainer.vue";
+import DataTable from 'datatables.net-vue3';
+import DataTablesCore from 'datatables.net';
+import SuccessButton from "@/Components/Buttons/SuccessButton.vue";
+import TransparentButton from "@/Components/Buttons/TransparentButton.vue";
+import PrimaryButton from "@/Components/Buttons/PrimaryButton.vue";
+import PartyCake from "@/Components/Svgs/PartyCake143.vue";
+import ExcelIcon from "@/Components/Svgs/Excel.vue";
+import Bread from "@/Components/Svgs/Bread.vue";
+import Save from "@/Components/Svgs/Save.vue";
+import Search from "@/Components/Svgs/SearchColored.vue";
+import SelectOption from '@/Components/SelectOption/SelectOption.vue';
+import 'datatables.net-fixedcolumns';
+import { ref, computed, isRef, unref, reactive, onMounted } from 'vue';
+import ExcelJS from 'exceljs';
+import axios from 'axios';
+
+
+DataTable.use(DataTablesCore);
+
+const emit = defineEmits();
+
+const isLoading = ref(false);
+
+const props = defineProps({
+  orders: {
+    type: Array,
+    required: true,
+  },
+    routes: {
+    type: String,
+    required: true,
+  },
+});
+
+const form = useForm({
+  StartDate: '',
+  EndDate: '',
+});
+
+const submitForm = () => {
+  form.get(route('orderingconso.getrange'), {
+    preserveScroll: true,
+  });
+};
+
+const toggleActive = () => {
+  emit('toggleActive');
+};
+
+/* const options = {
+  paging: false,
+  scrollX: true,
+  scrollY: "60vh",
+  scrollCollapse: true,
+  fixedColumns: {
+    left: 6
+  },
+  error: function (xhr, error, thrown) {
+    console.error("DataTables error:", error);
+  }
+}; */
+
+const options = {
+  paging: false,
+  scrollX: true,
+  scrollY: "60vh",
+  scrollCollapse: true,
+  /* fixedColumns: {
+    left: 6
+  }, */
+  
+  error: function (xhr, error, thrown) {
+    console.error("DataTables error:", error);
+  },
+  footerCallback: function(tfoot, data, start, end, display) {
+    const api = this.api();
+    const footerRow = api.table().footer().querySelectorAll('th');
+    columns.value.forEach((column, index) => {
+      if (column.footer) {
+        footerRow[index].textContent = column.footer();
+      }
+    });
+  },
+  
+};
+
+/* const groupedOrders = reactive(props.orders.reduce((acc, order) => {
+  const { STORENAME, ITEMID, ITEMNAME, CATEGORY, COUNTED } = order;
+  const counted = parseInt(COUNTED) || 0;
+
+  if (!acc[ITEMID]) {
+    acc[ITEMID] = {
+      ITEMID,
+      ITEMNAME,
+      CATEGORY,
+      TOTAL: 0,
+      MGCount: 0,
+      BalanceCount: 0,
+    };
+  }
+
+  if (!acc[ITEMID][STORENAME]) {
+    acc[ITEMID][STORENAME] = 0;
+  }
+
+  acc[ITEMID][STORENAME] += counted;
+  acc[ITEMID].TOTAL += counted;
+  acc[ITEMID].BalanceCount = acc[ITEMID].TOTAL - acc[ITEMID].MGCount;
+
+  return acc;
+}, {})); */
+
+const groupedOrders = reactive(props.orders.reduce((acc, order) => {
+  const { STORENAME, ITEMID, ITEMNAME, CATEGORY, COUNTED, MGCOUNT } = order;
+  const counted = parseInt(COUNTED) || 0;
+  const mgCount = parseInt(MGCOUNT) || 0;
+
+  if (!acc[ITEMID]) {
+    acc[ITEMID] = {
+      ITEMID,
+      ITEMNAME,
+      CATEGORY,
+      TOTAL: 0,
+      MGCount: mgCount,
+      BalanceCount: 0,
+    };
+  }
+
+  if (!acc[ITEMID][STORENAME]) {
+    acc[ITEMID][STORENAME] = 0;
+  }
+
+  acc[ITEMID][STORENAME] += counted;
+  acc[ITEMID].TOTAL += counted;
+  acc[ITEMID].BalanceCount = acc[ITEMID].MGCount - acc[ITEMID].TOTAL;
+
+  return acc;
+}, {}));
+
+const flattenedOrders = computed(() => Object.values(groupedOrders));
+
+const storeNames = computed(() => {
+  const names = new Set();
+  flattenedOrders.value.forEach(order => {
+    Object.keys(order).forEach(key => {
+      if (key !== 'ITEMID' && key !== 'ITEMNAME' && key !== 'CATEGORY' && key !== 'TOTAL' && key !== 'MGCount' && key !== 'BalanceCount') {
+        names.add(key);
+      }
+    });
+  });
+  return names;
+});
+
+/* const columns = computed(() => [
+  { title: 'ITEMID', data: 'ITEMID' },
+  { title: 'ITEMS', data: 'ITEMNAME' },
+  { title: 'CATEGORY', data: 'CATEGORY' },
+  { 
+    title: 'ACTUAL INV COUNT', 
+    data: 'MGCount',
+    render: (data, type, row) => {
+      if (type === 'display') {
+        return `<input type="number" value="${data}" onchange="window.updateMGCount('${row.ITEMID}', this.value)" />`;
+      }
+      return data;
+    }
+  },
+  { title: 'REMAINING STOCKS', data: 'BalanceCount' },
+  { title: 'TOTAL DISPATCH', data: 'TOTAL' },
+  ...Array.from(storeNames.value).map(storeName => ({ 
+    title: storeName, 
+    data: storeName,
+    render: (data, type, row) => {
+      if (type === 'display') {
+        return `<input type="number" value="${data}" onchange="window.updateCounted('${row.ITEMID}', '${storeName}', this.value)" />`;
+      }
+      return data;
+    }
+  }))
+]); */
+
+const footerTotals = computed(() => {
+  const totals = {
+    ITEMID: 'Grand Total',
+    ITEMNAME: '',
+    CATEGORY: '',
+    MGCount: 0,
+    BalanceCount: 0,
+    TOTAL: 0
+  };
+
+  storeNames.value.forEach(store => {
+    totals[store] = 0;
+  });
+
+  processedOrders.value.forEach(order => {
+    totals.MGCount += Number(order.MGCount) || 0;
+    totals.BalanceCount += Number(order.BalanceCount) || 0;
+    totals.TOTAL += Number(order.TOTAL) || 0;
+
+    storeNames.value.forEach(store => {
+      totals[store] += Number(order[store]) || 0;
+    });
+  });
+
+  return totals;
+});
+
+const columns = computed(() => [
+  { 
+    title: 'ITEMID', 
+    data: 'ITEMID',
+    className: 'frozen-column',
+    footer: () => footerTotals.value.ITEMID
+  },
+  { 
+    title: 'ITEMS', 
+    data: 'ITEMNAME',
+    className: 'frozen-column',
+    footer: () => ''
+  },
+  { 
+    title: 'CATEGORY', 
+    data: 'CATEGORY',
+    className: 'frozen-column',
+    footer: () => ''
+  },
+  { 
+    title: 'ACTUAL INV COUNT', 
+    data: 'MGCount',
+    className: 'frozen-column',
+    render: (data, type, row) => {
+      if (type === 'display') {
+        return `<input type="number" value="${data}" onchange="window.updateMGCount('${row.ITEMID}', this.value)" disabled/>`;
+      }
+      return data;
+    },
+    footer: () => footerTotals.value.MGCount
+  },
+  { 
+    title: 'REMAINING STOCKS', 
+    data: 'BalanceCount',
+    className: 'frozen-column',
+    footer: () => footerTotals.value.BalanceCount
+  },
+  { 
+    title: 'TOTAL ALLOCATION', 
+    data: 'TOTAL',
+    className: 'frozen-column',
+    footer: () => footerTotals.value.TOTAL
+  },
+  ...Array.from(storeNames.value).map(storeName => ({ 
+    title: storeName, 
+    data: storeName,
+    render: (data, type, row) => {
+      if (type === 'display') {
+        return `<input type="number" value="${data}" onchange="window.updateCounted('${row.ITEMID}', '${storeName}', this.value)" disabled/>`;
+      }
+      return data;
+    },
+    footer: () => footerTotals.value[storeName]
+  })),
+]);
+
+/* const saveAllData = () => {
+  const dataToSave = flattenedOrders.value.map(order => {
+    const counted = {};
+    Array.from(storeNames.value).forEach(storeName => {
+      counted[storeName] = order[storeName] || 0;
+    });
+
+    return {
+      itemId: order.ITEMID,
+      storeName: order.STORENAME,
+      mgCount: order.MGCount,
+      balanceCount: order.BalanceCount,
+      counted: counted
+    };
+  });
+
+  console.log('Data to save:', dataToSave); 
+
+  axios.post(route('save.all.data'), { data: dataToSave })
+    .then(response => {
+      console.log('All data saved successfully');
+    })
+    .catch(error => {
+      console.error('Error saving data:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
+    });
+}; */
+
+/* const saveAllData = () => {
+  const dataToSave = flattenedOrders.value.map(order => {
+    const counted = {};
+    Array.from(storeNames.value).forEach(storeName => {
+      counted[storeName] = order[storeName] || 0;
+    });
+
+    return {
+      itemId: order.ITEMID,
+      mgCount: order.MGCount,
+      balanceCount: order.BalanceCount,
+      counted: counted
+    };
+  });
+
+  console.log('Data to save:', JSON.stringify(dataToSave, null, 2));
+
+  axios.post(route('save.all.data'), { data: dataToSave })
+    .then(response => {
+      console.log('All data saved successfully:', response.data);
+    })
+    .catch(error => {
+      console.error('Error saving data:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
+    });
+}; */
+
+const showMessage = ref(false);
+const messageText = ref('');
+
+/* const saveAllData = () => {
+  const dataToSave = flattenedOrders.value.map(order => {
+    const counted = {};
+    Array.from(storeNames.value).forEach(storeName => {
+      counted[storeName] = order[storeName] || 0;
+    });
+
+    return {
+      itemId: order.ITEMID,
+      mgCount: order.MGCount,
+      balanceCount: order.BalanceCount,
+      counted: counted
+    };
+  });
+
+  console.log('Data to save:', JSON.stringify(dataToSave, null, 2));
+
+  axios.post(route('save.all.data'), { data: dataToSave })
+    .then(response => {
+      console.log('All data saved successfully:', response.data);
+      messageText.value = 'Data saved successfully!';
+      showMessage.value = true;
+      setTimeout(() => {
+        showMessage.value = false;
+      }, 3000); // Hide message after 3 seconds
+    })
+    .catch(error => {
+      console.error('Error saving data:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
+      messageText.value = 'Error saving data. Please try again.';
+      showMessage.value = true;
+      setTimeout(() => {
+        showMessage.value = false;
+      }, 3000); // Hide message after 3 seconds
+    });
+}; */
+
+const saveAllData = () => {
+  isLoading.value = true;
+  disableAllInputs(true);
+
+  const dataToSave = flattenedOrders.value.map(order => {
+    const counted = {};
+    Array.from(storeNames.value).forEach(storeName => {
+      counted[storeName] = order[storeName] || 0;
+    });
+
+    return {
+      itemId: order.ITEMID,
+      mgCount: order.MGCount,
+      balanceCount: order.BalanceCount,
+      counted: counted
+    };
+  });
+
+  console.log('Data to save:', JSON.stringify(dataToSave, null, 2));
+
+  axios.post(route('save.all.data'), { data: dataToSave })
+    .then(response => {
+      console.log('All data saved successfully:', response.data);
+      messageText.value = 'Data saved successfully!';
+      showMessage.value = true;
+      setTimeout(() => {
+        showMessage.value = false;
+      }, 3000);
+    })
+    .catch(error => {
+      console.error('Error saving data:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
+      messageText.value = 'Error saving data. Please try again.';
+      showMessage.value = true;
+      setTimeout(() => {
+        showMessage.value = false;
+      }, 3000);
+    })
+    .finally(() => {
+      isLoading.value = false;
+      disableAllInputs(false);
+    });
+};
+
+const disableAllInputs = (disabled) => {
+  const inputs = document.querySelectorAll('input, button');
+  inputs.forEach(input => {
+    input.disabled = disabled;
+  });
+};
+
+/* const saveAllData = () => {
+  const dataToSave = flattenedOrders.value.map(order => {
+    const counted = {};
+    Array.from(storeNames.value).forEach(storeName => {
+      counted[storeName] = order[storeName] || 0;
+    });
+
+    return {
+      itemId: order.ITEMID,
+      mgCount: order.MGCount,
+      balanceCount: order.BalanceCount,
+      counted: counted
+    };
+  });
+
+  console.log('Data to save:', JSON.stringify(dataToSave, null, 2));
+
+  axios.post(route('save.all.data'), { data: dataToSave })
+    .then(response => {
+      console.log('All data saved successfully:', response.data);
+    })
+    .catch(error => {
+      console.error('Error saving data:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
+    });
+}; */
+
+/* window.updateMGCount = function(itemId, value) {
+  const item = groupedOrders[itemId];
+  if (item) {
+    item.MGCount = parseInt(value, 10) || 0;
+    item.BalanceCount =  item.MGCount - item.TOTAL;
+    
+    axios.post('/api/update-mgcount', {
+      itemId: itemId,
+      mgCount: item.MGCount
+    })
+    .then(response => {
+      console.log('MGCount updated successfully');
+    })
+    .catch(error => {
+      console.error('Error updating MGCount:', error);
+    });
+  }
+} */
+
+window.updateMGCount = function(itemId, value) {
+  const item = groupedOrders[itemId];
+  if (item) {
+    item.MGCount = parseInt(value, 10) || 0;
+    item.BalanceCount = item.MGCount - item.TOTAL;
+    
+    axios.post('/api/update-mgcount', {
+      itemId: itemId,
+      mgCount: item.MGCount
+    })
+    .then(response => {
+      console.log('MGCount updated successfully');
+    })
+    .catch(error => {
+      console.error('Error updating MGCount:', error);
+    });
+  }
+}
+
+window.updateCounted = function(itemId, storeName, value) {
+  const item = groupedOrders[itemId];
+  if (item) {
+    item[storeName] = parseInt(value, 10) || 0;
+    
+    // Recalculate TOTAL based on all store counts
+    item.TOTAL = Array.from(storeNames.value).reduce((sum, store) => {
+      return sum + (item[store] || 0);
+    }, 0);
+    
+    // Recalculate BalanceCount
+    item.BalanceCount = item.TOTAL - item.MGCount;
+
+    axios.post('/api/update-counted', {
+      itemId: itemId,
+      storeName: storeName,
+      counted: item[storeName],
+      total: item.TOTAL,
+      balanceCount: item.BalanceCount
+    })
+    .then(response => {
+      console.log('Counted updated successfully');
+    })
+    .catch(error => {
+      console.error('Error updating Counted:', error);
+    });
+  }
+}
+
+const processedOrders = computed(() => {
+  return flattenedOrders.value.map(order => {
+    const processedOrder = {...order};
+    columns.value.forEach(column => {
+      if (!processedOrder.hasOwnProperty(column.data)) {
+        processedOrder[column.data] = '0';
+      }
+    });
+    return processedOrder;
+  });
+});
+
+const StartDate = ref(null);
+const formattedDate1 = computed(() => {
+  if (StartDate.value) {
+    const date = new Date(StartDate.value);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+});
+
+const EndDate = ref(null);
+const formattedDate2 = computed(() => {
+  if (EndDate.value) {
+    const date = new Date(EndDate.value);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+});
+
+const currentDate = computed(() => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}${month}${day}`;
+});
+
+function generateTextFileContent(processedOrders, columns) {
+  const headerRow = columns.value.map(column => column.title).join(',');
+  const dataRows = processedOrders.map(order => {
+    const rowData = columns.value.map(column => order[column.data] || '');
+    return rowData.join(',');
+  });
+
+  return [headerRow, ...dataRows].join('\n');
+}
+
+function downloadTextFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function generateAndDownloadTextFile() {
+  const filename = `BW0001${isRef(currentDate) ? unref(currentDate) : currentDate.value}.txt`;
+  const content = generateTextFileContent(processedOrders.value, columns);
+  downloadTextFile(filename, content);
+}
+
+/* async function exportToExcel() {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Flattened Orders');
+
+    worksheet.columns = columns.value.map(column => ({
+      header: column.title,
+      key: column.data,
+      width: 15
+    }));
+
+    worksheet.addRow(columns.value.map(column => column.title));
+
+    processedOrders.value.forEach(order => {
+      const rowData = columns.value.map(column => {
+        const value = order[column.data];
+        return value !== null && value !== undefined ? value : 0;
+      });
+      worksheet.addRow(rowData);
+    });
+
+    const footerRow = worksheet.addRow(columns.value.map(column => {
+      if (column.footer) {
+        const value = column.footer();
+        return value !== null && value !== undefined ? value : 0;
+      }
+      return 0;
+    }));
+    footerRow.font = { bold: true };
+    footerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF7C0000' }
+    };
+    footerRow.font = { color: { argb: 'FFDDDDDD' } };
+
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF8F9FA' }
+    };
+
+    const today = new Date();
+    const filename = `FlattenedOrders_${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+  } catch (error) {
+    console.error('Error exporting to Excel:', error);
+  }
+} */
+
+async function exportToExcel() {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Flattened Orders');
+
+    // Define columns
+    worksheet.columns = columns.value.map(column => ({
+      header: column.title,
+      key: column.data,
+      width: 15
+    }));
+
+    // Add header row
+    worksheet.addRow(columns.value.map(column => column.title));
+
+    // Filter out items with no count and add data rows
+    const filteredOrders = processedOrders.value.filter(order => {
+      const storeCounts = Array.from(storeNames.value).map(store => order[store] || 0);
+      return storeCounts.some(count => count > 0);
+    });
+
+    filteredOrders.forEach(order => {
+      const rowData = columns.value.map(column => {
+        const value = order[column.data];
+        return value !== null && value !== undefined ? value : 0;
+      });
+      worksheet.addRow(rowData);
+    });
+
+    // Recalculate totals for filtered orders
+    const filteredTotals = columns.value.reduce((acc, column) => {
+      if (column.footer) {
+        acc[column.data] = filteredOrders.reduce((sum, order) => {
+          return sum + (Number(order[column.data]) || 0);
+        }, 0);
+      }
+      return acc;
+    }, {});
+
+    // Add footer row with recalculated totals
+    const footerRow = worksheet.addRow(columns.value.map(column => {
+      if (column.footer) {
+        return filteredTotals[column.data] || 0;
+      }
+      return '';
+    }));
+    footerRow.font = { bold: true };
+    footerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF7C0000' }
+    };
+    footerRow.font = { color: { argb: 'FFDDDDDD' } };
+
+    // Style header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF8F9FA' }
+    };
+
+    // Generate Excel file
+    const today = new Date();
+    const filename = `FlattenedOrders_${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+  } catch (error) {
+    console.error('Error exporting to Excel:', error);
+  }
+}
+
+const picklist = () => {
+  window.location.href = '/f-picklist';
+};
+
+const cakes = () => {
+  window.location.href = '/f-cakepicklist';
+};
+
+const specialorder = () => { 
+    window.location.href = '/special-orders';
+};
+
+const inputpartycakes = () => { 
+    window.location.href = '/add-partycakes';
+};
+
+const postorders = () => {
+    const userConfirmed = window.confirm('Are you sure you want to post all process?');
+
+    if (userConfirmed) {
+        window.location.href = '/opic/post';
+    } else {
+        console.log('User cancelled the post operation.');
+    }
+};
+</script>
+
+<template>
+  <div v-if="showMessage" class="fixed top-5 right-5 bg-green-900 text-white border border-gray-300 rounded-lg shadow-lg p-4 z-50">
+    {{ messageText }}
+  </div>
+  <Main active-tab="INVENTORY">
+    <template v-slot:main>
+      <TableContainer>
+        <div class="absolute adjust">
+          <div class="flex justify-start items-center">
+            <!-- <form @submit.prevent="submitForm" class="px-2 py-3 max-h-[50vh] lg:max-h-[70vh] overflow-y-auto">
+              <input type="hidden" name="_token" :value="$page.props.csrf_token">
+              <div date-rangepicker class="flex items-center">
+                <div class="relative ml-5 ">
+                  <div class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path></svg>
+                  </div>
+                  <input
+                    id="StartDate"
+                    type="date"
+                    v-model="form.StartDate"
+                    @input="formattedDate1"
+                    :placeholder="formattedDate1"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Select date start"
+                    required
+                  />
+                  <InputError :message="form.errors.StartDate" class="mt-2" />
+                </div>
+                <span class="mx-4 text-gray-500">to</span>
+                <div class="relative">
+                  <div class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none">
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path></svg>
+                  </div>
+                  <input
+                    id="EndDate"
+                    type="date"
+                    v-model="form.EndDate"
+                    @input="formattedDate2"
+                    :placeholder="formattedDate2"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Select date end"
+                    required
+                  />
+                  <InputError :message="form.errors.EndDate" class="mt-2" />
+                </div>
+              </div>
+            </form>
+            <TransparentButton type="submit" @click="submitForm" :disabled="form.processing" :class="{ 'opacity-25': form.processing }">
+              <Search class="h-8" />
+            </TransparentButton> -->
+            <SuccessButton
+              type="button"
+              @click="exportToExcel"
+              class="ml-6 bg-green"
+            >
+              <ExcelIcon class="h-4" />
+            </SuccessButton>
+
+            <!-- <PrimaryButton
+              type="button"
+              @click="saveAllData"
+              class="m-6"
+            >
+              <Save class="h-4" />
+            </PrimaryButton> -->
+
+            <!-- <PrimaryButton
+              type="button"
+              @click="saveAllData"
+              class="m-6 bg-navy"
+              :disabled="isLoading"
+            >
+              <template v-if="isLoading">
+                <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                &nbsp Saving...
+              </template>
+              <template v-else>
+                <Save class="h-4" />
+              </template>
+            </PrimaryButton> -->
+
+            <PrimaryButton
+              type="button"
+              @click="picklist"
+              class="m-1 bg-navy"
+            >
+              <!-- <Bread class="h-4" /> -->
+               NEWCOM
+            </PrimaryButton>
+
+            <PrimaryButton
+              type="button"
+              @click="cakes"
+              class="m-1 bg-navy"
+            >
+              <!-- <PartyCake class="h-4" /> -->
+               OLDCOM
+            </PrimaryButton>
+
+            <PrimaryButton
+            type="button"
+            @click="specialorder"
+            class="ml-2 bg-navy "
+          >
+            SPECIAL ORDER
+          </PrimaryButton>
+
+          <PrimaryButton
+            type="button"
+            @click=""
+            class="ml-2 bg-navy"
+          >
+            PARTYCAKES
+          </PrimaryButton>
+
+                <!-- <PrimaryButton
+                    type="button"
+                    @click="postorders"
+                    class="m-1 ml-2 bg-red-900 p-10"
+                >
+                     POST
+                </PrimaryButton> -->
+
+            <!-- <div class="col-span-6 sm:col-span-4">
+              <InputLabel for="ROUTES" value="ROUTES" />
+              <SelectOption 
+                  id="ROUTES"
+                  v-model="form.ROUTES" 
+                  :is-error="form.errors.ROUTES ? true : false"
+                  class="mt-1 block w-full"
+                  >
+                  <option disabled value="">Select Route</option>
+                  <option >SOUTH 1</option>
+                  <option >SOUTH 2</option>
+                  <option >SOUTH3</option>
+                  <option >NORTH 1</option>
+                  <option >NORTH 2</option>
+                  <option >CENTRAL</option>
+                  <option >EAST</option>
+              </SelectOption>
+              <InputError :message="form.errors.ROUTES" class="mt-2" />
+              </div> -->
+
+              <details className="dropdown">
+                <summary className="btn m-1">Select Route</summary>
+                <ul className="menu dropdown-content bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+                  <li><a href="/f-mgcount">ALL</a></li>
+                  <li><a href="/f-south1">SOUTH 1</a></li>
+                  <li><a href="/f-south2">SOUTH 2</a></li>
+                  <li><a href="/f-south3">SOUTH 3</a></li>
+                  <li><a href="/f-north1">NORTH 1</a></li>
+                  <li><a href="/f-north2">NORTH 2</a></li>
+                  <li><a href="/f-central">CENTRAL</a></li>
+                  <li><a href="/f-east">EAST</a></li>
+                </ul>
+              </details>
+
+              <h6 class="ml-2">{{ routes }}</h6>
+          </div>
+        </div>
+        
+        <div class="custom-datatable">
+          <div :class="{ 'blur-overlay': isLoading }">  
+              <DataTable 
+              :data="processedOrders" 
+              :columns="columns" 
+              class="w-full relative display" 
+              :options="options"
+              >
+              
+              <template #action="data">
+                <div class="flex justify-start">
+                </div>
+              </template>
+            </DataTable>
+          </div>
+        </div>
+        
+      </TableContainer>
+    </template>
+  </Main>
+</template>
+
+<style scoped>
+.custom-datatable ::v-deep table.dataTable {
+  font-size: 0.85rem;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.custom-datatable ::v-deep .dataTables_scrollHead th.frozen-column,
+.custom-datatable ::v-deep .dataTables_scrollBody td.frozen-column {
+  position: sticky;
+  background-color: white;
+  z-index: 1;
+}
+
+.custom-datatable ::v-deep th, 
+.custom-datatable ::v-deep td {
+  white-space: nowrap;
+}
+
+.custom-datatable ::v-deep div.dataTables_wrapper {
+  width: 800px;
+  margin: 0 auto;
+}
+
+.custom-datatable ::v-deep .dataTables_scrollHead th:nth-child(-n+6),
+.custom-datatable ::v-deep .dataTables_scrollBody td:nth-child(-n+6) {
+  width: max(5%, 10px);
+  min-width: 10px;
+  max-width: 100px;
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-datatable ::v-deep .dataTables_scrollHead,
+.custom-datatable ::v-deep .dataTables_scrollBody {
+  overflow: visible !important;
+}
+
+.custom-datatable ::v-deep .dataTables_scrollHead th:nth-child(-n+6),
+.custom-datatable ::v-deep .dataTables_scrollBody td:nth-child(-n+6) {
+  position: sticky;
+  background-color: white;
+  z-index: 1;
+  left: 0;
+}
+
+.custom-datatable ::v-deep .dataTables_scrollHead th:nth-child(2),
+.custom-datatable ::v-deep .dataTables_scrollBody td:nth-child(2) { left: 100px; background-color: white;}
+
+.custom-datatable ::v-deep .dataTables_scrollHead th:nth-child(3),
+.custom-datatable ::v-deep .dataTables_scrollBody td:nth-child(3) { left: 200px; background-color: white;}
+
+.custom-datatable ::v-deep .dataTables_scrollHead th:nth-child(4),
+.custom-datatable ::v-deep .dataTables_scrollBody td:nth-child(4) { left: 300px; background-color: white;}
+
+.custom-datatable ::v-deep .dataTables_scrollHead th:nth-child(5),
+.custom-datatable ::v-deep .dataTables_scrollBody td:nth-child(5) { left: 400px; background-color: white;}
+
+.custom-datatable ::v-deep .dataTables_scrollHead th:nth-child(6),
+.custom-datatable ::v-deep .dataTables_scrollBody td:nth-child(6) { left: 500px; background-color: white;}
+
+/* Additional styles for better visibility of frozen columns */
+.custom-datatable ::v-deep .dataTables_scrollHead th:nth-child(-n+6),
+.custom-datatable ::v-deep .dataTables_scrollBody td:nth-child(-n+6) {
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+/* Ensure input fields in table cells don't overflow */
+.custom-datatable ::v-deep input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px;
+  font-size: 0.75rem;
+}
+
+/* Improve readability of table headers */
+.custom-datatable ::v-deep thead th {
+  font-weight: bold;
+  background-color: #f8f9fa;
+}
+
+/* Add some padding to table cells for better spacing */
+.custom-datatable ::v-deep td,
+.custom-datatable ::v-deep th {
+  padding: 6px;
+}
+
+/* Style for alternating row colors */
+.custom-datatable ::v-deep tbody tr:nth-of-type(even) {
+  background-color: #f3f4f6;
+}
+
+/* Hover effect for rows */
+.custom-datatable ::v-deep tbody tr:hover {
+  background-color: #e5e7eb;
+}
+
+
+
+/* Responsive adjustments */
+/* @media (max-width: 768px) {
+  .custom-datatable ::v-deep table.dataTable {
+    font-size: 0.7rem;
+  }
+  
+  .custom-datatable ::v-deep .dataTables_scrollHead th:nth-child(-n+6),
+  .custom-datatable ::v-deep .dataTables_scrollBody td:nth-child(-n+6) {
+    font-size: 0.65rem;
+    padding: 3px;
+  }
+} */
+
+.blur-overlay {
+  filter: blur(5px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.custom-datatable ::v-deep input[type="number"]:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.custom-datatable ::v-deep tfoot {
+  font-weight: bold;
+  background-color: #7c0000;
+  color: #ddd;
+}
+
+.custom-datatable ::v-deep tfoot td {
+  border-top: 2px solid #ddd;
+}
+
+.message-box-enter-active,
+.message-box-leave-active {
+  transition: opacity 0.5s;
+}
+.message-box-enter-from,
+.message-box-leave-to {
+  opacity: 0;
+}
+
+</style>

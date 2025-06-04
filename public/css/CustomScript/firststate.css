@@ -1,0 +1,60 @@
+.input-group{
+  visibility: hidden !important;
+}
+.float-right{
+    float: right;
+  padding-left: 20px;
+  }
+  .table-csv{
+    background: #00700a !important;
+    color: #ffff !important;
+    margin-top: 50px !important;
+  }
+  table.dataTable thead tr {
+      background-color: darkblue;
+      color: #ffff;
+      font-family:"Calibri", sans-serif;
+      font-weight: 900;
+      font-size: 12px;
+  }
+tr {
+  font-family:"Calibri", sans-serif;
+  font-size: 12px;
+  }
+    .msg-container{
+    position:absolute;
+    bottom:0;
+    right:20px;
+  }
+  .navbar > .container, .navbar > .container-fluid{
+    background-color: #000 !important;
+    color: #fff !important;
+  }
+  .LayoutTable{
+    margin-top: -30px !important;
+  }
+  .table-header{
+    margin-top: -10px !important;
+    background: url('../../images/table-header.png');
+  }
+
+  .table-footer{
+    background: black;
+    color:#fff;
+  }
+
+  div.dataTables_wrapper div.dataTables_filter{
+    margin-top: -10px !important;
+  }
+  .btn-group, .btn-group-vertical {
+      position: absolute !important;
+      margin: -10px 1px !important;
+  }
+  .card
+  {
+    border-bottom: 2px solid rgb(6, 0, 97);
+  }
+/* 
+  #iddetector2{
+    display:block;
+  } */

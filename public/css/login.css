@@ -1,0 +1,29 @@
+body {
+  min-height: 100%;
+  /* background: linear-gradient(0deg, rgba(0, 0, 0, 0.493), rgba(0, 0, 0, 0.493)), url(/images/bg.jpg?9f5c10ecaf7d910c4e881754bb3f7a95); */
+  background-size: cover;
+}
+
+.bg-blue {
+  color: #fff;
+  background-color: #1A237E;
+}
+
+.navbar-dark .navbar-brand {
+  color: white !important;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+  color: white !important;
+}
+
+.card {
+  margin-top: 30vh !important;
+}
+
+.card-header {
+  /* background: rgb(128, 42, 0) !important; */
+  background: rgb(0, 1, 58) !important;
+  color: white !important;
+}
+

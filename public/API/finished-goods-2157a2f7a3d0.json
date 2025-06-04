@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "finished-goods",
+  "private_key_id": "2157a2f7a3d03f8e9dfad7288c33e1d875fff1eb",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDVLpTR0QlNhFN9\nPAiLm9MY44NNDLdSGj1nrNeR1c6Ya1xJCtXq/dYuHfPydRGvv7Xanm7Ljx70Mmpw\n8f8u6l2VnVc+rDbMnuNojDCk9BeGHKsedm1tzj6T1Ctynhq+yVzsYGtuqVgiy15I\nS7WvZV3mRpfjqql2vubkKNWi/9rsu3rfeOGJ/Svz4GNyEnr3EJuD4QBzj98v8b4N\nq8XlgB/U8LyY7EFQKl844tgFdkle+HtlwW1WtRqT0YHEtnecVa/bd/JC1oyGbNQt\nu3VrYhPwSML4o5h/kPbbV06EXIav5DqejNEvegrTR+wj15u9ZHQq7V3IVYg3H2cd\n419pQ/29AgMBAAECggEAAZCcuOM9Bf5mGCnVZzme2v8qjX7TJq1jd4FyOKjA4jy2\n2fYUJsGJGGARvx0jDYRNqwaViiApakH80YpD5QiFOi4EQAUcHDRAt5mrLr7NoGdR\nTevbzEiitsuXK7l44/R5npDroPg/GcxJNiR7d4ePNlDyLafo+WKX3SNmmWfMPTIf\nWbsyHoHc4AqolcdOX2xUFu3yj8zOqulGh0xW0JmgP0fo67ZVBIS/3s9Ji0SI5nfW\nK2ibC++6t8MLXCUGItrgT0vZ8jtiRjQNw6zqCp/ovi46nyWeN5NcK3a+0zs9eUPu\nsmSiy0BrOKQvcbEPy61WRpOU54RrSgDWD7JAKCngkQKBgQD7EWQdDC7WgvREiOGg\n84VCKn8kDlIJeINL9bU9hOnMHVB5oj4OowD92xBf3s98fLRIS0EGZw3kAbywa0s0\nUNP37suzr6kBr1OB60HsVY0vojJpaWWtziFUX9cKukLVcC4ONwlP5e9JtFQu5WTF\nekQM2Z6DzVQkNBt53ELCRU1erQKBgQDZXqnYHdq5Wv+QmVcVqwO8uHsvrO1pT7Il\nsYJhCCbWfnikuOhBY7ffoLLAlJVqqNjyL5iX9Wdz2/PZc9JCKXzuJ5Cqja5QqIpI\nmolLmnKP6g+2+G6ih8zN/UDgP6q46uLv4OJvefEG4wxZZsyCDugzNvRmMGa7XfzX\nd0ujtGtNUQKBgQD39QwP2BlmB/1gtmNHx1oDp97baD1DVz8sxOUTdfJFgWoaRs7N\nO9Vd4X2BgZcfljWi9Jeq0Bqa5dBJ2B109KLzyWZq9wCORm7N79+ynieLNMBe9RXT\nmrG2F9VUpfIdw+XoahiLTUaPX0aI7ksg8YjFvCNefmosOz4rkwpnvXQVHQKBgQCY\nekMCCs8nPqIPOMFRvci9VVt0MgXH3dPFhSNEFYfI5qaSRfMGC4EsKXm6hX/add7Y\n5HJSBh8vspb3bruLFbdBCBf+y6v/gHqgO2cb1ZePRE0JuHNDJ6eOx5v+sip71Kik\nREgSkqN0hUhgXjAO+43+fwoptMIbpO575n70staiQQKBgD3vTk8A2D29rMm0VVno\nJYdCxlfkDDrwt340QhV8twoVm5hnTN6MFIZaSTBT+yJhAnjrz1N16Kl9LXLNpKXd\nJPFPYU2gCKCkl/4auIwcKYSPtE117wu5FN58MGmOo0dOKuVAI9WG+org5QxffYQP\n1YB10m9PQ2GQS8ZfqKiHvJ4b\n-----END PRIVATE KEY-----\n",
+  "client_email": "omniflow-api-cloud@finished-goods.iam.gserviceaccount.com",
+  "client_id": "105490504260360652722",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/omniflow-api-cloud%40finished-goods.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
