@@ -43,6 +43,7 @@ const production = ref('');
 
 const allSelected = ref(false);
 const selectedItems = ref([]);
+const showImportModal = ref(false);
 
 const props = defineProps({
     items: {
@@ -88,6 +89,18 @@ const columns = computed(() => {
     { data: 'barcode', title: 'BARCODE' },
     { data: 'itemgroup', title: 'CATEGORY' },
     { data: 'specialgroup', title: 'RETAILGROUP' },
+    { data: 'production', title: 'PRODUCTION' },
+    { data: 'moq', title: 'MOQ' },
+    {
+      data: 'cost',
+      title: 'COST',
+      render: (data, type, row) => {
+        if (type === 'display') {
+          return row.cost != null ? Number(row.cost).toFixed(2) : '0.00';
+        }
+        return data;
+      },
+    },
     {
       data: 'price',
       title: 'SRP',
@@ -134,6 +147,37 @@ const columns = computed(() => {
       render: (data, type, row) => {
         if (type === 'display') {
           return row.foodpandaprice != null ? Number(row.foodpandaprice).toFixed(2) : '0.00';
+        }
+        return data;
+      },
+    },
+    // Added default fields to columns
+    {
+      data: 'default1',
+      title: 'DEFAULT1',
+      render: (data, type, row) => {
+        if (type === 'display') {
+          return row.default1 ? 'Yes' : 'No';
+        }
+        return data;
+      },
+    },
+    {
+      data: 'default2',
+      title: 'DEFAULT2',
+      render: (data, type, row) => {
+        if (type === 'display') {
+          return row.default2 ? 'Yes' : 'No';
+        }
+        return data;
+      },
+    },
+    {
+      data: 'default3',
+      title: 'DEFAULT3',
+      render: (data, type, row) => {
+        if (type === 'display') {
+          return row.default3 ? 'Yes' : 'No';
         }
         return data;
       },
@@ -244,19 +288,40 @@ const MoreModalHandler = () => {
     showModalMore.value = false;
 };
 
-const form = useForm({
-    title: '',
-    content: '',
+// Import form
+const importForm = useForm({
+    file: null,
 });
 
-const submitForm = () => {
-    form.post('/ImportProducts', {
+const handleFileUpload = (event) => {
+    importForm.file = event.target.files[0];
+};
+
+const submitImportForm = () => {
+    if (!importForm.file) {
+        alert('Please select a file to import.');
+        return;
+    }
+
+    importForm.post('/ImportProducts', {
+        preserveScroll: true,
         onSuccess: () => {
+            importForm.reset();
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput) fileInput.value = '';
+            showImportModal.value = false;
+            // Reload the page to show imported items
+            window.location.reload();
         },
         onError: (errors) => {
+            console.error('Import failed:', errors);
         },
     });
-}
+};
+
+const downloadTemplate = () => {
+    window.location.href = '/download-import-template';
+};
 
 const handleSelectedCategory = (category) => {
     console.log('Selected Category:', category);
@@ -311,6 +376,30 @@ const getFilteredData = () => {
     return dataTable.value.api.rows({ search: 'applied' }).data().toArray();
   }
   return props.items;
+};
+
+// Enhanced export data with all fields
+const getExportData = () => {
+  const data = getFilteredData();
+  return data.map(item => ({
+    itemid: item.itemid,
+    itemname: item.itemname,
+    barcode: item.barcode,
+    itemgroup: item.itemgroup,
+    specialgroup: item.specialgroup,
+    production: item.production,
+    moq: item.moq,
+    cost: item.cost ? Number(item.cost).toFixed(2) : '0.00',
+    price: item.price ? Number(item.price).toFixed(2) : '0.00',
+    manilaprice: item.manilaprice ? Number(item.manilaprice).toFixed(2) : '0.00',
+    mallprice: item.mallprice ? Number(item.mallprice).toFixed(2) : '0.00',
+    grabfoodprice: item.grabfoodprice ? Number(item.grabfoodprice).toFixed(2) : '0.00',
+    foodpandaprice: item.foodpandaprice ? Number(item.foodpandaprice).toFixed(2) : '0.00',
+    default1: item.default1 ? 'Yes' : 'No',
+    default2: item.default2 ? 'Yes' : 'No',
+    default3: item.default3 ? 'Yes' : 'No',
+    Activeondelivery: item.Activeondelivery
+  }));
 };
 
 const products = () => {
@@ -377,6 +466,53 @@ const nonproducts = () => {
           @click="ClickEnable"
         />
 
+        <!-- Import Modal -->
+        <div v-if="showImportModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+              <h3 class="text-lg font-medium text-gray-900 mb-4">Import Items</h3>
+              
+              <div class="mb-4">
+                <button
+                  @click="downloadTemplate"
+                  class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-3"
+                >
+                  Download Template
+                </button>
+              </div>
+
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Select CSV File
+                </label>
+                <input
+                  type="file"
+                  id="fileInput"
+                  @change="handleFileUpload"
+                  accept=".csv,.txt"
+                  class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+              </div>
+
+              <div class="flex justify-end space-x-3">
+                <button
+                  @click="showImportModal = false"
+                  class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  @click="submitImportForm"
+                  :disabled="importForm.processing || !importForm.file"
+                  class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+                >
+                  {{ importForm.processing ? 'Importing...' : 'Import' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </template>
 
 
@@ -406,30 +542,23 @@ const nonproducts = () => {
                     <Enabled class="h-4" />
                   </PrimaryButton>
                   
-
-                  <form @submit.prevent="submitForm" id="importproduct" class="flex items-center">
-                    <Excel
-                      :data="items"
-                      :headers="['ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'PRICE', 'PRODUCTION', 'MOQ']"
-                      :row-name-props="['itemid', 'itemname', 'barcode', 'itemgroup', 'price', 'production', 'moq']"
-                      class="relative display"
-                      v-if="isAdmin || isOpic"
-                    />
-                    
-                    <PrimaryButton class="m-2 bg-navy" @click.prevent="submitForm" v-if="isAdmin || isOpic">
-                      <Import class="h-4" />
-                    </PrimaryButton>
-                  </form>
-                </div>
-
-                <div class="w-full mt-2">
-                  <!-- <input
-                    type="file"
-                    id="fileInput"
-                    class="file-input file-input-bordered file-input-primary file-input-sm w-full max-w-xs"
-                    @input.prevent="form.file = $event.target.files[0]"
-                    v-if="isAdmin"
-                  /> -->
+                  <!-- Export Button -->
+                  <Excel
+                    :data="getExportData()"
+                    :headers="['ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 'PRODUCTION', 'MOQ', 'COST', 'SRP', 'MANILA', 'MALL', 'GRABFOOD', 'FOODPANDA', 'DEFAULT1', 'DEFAULT2', 'DEFAULT3', 'ENABLEORDER']"
+                    :row-name-props="['itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice', 'grabfoodprice', 'foodpandaprice', 'default1', 'default2', 'default3', 'Activeondelivery']"
+                    class="m-2 bg-green-500"
+                    v-if="isAdmin || isOpic"
+                  />
+                  
+                  <!-- Import Button -->
+                  <PrimaryButton 
+                    class="m-2 bg-blue-500 hover:bg-blue-700" 
+                    @click="showImportModal = true" 
+                    v-if="isAdmin || isOpic"
+                  >
+                    <Import class="h-4" />
+                  </PrimaryButton>
                 </div>
               </div>
             </div> 
@@ -457,29 +586,25 @@ const nonproducts = () => {
                   >
                     <Enabled class="h-4" />
                   </PrimaryButton>
-                </div>
 
-                <form @submit.prevent="submitForm" id="importproduct" class="flex flex-col sm:flex-row items-center w-full sm:w-auto">
+                  <!-- Export Button -->
                   <Excel
-                  :data="getFilteredData()"
-                  :headers="['ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'PRICE', 'PRODUCTION']"
-                  :row-name-props="['itemid', 'itemname', 'barcode', 'itemgroup', 'price', 'production']"
-                  class="mt-4 sm:mt-0 sm:ml-4 relative display"
-                  v-if="isAdmin || isOpic"
+                    :data="getExportData()"
+                    :headers="['ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 'PRODUCTION', 'MOQ', 'COST', 'SRP', 'MANILA', 'MALL', 'GRABFOOD', 'FOODPANDA', 'DEFAULT1', 'DEFAULT2', 'DEFAULT3', 'ENABLEORDER']"
+                    :row-name-props="['itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice', 'grabfoodprice', 'foodpandaprice', 'default1', 'default2', 'default3', 'Activeondelivery']"
+                    class="m-2 sm:m-6 bg-green-500"
+                    v-if="isAdmin || isOpic"
                   />
                   
-                  <PrimaryButton class="m-2 sm:m-6 bg-navy" @click.prevent="submitForm" v-if="isOpic">
-                      <Import class="h-4" />
+                  <!-- Import Button -->
+                  <PrimaryButton 
+                    class="m-2 sm:m-6 bg-blue-500 hover:bg-blue-700" 
+                    @click="showImportModal = true" 
+                    v-if="isOpic"
+                  >
+                    <Import class="h-4" />
                   </PrimaryButton>
-
-                  <!-- <input
-                      type="file"
-                      id="fileInput"
-                      class="file-input file-input-bordered file-input-primary file-input-sm w-full max-w-xs mb-2 sm:mb-0"
-                      @input.prevent="form.file = $event.target.files[0]"
-                      v-if="isAdmin"
-                  /> -->
-                </form>
+                </div>
 
                 <PrimaryButton
                     type="button"
