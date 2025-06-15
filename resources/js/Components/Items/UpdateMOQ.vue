@@ -60,12 +60,19 @@ const form = useForm({
     moq: (''),
 });
 
-const submitForm = () => {
-    form.patch("/items/patch", {
-        preserveScroll: true,
-    });
 
-    location.reload();
+const submitForm = () => {
+    // Fixed: Use the correct RESTful route with the itemid parameter
+    form.patch(`/items/${props.itemid}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Emit event to close modal instead of page reload
+            toggleActive();
+        },
+        onError: (errors) => {
+            console.error('Update failed:', errors);
+        }
+    });
 };
 
 const emit = defineEmits();

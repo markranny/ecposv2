@@ -43,4 +43,4 @@
             console.log('Laravel PWA: ServiceWorker registration failed: ', err);
         });
     }
-</script><?php /**PATH C:\Users\OJT\Downloads\Compressed\final\resources\views/vendor/laravelpwa/meta.blade.php ENDPATH**/ ?>
+</script><?php /**PATH D:\MARK ADS\final\resources\views/vendor/laravelpwa/meta.blade.php ENDPATH**/ ?>

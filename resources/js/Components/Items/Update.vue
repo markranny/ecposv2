@@ -54,6 +54,19 @@ const props = defineProps({
         type: [String, Number],
         required: true,
     },
+    // Added default fields
+    default1: {
+        type: [String, Number, Boolean],
+        default: 0,
+    },
+    default2: {
+        type: [String, Number, Boolean],
+        default: 0,
+    },
+    default3: {
+        type: [String, Number, Boolean],
+        default: 0,
+    },
     showModal: {
         type: Boolean,
         default: false,
@@ -72,13 +85,24 @@ const form = useForm({
     cost: '',
     production: '',
     moq: '',
+    // Added default fields to form
+    default1: false,
+    default2: false,
+    default3: false,
 });
 
 const submitForm = () => {
-    form.patch("/items/patch", {
+    // Fixed: Use the correct RESTful route with the itemid parameter
+    form.patch(`/items/${props.itemid}`, {
         preserveScroll: true,
+        onSuccess: () => {
+            // Emit event to close modal instead of page reload
+            toggleActive();
+        },
+        onError: (errors) => {
+            console.error('Update failed:', errors);
+        }
     });
-    location.reload();
 };
 
 const emit = defineEmits();
@@ -100,6 +124,10 @@ onMounted(() => {
     form.cost = props.cost;
     form.production = props.production;
     form.moq = props.moq;
+    // Initialize default fields
+    form.default1 = Boolean(Number(props.default1));
+    form.default2 = Boolean(Number(props.default2));
+    form.default3 = Boolean(Number(props.default3));
 
     // Watch for changes in all props
     watch(() => props.itemid, (newValue) => {
@@ -144,6 +172,19 @@ onMounted(() => {
 
     watch(() => props.moq, (newValue) => {
         form.moq = newValue;
+    });
+
+    // Watch for default fields changes
+    watch(() => props.default1, (newValue) => {
+        form.default1 = Boolean(Number(newValue));
+    });
+
+    watch(() => props.default2, (newValue) => {
+        form.default2 = Boolean(Number(newValue));
+    });
+
+    watch(() => props.default3, (newValue) => {
+        form.default3 = Boolean(Number(newValue));
     });
 });
 </script>
@@ -263,6 +304,55 @@ onMounted(() => {
                         <option>CAKELAB</option>
                     </SelectOption>
                     <InputError :message="form.errors.production" class="mt-2" />
+                </div>
+
+                <!-- Added Default Fields Section -->
+                <div class="col-span-6 sm:col-span-4 mt-6">
+                    <InputLabel value="DEFAULT SETTINGS" class="text-lg font-semibold mb-4" />
+                    
+                    <div class="space-y-3">
+                        <!-- Default 1 -->
+                        <div class="flex items-center">
+                            <input
+                                id="default1"
+                                type="checkbox"
+                                v-model="form.default1"
+                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                            />
+                            <label for="default1" class="ml-2 text-sm font-medium text-gray-900">
+                                Default 1
+                            </label>
+                        </div>
+                        <InputError :message="form.errors.default1" class="mt-1" />
+
+                        <!-- Default 2 -->
+                        <div class="flex items-center">
+                            <input
+                                id="default2"
+                                type="checkbox"
+                                v-model="form.default2"
+                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                            />
+                            <label for="default2" class="ml-2 text-sm font-medium text-gray-900">
+                                Default 2
+                            </label>
+                        </div>
+                        <InputError :message="form.errors.default2" class="mt-1" />
+
+                        <!-- Default 3 -->
+                        <div class="flex items-center">
+                            <input
+                                id="default3"
+                                type="checkbox"
+                                v-model="form.default3"
+                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                            />
+                            <label for="default3" class="ml-2 text-sm font-medium text-gray-900">
+                                Default 3
+                            </label>
+                        </div>
+                        <InputError :message="form.errors.default3" class="mt-1" />
+                    </div>
                 </div>
             </FormComponent>
         </template>

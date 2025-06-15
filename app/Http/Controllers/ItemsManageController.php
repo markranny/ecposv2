@@ -15,33 +15,41 @@ use Inertia\Inertia;
 class ItemsManageController extends Controller
 {
     public function warehouse()
-    {
-          $rboinventitemretailgroups = DB::table('rboinventitemretailgroups')->get();
+{
+      $rboinventitemretailgroups = DB::table('rboinventitemretailgroups')->get();
 
-          $items = DB::table('inventtablemodules as a')
-          ->select(
-              'a.ITEMID as itemid',
-              'c.Activeondelivery as Activeondelivery',
-              'b.itemname as itemname',
-              'c.itemgroup as itemgroup',
-              'c.itemdepartment as specialgroup',
-              'c.production as production',
-              'c.moq as moq',
-              DB::raw('ROUND(FORMAT(a.priceincltax, "N2"), 2) as price'),
-              DB::raw('ROUND(FORMAT(a.price, "N2"), 2) as cost'),
-              /* DB::raw('CAST(a.price as float) as cost'), */
-              DB::raw("CASE WHEN d.ITEMBARCODE <> '' THEN d.itembarcode ELSE 'N/A' END as barcode")
-          )
-          ->leftJoin('inventtables as b', 'a.ITEMID', '=', 'b.itemid')
-          ->leftJoin('rboinventtables as c', 'b.itemid', '=', 'c.itemid')
-          ->leftJoin('inventitembarcodes as d', 'c.barcode', '=', 'd.ITEMBARCODE')
-          ->where('c.itemdepartment', '=', 'NON PRODUCT') 
-          ->get();
+      $items = DB::table('inventtablemodules as a')
+      ->select(
+          'a.ITEMID as itemid',
+          'c.Activeondelivery as Activeondelivery',
+          'b.itemname as itemname',
+          'c.itemgroup as itemgroup',
+          'c.itemdepartment as specialgroup',
+          'c.production as production',
+          'c.moq as moq',
+          // Added default fields
+          'c.default1 as default1',
+          'c.default2 as default2',
+          'c.default3 as default3',
+          // Fixed: Added all required price columns for DataTable
+          DB::raw('CAST(a.priceincltax as float) as price'),
+          DB::raw('CAST(a.manilaprice as float) as manilaprice'),
+          DB::raw('CAST(a.grabfood as float) as grabfoodprice'),
+          DB::raw('CAST(a.foodpanda as float) as foodpandaprice'),
+          DB::raw('CAST(a.mallprice as float) as mallprice'),
+          DB::raw('CAST(a.price as float) as cost'),
+          DB::raw("CASE WHEN d.ITEMBARCODE <> '' THEN d.itembarcode ELSE 'N/A' END as barcode")
+      )
+      ->leftJoin('inventtables as b', 'a.ITEMID', '=', 'b.itemid')
+      ->leftJoin('rboinventtables as c', 'b.itemid', '=', 'c.itemid')
+      ->leftJoin('inventitembarcodes as d', 'c.barcode', '=', 'd.ITEMBARCODE')
+      ->where('c.itemdepartment', '=', 'NON PRODUCT') 
+      ->get();
 
-          /* dd($rboinventitemretailgroups); */
+      /* dd($rboinventitemretailgroups); */
 
-        return Inertia::render('Items/Index', ['items' => $items, 'rboinventitemretailgroups' => $rboinventitemretailgroups]);
-    }
+    return Inertia::render('Items/Index', ['items' => $items, 'rboinventitemretailgroups' => $rboinventitemretailgroups]);
+}
 
     
     public function store(Request $request)

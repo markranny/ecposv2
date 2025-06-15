@@ -34,6 +34,12 @@ const itemgroup = ref('');
 const specialgroup = ref('');
 const price = ref('');
 const moq = ref('');
+// Added missing price fields
+const manilaprice = ref('');
+const foodpandaprice = ref('');
+const grabfoodprice = ref('');
+const mallprice = ref('');
+const production = ref('');
 
 const allSelected = ref(false);
 const selectedItems = ref([]);
@@ -177,26 +183,35 @@ const getSelectedItems = () => {
     return selectedItems.value;
 };
 
-const toggleUpdateModal = (newID, newItemName, newItemGroup, newPrice, newCost, newMoq) => {
+// Updated to accept all required parameters including price fields
+const toggleUpdateModal = (newID, newItemName, newItemGroup, newPrice, newCost, newMoq, newManilaPrice, newFoodPandaPrice, newGrabFoodPrice, newMallPrice, newProduction) => {
     itemid.value = newID;
     itemname.value = newItemName;
     itemgroup.value = newItemGroup;
     price.value = newPrice;
     cost.value = newCost;
     moq.value = newMoq;
+    manilaprice.value = newManilaPrice || 0;
+    foodpandaprice.value = newFoodPandaPrice || 0;
+    grabfoodprice.value = newGrabFoodPrice || 0;
+    mallprice.value = newMallPrice || 0;
+    production.value = newProduction || '';
     showModalUpdate.value = true;
 };
+
 const toggleMoreModal = (newID) => {
     itemid.value = newID;
     showModalMore.value = true;
 };
-const toggleUpdateMOQModal = (newID, newItemName, newItemGroup, newPrice, newCost, newMoq) => {
+
+const toggleUpdateMOQModal = (newID, newItemName, newItemGroup, newPrice, newCost, newMoq, newProduction) => {
     itemid.value = newID;
     itemname.value = newItemName;
     itemgroup.value = newItemGroup;
     price.value = newPrice;
     cost.value = newCost;
     moq.value = newMoq;
+    production.value = newProduction || '';
     showModalUpdateMOQ.value = true;
 };
 
@@ -317,13 +332,11 @@ const nonproducts = () => {
         <meta name="mobile-web-app-capable" content="yes" />
     </Head>
 
-  <!-- <component :is="layoutComponent" active-tab="RETAILITEMS"> 
-  </component> -->
-
     <component :is="layoutComponent" active-tab="RETAILITEMS">
       <template v-slot:modals>
         <Create :show-modal="showCreateModal" @toggle-active="createModalHandler" :rboinventitemretailgroups="props.rboinventitemretailgroups"  @select-item="handleSelectedCategory"/>
 
+        <!-- Updated Update component with all required props -->
         <Update
           :show-modal="showModalUpdate"
           :itemid="itemid"
@@ -332,6 +345,11 @@ const nonproducts = () => {
           :price="price"
           :cost="cost"
           :moq="moq"
+          :manilaprice="manilaprice"
+          :foodpandaprice="foodpandaprice"
+          :grabfoodprice="grabfoodprice"
+          :mallprice="mallprice"
+          :production="production"
           @toggle-active="updateModalHandler"
         />
 
@@ -343,6 +361,7 @@ const nonproducts = () => {
           :price="price"
           :cost="cost"
           :moq="moq"
+          :production="production"
           @toggle-active="updateMOQModalHandler"
         />
 
@@ -490,6 +509,7 @@ const nonproducts = () => {
                     ref="dataTable"
                 >
                     <template #action="data">
+                        <!-- Updated to pass all required data including price fields -->
                         <TransparentButton
                             type="button"
                             v-if="isAdmin || isOpic"
@@ -500,7 +520,12 @@ const nonproducts = () => {
                                     data.cellData.itemgroup,
                                     data.cellData.price,
                                     data.cellData.cost,
-                                    data.cellData.moq
+                                    data.cellData.moq,
+                                    data.cellData.manilaprice,
+                                    data.cellData.foodpandaprice,
+                                    data.cellData.grabfoodprice,
+                                    data.cellData.mallprice,
+                                    data.cellData.production
                                 )
                             "
                             class="me-1"
@@ -537,7 +562,8 @@ const nonproducts = () => {
                                     data.cellData.itemgroup,
                                     data.cellData.price,
                                     data.cellData.cost,
-                                    data.cellData.moq
+                                    data.cellData.moq,
+                                    data.cellData.production
                                 )
                             "
                             class="me-1"
