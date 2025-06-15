@@ -133,6 +133,9 @@ Route::resource('partycakes', PartyCakesController::class);
 // SUPERADMIN routes
 Route::middleware(['auth', 'role:SUPERADMIN'])->group(function () {
     Route::post('/ImportProducts', [ItemsManageController::class, 'store'])->name('import.products');
+    Route::post('/preview-import', [ItemsManageController::class, 'previewImport'])->name('preview.import');
+    Route::get('/download-import-template', [ItemsManageController::class, 'downloadTemplate'])->name('download.import.template');
+    Route::post('/ImportProducts', [ItemsManageController::class, 'store'])->name('import.products');
     Route::get('/retailprice', function () {
         return Inertia::render('retail/salesprice');
     });

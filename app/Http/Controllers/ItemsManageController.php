@@ -57,156 +57,323 @@ class ItemsManageController extends Controller
     }
 
     public function store(Request $request)
-    {
-        try {
-            // Validate the uploaded file
-            $validatedData = $request->validate([
-                'file' => 'required|file|mimes:csv,txt|max:10240', // 10MB max
-            ]);
+{
+    try {
+        // Validate the uploaded file
+        $validatedData = $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:10240', // 10MB max
+        ]);
 
-            $file = $request->file('file');
-            
-            // Store the file temporarily
-            $fileName = 'import_' . time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('imports', $fileName, 'public');
-            $fullPath = storage_path('app/public/' . $filePath);
+        $file = $request->file('file');
+        
+        // Store the file temporarily
+        $fileName = 'import_' . time() . '_' . $file->getClientOriginalName();
+        $filePath = $file->storeAs('imports', $fileName, 'public');
+        $fullPath = storage_path('app/public/' . $filePath);
 
-            // Clear existing import data
-            DB::table('importproducts')->truncate();
+        // Clear existing import data
+        DB::table('importproducts')->truncate();
 
-            // Process CSV file
-            $this->processCsvFile($fullPath);
-
-            // Process the imported data
-            $this->processImportedData();
-
+        // Process CSV file with validation
+        $importResult = $this->processCsvFile($fullPath);
+        
+        if (!$importResult['success']) {
             // Clean up: delete the temporary file
             Storage::disk('public')->delete($filePath);
-
+            
             return redirect()->back()
-                ->with('message', 'Items imported successfully')
-                ->with('isSuccess', true);
-
-        } catch (ValidationException $e) {
-            return back()
-                ->withErrors($e->errors())
-                ->withInput()
-                ->with('message', 'Validation failed: ' . implode(', ', array_flatten($e->errors())))
-                ->with('isSuccess', false);
-        } catch (\Exception $e) {
-            return back()
-                ->with('message', 'Import failed: ' . $e->getMessage())
+                ->with('message', 'Import failed: ' . $importResult['message'])
                 ->with('isSuccess', false);
         }
+
+        // Process the imported data
+        $processResult = $this->processImportedData();
+
+        // Clean up: delete the temporary file
+        Storage::disk('public')->delete($filePath);
+
+        if ($processResult['success']) {
+            return redirect()->back()
+                ->with('message', $processResult['message'])
+                ->with('isSuccess', true)
+                ->with('importStats', [
+                    'total' => $processResult['total'],
+                    'processed' => $processResult['processed']
+                ]);
+        } else {
+            return redirect()->back()
+                ->with('message', 'Import processing failed: ' . $processResult['message'])
+                ->with('isSuccess', false);
+        }
+
+    } catch (ValidationException $e) {
+        return back()
+            ->withErrors($e->errors())
+            ->withInput()
+            ->with('message', 'Validation failed: ' . implode(', ', array_flatten($e->errors())))
+            ->with('isSuccess', false);
+    } catch (\Exception $e) {
+        // Clean up file if it exists
+        if (isset($filePath) && Storage::disk('public')->exists($filePath)) {
+            Storage::disk('public')->delete($filePath);
+        }
+        
+        return back()
+            ->with('message', 'Import failed: ' . $e->getMessage())
+            ->with('isSuccess', false);
+    }
+}
+
+private function processCsvFile($filePath)
+{
+    if (!file_exists($filePath)) {
+        return ['success' => false, 'message' => 'File not found'];
     }
 
-    private function processCsvFile($filePath)
-    {
-        if (!file_exists($filePath)) {
-            throw new \Exception('File not found');
+    $handle = fopen($filePath, 'r');
+    if (!$handle) {
+        return ['success' => false, 'message' => 'Cannot open file'];
+    }
+
+    // Skip header row
+    $headers = fgetcsv($handle);
+    
+    $batch = [];
+    $batchSize = 100;
+    $rowNumber = 1;
+    $errors = [];
+    $processedRows = 0;
+
+    while (($data = fgetcsv($handle)) !== false) {
+        $rowNumber++;
+        
+        // Skip empty rows
+        if (empty(array_filter($data))) {
+            continue;
         }
 
-        $handle = fopen($filePath, 'r');
-        if (!$handle) {
-            throw new \Exception('Cannot open file');
+        // Basic validation
+        $rowErrors = $this->validateCsvRow($data, $rowNumber);
+        if (!empty($rowErrors)) {
+            $errors = array_merge($errors, $rowErrors);
+            continue;
         }
 
-        // Skip header row
-        fgetcsv($handle);
+        // Properly format barcode to avoid scientific notation
+        $barcode = '';
+        if (!empty($data[8])) {
+            $barcode = sprintf('%.0f', (float)$data[8]); // Convert to string without scientific notation
+        }
 
-        $batch = [];
-        $batchSize = 100;
+        // Map CSV columns to database fields
+        $batch[] = [
+            'itemid' => trim($data[0] ?? ''),
+            'description' => trim($data[1] ?? ''),
+            'costprice' => is_numeric($data[2]) ? (float)$data[2] : 0,
+            'salesprice' => is_numeric($data[3]) ? (float)$data[3] : 0,
+            'searchalias' => trim($data[4] ?? ''),
+            'notes' => trim($data[5] ?? ''),
+            'retailgroup' => trim($data[6] ?? ''),
+            'retaildepartment' => trim($data[7] ?? 'NON PRODUCT'),
+            'barcode' => $barcode,
+            'activestatus' => isset($data[9]) && $data[9] ? 1 : 1,
+            'barcodesetup' => trim($data[10] ?? ''),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
 
-        while (($data = fgetcsv($handle)) !== false) {
-            // Skip empty rows
-            if (empty(array_filter($data))) {
-                continue;
-            }
+        $processedRows++;
 
-            // Map CSV columns to database fields
-            // Adjust these indices based on your CSV structure
-            $batch[] = [
-                'itemid' => $data[0] ?? '',
-                'description' => $data[1] ?? '',
-                'costprice' => is_numeric($data[2]) ? $data[2] : 0,
-                'salesprice' => is_numeric($data[3]) ? $data[3] : 0,
-                'searchalias' => $data[4] ?? '',
-                'notes' => $data[5] ?? '',
-                'retailgroup' => $data[6] ?? '',
-                'retaildepartment' => $data[7] ?? 'NON PRODUCT',
-                'barcode' => $data[8] ?? '',
-                'activestatus' => isset($data[9]) && $data[9] ? 1 : 1, // default to active
-                'barcodesetup' => $data[10] ?? '',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-
-            if (count($batch) >= $batchSize) {
+        if (count($batch) >= $batchSize) {
+            try {
                 DB::table('importproducts')->insert($batch);
                 $batch = [];
+            } catch (\Exception $e) {
+                fclose($handle);
+                return ['success' => false, 'message' => 'Database insert error: ' . $e->getMessage()];
             }
         }
-
-        // Insert remaining records
-        if (!empty($batch)) {
-            DB::table('importproducts')->insert($batch);
-        }
-
-        fclose($handle);
     }
 
-    private function processImportedData()
-    {
-        $name = Auth::user()->name;
+    // Insert remaining records
+    if (!empty($batch)) {
+        try {
+            DB::table('importproducts')->insert($batch);
+        } catch (\Exception $e) {
+            fclose($handle);
+            return ['success' => false, 'message' => 'Database insert error: ' . $e->getMessage()];
+        }
+    }
 
-        // 1. Insert into inventtablemodules
+    fclose($handle);
+
+    // Check if there were validation errors
+    if (!empty($errors)) {
+        $errorMessage = "Import completed with warnings:\n" . implode("\n", array_slice($errors, 0, 10));
+        if (count($errors) > 10) {
+            $errorMessage .= "\n... and " . (count($errors) - 10) . " more errors.";
+        }
+        
+        return [
+            'success' => true, 
+            'message' => $errorMessage,
+            'hasWarnings' => true,
+            'processedRows' => $processedRows
+        ];
+    }
+
+    return [
+        'success' => true, 
+        'message' => "CSV file processed successfully. {$processedRows} rows imported.",
+        'processedRows' => $processedRows
+    ];
+}
+
+private function validateCsvRow($data, $rowNumber)
+{
+    $errors = [];
+
+    // Required fields validation
+    if (empty(trim($data[0] ?? ''))) {
+        $errors[] = "Row {$rowNumber}: Item ID is required";
+    }
+
+    if (empty(trim($data[1] ?? ''))) {
+        $errors[] = "Row {$rowNumber}: Description is required";
+    }
+
+    // Numeric validation
+    if (!empty($data[2]) && !is_numeric($data[2])) {
+        $errors[] = "Row {$rowNumber}: Cost price must be a number";
+    }
+
+    if (!empty($data[3]) && !is_numeric($data[3])) {
+        $errors[] = "Row {$rowNumber}: Sales price must be a number";
+    }
+
+    // Barcode validation (should be numeric if provided and reasonable length)
+    if (!empty($data[8])) {
+        if (!is_numeric($data[8])) {
+            $errors[] = "Row {$rowNumber}: Barcode must be numeric";
+        } elseif (strlen($data[8]) > 20) {
+            $errors[] = "Row {$rowNumber}: Barcode is too long (max 20 digits)";
+        }
+    }
+
+    // Price validation (cost should not be higher than sales price)
+    if (!empty($data[2]) && !empty($data[3])) {
+        $costPrice = (float) $data[2];
+        $salesPrice = (float) $data[3];
+        
+        if ($costPrice > $salesPrice) {
+            $errors[] = "Row {$rowNumber}: Warning - Cost price is higher than sales price";
+        }
+    }
+
+    return $errors;
+}
+
+    
+
+    private function processImportedData()
+{
+    $name = Auth::user()->name;
+    
+    try {
+        DB::beginTransaction();
+
+        // 1. Update or Insert into inventtablemodules
         DB::statement("
-            INSERT IGNORE INTO `inventtablemodules`
+            INSERT INTO `inventtablemodules`
             (`itemid`, `moduletype`, `unitid`, `price`, `priceunit`, `priceincltax`, 
              `quantity`, `lowestqty`, `highestqty`, `blocked`, `inventlocationid`, 
-             `pricedate`, `taxitemgroupid`)
-            SELECT itemid, 1, 1, costprice, 1, salesprice, 0, 0, 0, 0, 'S0001', NOW(), 1
+             `pricedate`, `taxitemgroupid`, `manilaprice`, `grabfood`, `foodpanda`, `mallprice`)
+            SELECT itemid, 1, 1, costprice, 1, salesprice, 0, 0, 0, 0, 'S0001', NOW(), 1, 0, 0, 0, 0
             FROM importproducts
             WHERE itemid != '' AND itemid IS NOT NULL
+            ON DUPLICATE KEY UPDATE
+                price = VALUES(price),
+                priceincltax = VALUES(priceincltax),
+                pricedate = NOW()
         ");
 
-        // 2. Insert into inventtables
+        // 2. Update or Insert into inventtables
         DB::statement("
-            INSERT IGNORE INTO `inventtables`
-            (`itemgroupid`, `itemid`, `itemname`, `itemtype`, `namealias`, `notes`)
-            SELECT 1, itemid, description, 1, searchalias, notes
+            INSERT INTO `inventtables`
+            (`itemgroupid`, `itemid`, `itemname`, `itemtype`, `namealias`, `notes`, `updated_at`)
+            SELECT 1, itemid, description, 1, searchalias, notes, NOW()
             FROM importproducts
             WHERE itemid != '' AND itemid IS NOT NULL
+            ON DUPLICATE KEY UPDATE
+                itemname = VALUES(itemname),
+                namealias = VALUES(namealias),
+                notes = VALUES(notes),
+                updated_at = NOW()
         ");
 
-        // 3. Insert into rboinventtables
+        // 3. Update or Insert into rboinventtables (Fixed the ambiguous barcode issue)
         DB::statement("
-            INSERT IGNORE INTO `rboinventtables`
-            (`itemid`, `itemgroup`, `itemdepartment`, `barcode`, `Activeondelivery`)
-            SELECT itemid, retailgroup, retaildepartment, barcode, activestatus
+            INSERT INTO `rboinventtables`
+            (`itemid`, `itemgroup`, `itemdepartment`, `barcode`, `Activeondelivery`, `production`, `moq`, `default1`, `default2`, `default3`)
+            SELECT itemid, retailgroup, retaildepartment, barcode, activestatus, 'NEWCOM', 0, 0, 0, 0
             FROM importproducts
             WHERE itemid != '' AND itemid IS NOT NULL
+            ON DUPLICATE KEY UPDATE
+                itemgroup = VALUES(itemgroup),
+                itemdepartment = VALUES(itemdepartment),
+                barcode = CASE 
+                    WHEN VALUES(barcode) != '' AND VALUES(barcode) IS NOT NULL 
+                    THEN VALUES(barcode) 
+                    ELSE rboinventtables.barcode 
+                END,
+                Activeondelivery = VALUES(Activeondelivery)
         ");
 
-        // 4. Insert into inventitembarcodes (only for items with barcodes)
+        // 4. Handle barcodes - only insert new ones to avoid duplicates
         DB::statement("
-            INSERT IGNORE INTO `inventitembarcodes`
-            (`ITEMBARCODE`, `ITEMID`, `BARCODESETUPID`, `DESCRIPTION`, `QTY`, 
-             `UNITID`, `RBOVARIANTID`, `BLOCKED`, `MODIFIEDBY`)
-            SELECT barcode, itemid, barcodesetup, description, 0, '1', '', 0, ?
-            FROM importproducts 
-            WHERE barcode != '' AND barcode IS NOT NULL AND itemid != '' AND itemid IS NOT NULL
-        ", [$name]);
-
-        // 5. Insert into barcodes (only for items with barcodes)
-        DB::statement("
-            INSERT IGNORE INTO `barcodes`
+            INSERT INTO `barcodes`
             (`Barcode`, `Description`, `IsUse`, `GenerateBy`, `GenerateDate`, `ModifiedBy`)
             SELECT barcode, description, 1, ?, NOW(), ?
             FROM importproducts 
-            WHERE barcode != '' AND barcode IS NOT NULL
+            WHERE barcode != '' AND barcode IS NOT NULL AND itemid != '' AND itemid IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM barcodes WHERE Barcode = importproducts.barcode)
         ", [$name, $name]);
+
+        // 5. Update or Insert into inventitembarcodes
+        DB::statement("
+            INSERT INTO `inventitembarcodes`
+            (`ITEMBARCODE`, `ITEMID`, `BARCODESETUPID`, `DESCRIPTION`, `QTY`, 
+             `UNITID`, `RBOVARIANTID`, `BLOCKED`, `MODIFIEDBY`)
+            SELECT barcode, itemid, COALESCE(barcodesetup, ''), description, 0, '1', '', 0, ?
+            FROM importproducts 
+            WHERE barcode != '' AND barcode IS NOT NULL AND itemid != '' AND itemid IS NOT NULL
+            ON DUPLICATE KEY UPDATE
+                ITEMID = VALUES(ITEMID),
+                DESCRIPTION = VALUES(DESCRIPTION),
+                MODIFIEDBY = VALUES(MODIFIEDBY)
+        ", [$name]);
+
+        DB::commit();
+        
+        // Get import statistics
+        $totalRecords = DB::table('importproducts')->count();
+        $processedRecords = DB::table('importproducts')
+            ->where('itemid', '!=', '')
+            ->whereNotNull('itemid')
+            ->count();
+            
+        return [
+            'success' => true,
+            'message' => "Import completed successfully. Processed {$processedRecords} out of {$totalRecords} records.",
+            'total' => $totalRecords,
+            'processed' => $processedRecords
+        ];
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        throw new \Exception('Import processing failed: ' . $e->getMessage());
     }
+}
 
     public function terminal(Request $request)
     {
@@ -226,45 +393,219 @@ class ItemsManageController extends Controller
     }
 
     public function downloadTemplate()
-    {
-        $headers = [
-            'itemid',
-            'description',
-            'costprice',
-            'salesprice',
-            'searchalias',
-            'notes',
-            'retailgroup',
-            'retaildepartment',
-            'barcode',
-            'activestatus',
-            'barcodesetup'
-        ];
+{
+    $headers = [
+        'itemid',           // Column 0 - Required
+        'description',      // Column 1 - Required  
+        'costprice',        // Column 2 - Numeric
+        'salesprice',       // Column 3 - Numeric
+        'searchalias',      // Column 4 - Optional
+        'notes',            // Column 5 - Optional
+        'retailgroup',      // Column 6 - Category/Group
+        'retaildepartment', // Column 7 - REGULAR PRODUCT or NON PRODUCT
+        'barcode',          // Column 8 - Numeric (optional)
+        'activestatus',     // Column 9 - 1 for active, 0 for inactive
+        'barcodesetup'      // Column 10 - Optional
+    ];
 
-        $filename = 'import_template.csv';
-        $handle = fopen('php://output', 'w');
-
-        header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-
-        fputcsv($handle, $headers);
-
-        // Add sample data row
-        fputcsv($handle, [
+    $sampleData = [
+        [
             'ITEM001',
-            'Sample Item Description',
-            '10.50',
-            '15.00',
-            'sample alias',
-            'Sample notes',
-            'SAMPLE GROUP',
-            'NON PRODUCT',
+            'Sample Bread Item',
+            '25.50',
+            '35.00',
+            'bread sample',
+            'Sample bread product',
+            'BREADS',
+            'REGULAR PRODUCT',
             '1234567890123',
             '1',
             'DEFAULT'
+        ],
+        [
+            'ITEM002',
+            'Sample Pastry Item',
+            '18.00',
+            '28.00',
+            'pastry sample',
+            'Sample pastry product',
+            'PASTRIES',
+            'REGULAR PRODUCT',
+            '1234567890124',
+            '1',
+            'DEFAULT'
+        ],
+        [
+            'WARE001',
+            'Sample Warehouse Item',
+            '15.00',
+            '20.00',
+            'warehouse sample',
+            'Sample warehouse item',
+            'SUPPLIES',
+            'NON PRODUCT',
+            '1234567890125',
+            '1',
+            'DEFAULT'
+        ]
+    ];
+
+    $filename = 'import_template_' . date('Y-m-d') . '.csv';
+    
+    $response = response()->stream(function() use ($headers, $sampleData) {
+        $handle = fopen('php://output', 'w');
+        
+        // Add headers
+        fputcsv($handle, $headers);
+        
+        // Add sample data
+        foreach ($sampleData as $row) {
+            fputcsv($handle, $row);
+        }
+        
+        fclose($handle);
+    }, 200, [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+    ]);
+
+    return $response;
+}
+
+/**
+ * Preview import data to show what will be updated vs created
+ */
+public function previewImport(Request $request)
+{
+    try {
+        $validatedData = $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:10240',
         ]);
 
-        fclose($handle);
-        exit;
+        $file = $request->file('file');
+        $fileName = 'preview_' . time() . '_' . $file->getClientOriginalName();
+        $filePath = $file->storeAs('imports', $fileName, 'public');
+        $fullPath = storage_path('app/public/' . $filePath);
+
+        // Clear existing import data
+        DB::table('importproducts')->truncate();
+
+        // Process CSV file
+        $importResult = $this->processCsvFile($fullPath);
+        
+        if (!$importResult['success']) {
+            Storage::disk('public')->delete($filePath);
+            return response()->json([
+                'success' => false,
+                'message' => $importResult['message']
+            ]);
+        }
+
+        // Analyze the import data
+        $analysis = $this->analyzeImportData();
+
+        // Clean up
+        Storage::disk('public')->delete($filePath);
+
+        return response()->json([
+            'success' => true,
+            'analysis' => $analysis
+        ]);
+
+    } catch (\Exception $e) {
+        if (isset($filePath) && Storage::disk('public')->exists($filePath)) {
+            Storage::disk('public')->delete($filePath);
+        }
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Preview failed: ' . $e->getMessage()
+        ]);
     }
+}
+
+/**
+ * Analyze import data to determine what will be updated vs created
+ */
+private function analyzeImportData()
+{
+    // Get all itemids from import
+    $importItems = DB::table('importproducts')
+        ->select('itemid', 'description', 'costprice', 'salesprice', 'barcode')
+        ->where('itemid', '!=', '')
+        ->whereNotNull('itemid')
+        ->get();
+
+    $existingItems = [];
+    $newItems = [];
+    $duplicateBarcodes = [];
+
+    foreach ($importItems as $item) {
+        // Check if item exists
+        $existingItem = DB::table('inventtables')
+            ->where('itemid', $item->itemid)
+            ->first();
+
+        if ($existingItem) {
+            // Get current prices
+            $currentPrices = DB::table('inventtablemodules')
+                ->where('itemid', $item->itemid)
+                ->first();
+
+            $existingItems[] = [
+                'itemid' => $item->itemid,
+                'description' => $item->description,
+                'current_cost' => $currentPrices->price ?? 0,
+                'new_cost' => $item->costprice,
+                'current_price' => $currentPrices->priceincltax ?? 0,
+                'new_price' => $item->salesprice,
+                'price_changed' => $currentPrices && (
+                    $currentPrices->price != $item->costprice || 
+                    $currentPrices->priceincltax != $item->salesprice
+                )
+            ];
+        } else {
+            $newItems[] = [
+                'itemid' => $item->itemid,
+                'description' => $item->description,
+                'cost' => $item->costprice,
+                'price' => $item->salesprice,
+                'barcode' => $item->barcode
+            ];
+        }
+
+        // Check for duplicate barcodes
+        if (!empty($item->barcode)) {
+            $existingBarcode = DB::table('barcodes')
+                ->where('Barcode', $item->barcode)
+                ->first();
+
+            if ($existingBarcode) {
+                $duplicateBarcodes[] = [
+                    'itemid' => $item->itemid,
+                    'barcode' => $item->barcode,
+                    'existing_description' => $existingBarcode->Description ?? 'Unknown'
+                ];
+            }
+        }
+    }
+
+    return [
+        'total_records' => $importItems->count(),
+        'existing_items' => [
+            'count' => count($existingItems),
+            'items' => $existingItems
+        ],
+        'new_items' => [
+            'count' => count($newItems),
+            'items' => $newItems
+        ],
+        'duplicate_barcodes' => [
+            'count' => count($duplicateBarcodes),
+            'items' => $duplicateBarcodes
+        ]
+    ];
+}
+
+
 }
