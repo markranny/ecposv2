@@ -395,17 +395,17 @@ private function validateCsvRow($data, $rowNumber)
     public function downloadTemplate()
 {
     $headers = [
-        'itemid',           // Column 0 - Required
-        'description',      // Column 1 - Required  
-        'costprice',        // Column 2 - Numeric
-        'salesprice',       // Column 3 - Numeric
-        'searchalias',      // Column 4 - Optional
-        'notes',            // Column 5 - Optional
-        'retailgroup',      // Column 6 - Category/Group
-        'retaildepartment', // Column 7 - REGULAR PRODUCT or NON PRODUCT
-        'barcode',          // Column 8 - Numeric (optional)
-        'activestatus',     // Column 9 - 1 for active, 0 for inactive
-        'barcodesetup'      // Column 10 - Optional
+        'itemid',           
+        'description',        
+        'costprice',        
+        'salesprice',       
+        'searchalias',      
+        'notes',            
+        'retailgroup',     
+        'retaildepartment', 
+        'barcode',          
+        'activestatus',     
+        'barcodesetup'      
     ];
 
     $sampleData = [
