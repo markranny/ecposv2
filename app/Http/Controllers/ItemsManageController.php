@@ -310,7 +310,7 @@ private function validateCsvRow($data, $rowNumber)
                 notes = VALUES(notes),
                 updated_at = NOW()
         ");
-
+        
         // 3. Update or Insert into rboinventtables (Fixed the ambiguous barcode issue)
         DB::statement("
             INSERT INTO `rboinventtables`

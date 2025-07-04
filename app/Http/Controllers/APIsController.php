@@ -398,34 +398,25 @@ class APIsController extends Controller
 
 
     public function storeRboTransactionSalesTrans(Request $request)
-{
-    try {
-        
+    {
+        try {
+            
 
-        $rboTransactionSalesTrans = rbotransactionsalestrans::create($request->all());
+            $rboTransactionSalesTrans = rbotransactionsalestrans::create($request->all());
 
-        return response()->json([
-            'message' => 'Transaction successfully created.',
-            'data' => $rboTransactionSalesTrans
-        ], 201);
-        
-        /* DB::table('rbotransactionsalestrans as t1')
-            ->join('rbotransactionsalestrans as t2', function($join) {
-                $join->on('t1.transactionid', '=', 't2.transactionid')
-                     ->on('t1.linenum', '=', 't2.linenum')
-                     ->where('t1.id', '>', 't2.id');
-            })
-       ->delete(); */
+            return response()->json([
+                'message' => 'Transaction successfully created.',
+                'data' => $rboTransactionSalesTrans
+            ], 201);
+            
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'message' => 'Failed to create sales transaction.',
-            'error' => $e->getMessage()
-        ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to create sales transaction.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
-
-
 
     public function nubersequencevalues()
     {

@@ -121,226 +121,226 @@ class ApisStockCountingLineController extends Controller
     }
 
     public function show($storeids, $journalId)
-{
-    try {
-        $store = DB::table('rbostoretables')
-            ->where('name', $storeids)
-            ->value('name');
-        
-        $storeName = $store;
-        $currentDate = Carbon::now('Asia/Manila')->toDateString();
-        Log::info('User store', ['store' => $storeName]);
-
-        $stockcountingtrans = DB::table('stockcountingtrans AS a')
-            ->select(
-                'a.*', 
-                'b.*', 
-                'c.*', 
-                'st.posted',
-                DB::raw("DATE(a.TRANSDATE) as TRANSDATE")  
-            )
-            ->leftJoin('inventtables AS b', 'a.itemid', '=', 'b.itemid')
-            ->leftJoin('rboinventtables AS c', 'b.itemid', '=', 'c.itemid')
-            ->leftJoin('stockcountingtables as st', function($join) use ($storeName) {
-                $join->on('a.journalid', '=', 'st.journalid')
-                    ->where('st.storeid', '=', $storeName);
-            })
-            ->where('a.journalid', $journalId)
-            ->where('a.storename', $storeName)
-            ->OrderBy('a.ADJUSTMENT', 'DESC')
-            ->get();
-
-        // Check if no data was found
-        if ($stockcountingtrans->isEmpty()) {
-            Log::info('No data found, redirecting to getbwproducts', [
-                'journalId' => $journalId,
-                'store' => $storeName
-            ]);
-            
-            // Create a new request instance with all required parameters
-            $request = new Request();
-            $request->merge([
-                'JOURNALID' => $journalId,
-                'storeids' => $storeids
-            ]);
-            
-            // Call getbwproducts method with all required parameters
-            return $this->getbwproducts($request, $storeids, $journalId);
-        }
-
-        $isPosted = DB::table('stockcountingtables')
-            ->where('journalid', $journalId)
-            ->where('storeid', $storeName)
-            ->value('posted') ?? 0;
-            
-        return response()->json([
-            'journalid' => $journalId,
-            'stockcountingtrans' => $stockcountingtrans,
-            'isPosted' => $isPosted,
-            'currentDate' => $currentDate, 
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Error in show method', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return response()->json([
-            'success' => false,
-            'message' => 'Error retrieving record: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-public function getbwproducts(Request $request, $storeids, $journalId)
-{
-    try {
-        $request->validate([
-            'JOURNALID' => 'required|string',
-        ]);
-        Log::info('Validation passed', ['journalId' => $request->JOURNALID]);
-
-        $currentDateTime = Carbon::now('Asia/Manila')->toDateString();
-        
-        // Use the passed parameters instead of getting from request
-        $journalid = $journalId ?? $request->JOURNALID;
-        
-        $store = DB::table('users')
-            ->where('name', $storeids)
-            ->value('name');
-            
-        $storerole = DB::table('users')
-            ->where('name', $storeids)
-            ->value('name');
-        
-        $storename = $store;
-        $role = $storerole;
-        
-        Log::info('Context', [
-            'store' => $storename,
-            'role' => $role,
-            'date' => $currentDateTime
-        ]);
-
-        $record = DB::table('stockcountingtrans')
-            ->where('JOURNALID', $journalid)
-            ->count();
-
-        if ($record >= 1) {
-            Log::warning('Items already generated', [
-                'journalId' => $journalid,
-                'recordCount' => $record
-            ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Items have already been generated!',
-                'journalid' => $journalid,
-                'data' => null
-            ], 400);
-        }
-
-        DB::beginTransaction();
-
+    {
         try {
-            Log::info('Starting item generation transaction');
+            $store = DB::table('rbostoretables')
+                ->where('name', $storeids)
+                ->value('name');
             
-            // Insert new records
-            DB::table('stockcountingtrans')
-                ->insertUsing(
-                    ['JOURNALID', 'ITEMDEPARTMENT', 'TRANSDATE', 'ITEMID', 'ADJUSTMENT', 'RECEIVEDCOUNT', 'WASTECOUNT', 'COUNTED', 'STORENAME'],
-                    function ($query) use ($journalid, $currentDateTime, $storename) {
-                        $query->select(
-                            DB::raw("'{$journalid}' as JOURNALID"),
-                            'b.itemdepartment',
-                            DB::raw("'{$currentDateTime}' as TRANSDATE"),
-                            'a.itemid as ITEMID',
-                            DB::raw('0 as ADJUSTMENT'),
-                            DB::raw('0 as RECEIVEDCOUNT'),
-                            DB::raw('0 as WASTECOUNT'),
-                            DB::raw('0 as COUNTED'),
-                            DB::raw("'{$storename}' as STORENAME")
-                        )
-                        ->from('inventtables as a')
-                        ->leftJoin('rboinventtables as b', 'a.itemid', '=', 'b.itemid')
-                        ->where('b.activeondelivery', '1');
-                    }
-                );
+            $storeName = $store;
+            $currentDate = Carbon::now('Asia/Manila')->toDateString();
+            Log::info('User store', ['store' => $storeName]);
 
-            Log::info('Active inventory items inserted');
-
-            $yesterday = Carbon::yesterday()->format('Y-m-d');
-            Log::info('Fetching yesterday\'s journal records', ['date' => $yesterday]);
-
-            $journalRecords = DB::connection('remote_db')
-                ->table('inventjournaltables as a')
-                ->leftJoin('inventjournaltrans as b', 'a.journalid', '=', 'b.journalid') 
-                ->whereDate('a.posteddatetime', $yesterday)
-                ->where('a.storeid', $storename)  
+            $stockcountingtrans = DB::table('stockcountingtrans AS a')
+                ->select(
+                    'a.*', 
+                    'b.*', 
+                    'c.*', 
+                    'st.posted',
+                    DB::raw("DATE(a.TRANSDATE) as TRANSDATE")  
+                )
+                ->leftJoin('inventtables AS b', 'a.itemid', '=', 'b.itemid')
+                ->leftJoin('rboinventtables AS c', 'b.itemid', '=', 'c.itemid')
+                ->leftJoin('stockcountingtables as st', function($join) use ($storeName) {
+                    $join->on('a.journalid', '=', 'st.journalid')
+                        ->where('st.storeid', '=', $storeName);
+                })
+                ->where('a.journalid', $journalId)
+                ->where('a.storename', $storeName)
+                ->OrderBy('a.ADJUSTMENT', 'DESC')
                 ->get();
 
-            Log::info('Journal records retrieved', [
-                'count' => $journalRecords->count()
-            ]);
-
-            foreach ($journalRecords as $record) {
-                DB::table('stockcountingtrans')
-                    ->where('ITEMID', $record->ITEMID) 
-                    ->where('TRANSDATE', $currentDateTime)
-                    ->update([
-                        'ADJUSTMENT' => $record->ADJUSTMENT,
-                        'RECEIVEDCOUNT' => $record->ADJUSTMENT,
-                        'updated_at' => now()
-                    ]);
+            // Check if no data was found
+            if ($stockcountingtrans->isEmpty()) {
+                Log::info('No data found, redirecting to getbwproducts', [
+                    'journalId' => $journalId,
+                    'store' => $storeName
+                ]);
+                
+                // Create a new request instance with all required parameters
+                $request = new Request();
+                $request->merge([
+                    'JOURNALID' => $journalId,
+                    'storeids' => $storeids
+                ]);
+                
+                // Call getbwproducts method with all required parameters
+                return $this->getbwproducts($request, $storeids, $journalId);
             }
 
-            DB::commit();
-            Log::info('Transaction committed successfully');
-
-            // Get the newly generated items
-            $generatedItems = DB::table('stockcountingtrans')
-                ->where('JOURNALID', $journalid)
-                ->where('STORENAME', $storename)
-                ->get();
-
+            $isPosted = DB::table('stockcountingtables')
+                ->where('journalid', $journalId)
+                ->where('storeid', $storeName)
+                ->value('posted') ?? 0;
+                
             return response()->json([
-                'success' => true,
-                'message' => 'Items generated successfully',
-                'journalid' => $journalid,
-                'data' => [
-                    'items' => $generatedItems,
-                    'total_count' => $generatedItems->count(),
-                    'generation_date' => $currentDateTime
-                ]
-            ], 200);
+                'journalid' => $journalId,
+                'stockcountingtrans' => $stockcountingtrans,
+                'isPosted' => $isPosted,
+                'currentDate' => $currentDate, 
+            ]);
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error in transaction', [
+            Log::error('Error in show method', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            throw $e;
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving record: ' . $e->getMessage()
+            ], 500);
         }
-    } catch (ValidationException $e) {
-        Log::warning('Validation failed', [
-            'errors' => $e->errors()
-        ]);
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation failed',
-            'errors' => $e->errors()
-        ], 422);
-    } catch (\Exception $e) {
-        Log::error('Error in getbwproducts', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return response()->json([
-            'success' => false,
-            'message' => 'Error generating items: ' . $e->getMessage()
-        ], 500);
     }
-}
+
+    public function getbwproducts(Request $request, $storeids, $journalId)
+    {
+        try {
+            $request->validate([
+                'JOURNALID' => 'required|string',
+            ]);
+            Log::info('Validation passed', ['journalId' => $request->JOURNALID]);
+
+            $currentDateTime = Carbon::now('Asia/Manila')->toDateString();
+            
+            // Use the passed parameters instead of getting from request
+            $journalid = $journalId ?? $request->JOURNALID;
+            
+            $store = DB::table('users')
+                ->where('name', $storeids)
+                ->value('name');
+                
+            $storerole = DB::table('users')
+                ->where('name', $storeids)
+                ->value('name');
+            
+            $storename = $store;
+            $role = $storerole;
+            
+            Log::info('Context', [
+                'store' => $storename,
+                'role' => $role,
+                'date' => $currentDateTime
+            ]);
+
+            $record = DB::table('stockcountingtrans')
+                ->where('JOURNALID', $journalid)
+                ->count();
+
+            if ($record >= 1) {
+                Log::warning('Items already generated', [
+                    'journalId' => $journalid,
+                    'recordCount' => $record
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Items have already been generated!',
+                    'journalid' => $journalid,
+                    'data' => null
+                ], 400);
+            }
+
+            DB::beginTransaction();
+
+            try {
+                Log::info('Starting item generation transaction');
+                
+                // Insert new records
+                DB::table('stockcountingtrans')
+                    ->insertUsing(
+                        ['JOURNALID', 'ITEMDEPARTMENT', 'TRANSDATE', 'ITEMID', 'ADJUSTMENT', 'RECEIVEDCOUNT', 'WASTECOUNT', 'COUNTED', 'STORENAME'],
+                        function ($query) use ($journalid, $currentDateTime, $storename) {
+                            $query->select(
+                                DB::raw("'{$journalid}' as JOURNALID"),
+                                'b.itemdepartment',
+                                DB::raw("'{$currentDateTime}' as TRANSDATE"),
+                                'a.itemid as ITEMID',
+                                DB::raw('0 as ADJUSTMENT'),
+                                DB::raw('0 as RECEIVEDCOUNT'),
+                                DB::raw('0 as WASTECOUNT'),
+                                DB::raw('0 as COUNTED'),
+                                DB::raw("'{$storename}' as STORENAME")
+                            )
+                            ->from('inventtables as a')
+                            ->leftJoin('rboinventtables as b', 'a.itemid', '=', 'b.itemid')
+                            ->where('b.activeondelivery', '1');
+                        }
+                    );
+
+                Log::info('Active inventory items inserted');
+
+                $yesterday = Carbon::yesterday()->format('Y-m-d');
+                Log::info('Fetching yesterday\'s journal records', ['date' => $yesterday]);
+
+                $journalRecords = DB::connection('remote_db')
+                    ->table('inventjournaltables as a')
+                    ->leftJoin('inventjournaltrans as b', 'a.journalid', '=', 'b.journalid') 
+                    ->whereDate('a.posteddatetime', $yesterday)
+                    ->where('a.storeid', $storename)  
+                    ->get();
+
+                Log::info('Journal records retrieved', [
+                    'count' => $journalRecords->count()
+                ]);
+
+                foreach ($journalRecords as $record) {
+                    DB::table('stockcountingtrans')
+                        ->where('ITEMID', $record->ITEMID) 
+                        ->where('TRANSDATE', $currentDateTime)
+                        ->update([
+                            'ADJUSTMENT' => $record->ADJUSTMENT,
+                            'RECEIVEDCOUNT' => $record->ADJUSTMENT,
+                            'updated_at' => now()
+                        ]);
+                }
+
+                DB::commit();
+                Log::info('Transaction committed successfully');
+
+                // Get the newly generated items
+                $generatedItems = DB::table('stockcountingtrans')
+                    ->where('JOURNALID', $journalid)
+                    ->where('STORENAME', $storename)
+                    ->get();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Items generated successfully',
+                    'journalid' => $journalid,
+                    'data' => [
+                        'items' => $generatedItems,
+                        'total_count' => $generatedItems->count(),
+                        'generation_date' => $currentDateTime
+                    ]
+                ], 200);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Error in transaction', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                throw $e;
+            }
+        } catch (ValidationException $e) {
+            Log::warning('Validation failed', [
+                'errors' => $e->errors()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error in getbwproducts', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generating items: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function StockCountingLine($journalid)
     {
@@ -372,37 +372,30 @@ public function getbwproducts(Request $request, $storeids, $journalId)
                 ->OrderBy('a.ADJUSTMENT', 'DESC')
                 ->get();
 
-            Log::info('Stock transfer records retrieved', [
-                'count' => $journalRecords->count()
+            Log::info('Stock counting records retrieved', [
+                'count' => $stockcountingtrans->count()
             ]);
 
-            foreach ($journalRecords as $record) {
-                DB::table('stockcountingtrans')
-                    ->where('ITEMID', $record->itemid)
-                    ->whereDate('TRANSDATE', now())
-                    ->update([
-                        'TRANSFERCOUNT' => $record->qty,
-                        'updated_at' => now()
-                    ]);
-            }
+            $isPosted = DB::table('stockcountingtables')
+                ->where('journalid', $journalid)
+                ->where('storeid', $storeName)
+                ->value('posted') ?? 0;
 
-            DB::commit();
-            Log::info('Transaction committed successfully');
-
-            return redirect()
-                ->route('StockCountingLine', ['journalid' => $journalid])
-                ->with('message', 'Stock Transfer Updated Successfully')
-                ->with('isSuccess', true);
+            return Inertia::render('StockCountingLine/show', [
+                'journalid' => $journalid,
+                'stockcountingtrans' => $stockcountingtrans,
+                'isPosted' => $isPosted,
+                'currentDate' => $currentDate,
+            ]);
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error in getstocktransfer', [
+            Log::error('Error in StockCountingLine', [
                 'journalId' => $journalid,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
             return back()
-                ->with('message', 'Error occurred: ' . $e->getMessage())
+                ->with('message', 'Error loading stock counting line: ' . $e->getMessage())
                 ->with('isError', true);
         }
     }
@@ -499,64 +492,242 @@ public function getbwproducts(Request $request, $storeids, $journalId)
     }
 
     public function postbatchline($itemid, $storeid, $journalid, $adjustment, $receivedcount, $transfercount, $wastecount, $wastetype, $counted)
-{
-    try {
-        // Assuming you have a StockCount model
-        $updated = stockcountingtrans::where([
-            'ITEMID' => $itemid,
-            'STORENAME' => $storeid,
-            'JOURNALID' => $journalid
-        ])
-        ->whereDate('TRANSDATE', Carbon::today())
-        ->update([
-            'ADJUSTMENT' => $adjustment,
-            'COUNTED' => $counted, 
-            'TRANSFERCOUNT' => $transfercount,
-            'RECEIVEDCOUNT' => $receivedcount,
-            'WASTECOUNT' => $wastecount,
-            'WASTETYPE' => $wastetype,
-            'updated_at' => Carbon::now()
-        ]);
+    {
+        try {
+            $storename = Auth::user()->storeid;
+            $currentDate = Carbon::now('Asia/Manila')->toDateString();
+            $yesterday = Carbon::yesterday()->format('Y-m-d');
+            
+            Log::info('Updating stock counting record', [
+                'itemid' => $itemid,
+                'storeid' => $storeid,
+                'journalid' => $journalid
+            ]);
 
-        // Fetch the updated record to return in response
-        $stockCount = stockcountingtrans::where([
-            'ITEMID' => $itemid,
-            'STORENAME' => $storeid,
-            'JOURNALID' => $journalid
-        ])
-        ->whereDate('TRANSDATE', Carbon::today())
-        ->first();
+            $updated = stockcountingtrans::where([
+                'ITEMID' => $itemid,
+                'STORENAME' => $storeid,
+                'JOURNALID' => $journalid
+            ])
+            ->whereDate('TRANSDATE', Carbon::today())
+            ->update([
+                'ADJUSTMENT' => $adjustment,
+                'COUNTED' => $counted, 
+                'TRANSFERCOUNT' => $transfercount,
+                'RECEIVEDCOUNT' => $receivedcount,
+                'WASTECOUNT' => $wastecount,
+                'WASTETYPE' => $wastetype,
+                'updated_at' => Carbon::now()
+            ]);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Stock counting records updated successfully',
-            'data' => $stockCount
-        ], 200);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Failed to update stock counting records',
-            'error' => $e->getMessage()
-        ], 500);
+            // Fetch the updated record to return in response
+            $stockCount = stockcountingtrans::where([
+                'ITEMID' => $itemid,
+                'STORENAME' => $storeid,
+                'JOURNALID' => $journalid
+            ])
+            ->whereDate('TRANSDATE', Carbon::today())
+            ->first();
+
+            // Update inventory summaries
+            $this->updateInventorySummaries($itemid, $storeid, $currentDate, $yesterday);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Stock counting records updated successfully',
+                'data' => $stockCount
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error in postbatchline', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update stock counting records',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
+
+    private function updateInventorySummaries($itemid, $storename, $currentDate, $yesterday)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Update item_count
+            DB::table('inventory_summaries')
+                ->where('itemid', $itemid)
+                ->where('STORENAME', $storename)
+                ->whereDate('report_date', $currentDate)
+                ->update([
+                    'item_count' => DB::raw("(
+                        SELECT COUNTED 
+                        FROM stockcountingtrans 
+                        WHERE stockcountingtrans.ITEMID = '{$itemid}'
+                          AND STORENAME = '{$storename}'
+                          AND CAST(TRANSDATE AS DATE) = '{$currentDate}'
+                          AND COUNTED > 0
+                    )")
+                ]);
+
+            // Update throw_away
+            DB::table('inventory_summaries')
+                ->where('itemid', $itemid)
+                ->where('STORENAME', $storename)
+                ->whereDate('report_date', $currentDate)
+                ->update([
+                    'throw_away' => DB::raw("(
+                        SELECT COALESCE(SUM(WASTECOUNT), 0)
+                        FROM stockcountingtrans 
+                        WHERE stockcountingtrans.ITEMID = '{$itemid}'
+                          AND STORENAME = '{$storename}'
+                          AND CAST(TRANSDATE AS DATE) = '{$currentDate}'
+                    )")
+                ]);
+
+            // Update received_delivery
+            DB::table('inventory_summaries')
+                ->where('itemid', $itemid)
+                ->where('STORENAME', $storename)
+                ->whereDate('report_date', $currentDate)
+                ->update([
+                    'received_delivery' => DB::raw("(
+                        SELECT COALESCE(SUM(RECEIVEDCOUNT), 0)
+                        FROM stockcountingtrans 
+                        WHERE stockcountingtrans.ITEMID = '{$itemid}'
+                          AND STORENAME = '{$storename}'
+                          AND CAST(TRANSDATE AS DATE) = '{$currentDate}'
+                    )")
+                ]);
+
+            // Update sales
+            DB::table('inventory_summaries')
+                ->where('itemid', $itemid)
+                ->where('STORENAME', $storename)
+                ->whereDate('report_date', $currentDate)
+                ->update([
+                    'sales' => DB::raw("(
+                        SELECT COALESCE(SUM(b.qty), 0)
+                        FROM rbotransactiontables a 
+                        LEFT JOIN rbotransactionsalestrans b ON a.transactionid = b.transactionid 
+                        LEFT JOIN rboinventtables c ON b.itemid = c.itemid 
+                        WHERE a.store = '{$storename}'
+                        AND CAST(a.createddate AS DATE) = '{$currentDate}'
+                        AND c.itemid = '{$itemid}'
+                    )")
+                ]);
+
+            // Update beginning inventory
+            DB::table('inventory_summaries')
+                ->where('itemid', $itemid)
+                ->where('STORENAME', $storename)
+                ->whereDate('report_date', $currentDate)
+                ->update([
+                    'beginning' => DB::raw("(
+                        SELECT COALESCE(item_count, 0)
+                        FROM inventory_summaries prev
+                        WHERE prev.itemid = '{$itemid}'
+                          AND prev.STORENAME = '{$storename}'
+                          AND CAST(prev.report_date AS DATE) = '{$yesterday}'
+                    )")
+                ]);
+
+            // Update ending inventory
+            DB::table('inventory_summaries')
+                ->where('itemid', $itemid)
+                ->where('STORENAME', $storename)
+                ->whereDate('report_date', $currentDate)
+                ->update([
+                    'ending' => DB::raw("CASE 
+                        WHEN beginning IS NOT NULL 
+                             AND beginning != 0
+                             AND received_delivery = 0
+                             AND stock_transfer = 0
+                             AND sales = 0
+                             AND bundle_sales = 0
+                             AND throw_away = 0
+                             AND early_molds = 0
+                             AND pull_out = 0
+                             AND rat_bites = 0
+                             AND ant_bites = 0
+                        THEN beginning
+                        ELSE beginning + received_delivery - stock_transfer - sales - bundle_sales - throw_away - early_molds - pull_out - rat_bites - ant_bites
+                    END")
+                ]);
+
+            // Update item_count based on conditions
+            DB::table('inventory_summaries')
+                ->where('itemid', $itemid)
+                ->where('STORENAME', $storename)
+                ->whereDate('report_date', $currentDate)
+                ->update([
+                    'item_count' => DB::raw("CASE 
+                        WHEN beginning IS NOT NULL 
+                             AND beginning != 0
+                             AND received_delivery = 0
+                             AND stock_transfer = 0
+                             AND sales = 0
+                             AND bundle_sales = 0
+                             AND throw_away = 0
+                             AND early_molds = 0
+                             AND pull_out = 0
+                             AND rat_bites = 0
+                             AND ant_bites = 0
+                        THEN beginning 
+                        ELSE item_count 
+                    END")
+                ]);
+
+            // Update variance
+            DB::table('inventory_summaries')
+                ->where('itemid', $itemid)
+                ->where('STORENAME', $storename)
+                ->whereDate('report_date', $currentDate)
+                ->update([
+                    'variance' => DB::raw('ending - item_count')
+                ]);
+
+            DB::commit();
+            Log::info('Inventory summaries updated successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating inventory summaries', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
     
     public function getstocktransfer(Request $request, $journalid)
     {
         try {
             $storename = Auth::user()->storeid;
             
+            Log::info('Fetching stock transfer data', [
+                'journalId' => $journalid,
+                'store' => $storename
+            ]);
+            
             DB::beginTransaction();
             $journalRecords = DB::table('stock_transfers as a')
                 ->leftJoin('stock_transfer_items as b', 'a.id', '=', 'b.stock_transfer_id')
                 ->select('b.itemid', DB::raw('SUM(b.quantity) as qty'))
                 ->whereDate('a.transfer_date', now())
+                ->where('a.store_id', $storename)
                 ->groupBy('b.itemid')
                 ->get();
+
+            Log::info('Stock transfer records retrieved', [
+                'count' => $journalRecords->count()
+            ]);
 
             foreach ($journalRecords as $record) {
                 DB::table('stockcountingtrans')
                     ->where('ITEMID', $record->itemid)
+                    ->where('JOURNALID', $journalid)
                     ->whereDate('TRANSDATE', now())
                     ->update([
                         'TRANSFERCOUNT' => $record->qty,
@@ -565,12 +736,20 @@ public function getbwproducts(Request $request, $storeids, $journalId)
             }
 
             DB::commit();
+            Log::info('Stock transfer update completed successfully');
+
             return redirect()
                 ->route('StockCountingLine', ['journalid' => $journalid])
                 ->with('message', 'Stock Transfer Updated Successfully')
                 ->with('isSuccess', true);
+
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Error in getstocktransfer', [
+                'journalId' => $journalid,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()
                 ->with('message', 'Error occurred: ' . $e->getMessage())
                 ->with('isError', true);
