@@ -103,9 +103,7 @@ const footerTotals = computed(() => {
 
         acc.bw_products += (parseFloat(row.bw_products) || 0);
         acc.merchandise += (parseFloat(row.merchandise) || 0);
-
         acc.partycakes += (parseFloat(row.partycakes) || 0);
-        
 
         return acc;
     }, {
@@ -128,75 +126,75 @@ const footerTotals = computed(() => {
         grabfood: 0,
         mrktgdisc: 0,
         rddisc: 0,
+        discofferid: 0,
 
         bw_products: 0,
         merchandise: 0,
         partycakes: 0
-        
     });
 });
 
 const columns = [
     { data: 'storename', title: 'Store', footer: 'Grand Total' },
-    { data: 'staff', title: 'Staff' },
-    { data: 'createddate', title: 'Date' },
-    { data: 'timeonly', title: 'Time' },
-    { data: 'transactionid', title: 'Transaction ID' },
-    { data: 'receiptid', title: 'Receipt ID' },
-    { data: 'paymentmethod', title: 'Payment Method' },
-    { data: 'custaccount', title: 'Customer' },
-    { data: 'itemname', title: 'Item Name' },
-    { data: 'itemgroup', title: 'Item Group' },
-    { data: 'discofferid', title: 'PROMO' },
+    { data: 'staff', title: 'Staff', footer: '' },
+    { data: 'createddate', title: 'Date', footer: '' },
+    { data: 'timeonly', title: 'Time', footer: '' },
+    { data: 'transactionid', title: 'Transaction ID', footer: '' },
+    { data: 'receiptid', title: 'Receipt ID', footer: '' },
+    { data: 'paymentmethod', title: 'Payment Method', footer: '' },
+    { data: 'custaccount', title: 'Customer', footer: '' },
+    { data: 'itemname', title: 'Item Name', footer: '' },
+    { data: 'itemgroup', title: 'Item Group', footer: '' },
+    { data: 'discofferid', title: 'PROMO', footer: '' },
     
-    // Existing columns
+    // Columns with footer calculations (indices 11-29)
     { 
         data: 'qty', 
         title: 'Qty',
         render: (data) => Math.round(data || 0),
-        footer: () => Math.round(footerTotals.value.total_qty)
+        footer: ''
     },
     { 
         data: 'total_costprice', 
         title: 'Cost Price',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.total_costprice.toFixed(2)
+        footer: ''
     },
     { 
         data: 'total_grossamount', 
         title: 'Gross Amount',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.total_grossamount.toFixed(2)
+        footer: ''
     },
     { 
         data: 'total_costamount', 
         title: 'Cost Amount',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.total_costamount.toFixed(2)
+        footer: ''
     },
     { 
         data: 'total_discamount', 
         title: 'Discount Amount',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.total_discamount.toFixed(2)
+        footer: ''
     },
     { 
         data: 'total_netamount', 
         title: 'Net Amount',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.total_netamount.toFixed(2)
+        footer: ''
     },
     { 
         data: 'vatablesales', 
         title: 'Vatable Sales',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.vatablesales.toFixed(2)
+        footer: ''
     },
     { 
         data: 'vat', 
         title: 'VAT',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.vat.toFixed(2)
+        footer: ''
     },
 
     // Payment Method Columns
@@ -204,74 +202,69 @@ const columns = [
         data: 'cash', 
         title: 'Cash',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.cash.toFixed(2)
+        footer: ''
     },
     { 
         data: 'charge', 
         title: 'Charge',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.charge.toFixed(2)
+        footer: ''
     },
     { 
         data: 'representation', 
         title: 'Representation',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.representation.toFixed(2)
+        footer: ''
     },
     { 
         data: 'gcash', 
         title: 'GCash',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.gcash.toFixed(2)
+        footer: ''
     },
     { 
         data: 'foodpanda', 
         title: 'FoodPanda',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.foodpanda.toFixed(2)
+        footer: ''
     },
     { 
         data: 'grabfood', 
         title: 'GrabFood',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.grabfood.toFixed(2)
+        footer: ''
     },
     { 
         data: 'mrktgdisc', 
         title: 'Mktg Disc',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.mrktgdisc.toFixed(2)
+        footer: ''
     },
     { 
         data: 'rddisc', 
         title: 'RD Disc',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.rddisc.toFixed(2)
+        footer: ''
     },
     { 
         data: 'bw_products', 
         title: 'BW PRODUCTS',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: (data) => {
-            const total = footerTotals.value.bw_products || 0;
-            return total.toFixed(2);
-        }
+        footer: ''
     },
     { 
         data: 'merchandise', 
         title: 'MERCHANDISE',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: (data) => {
-            const total = footerTotals.value.merchandise || 0;
-            return total.toFixed(2);
-        }
+        footer: ''
     },
     { 
         data: 'partycakes', 
         title: 'PARTYCAKES',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: () => footerTotals.value.partycakes.toFixed(2)
-    }
+        footer: ''
+    },
+    { data: 'remarks', title: 'NOTE', footer: '' }
 ];
 
 const options = {
@@ -286,7 +279,6 @@ const options = {
         {
             text: 'Export Excel',
             action: function(e, dt, node, config) {
-                // Pass the DataTable instance to export only filtered data
                 exportToExcel(dt);
             }
         },
@@ -333,40 +325,43 @@ const options = {
         });
 
         // Update footer with new totals
-        const footerRow = api.table().footer().querySelectorAll('td, th');
-        
-        // Map of column indices to their corresponding total keys
-        const columnMappings = [
-            { index: 11, key: 'total_qty', round: true },
-            { index: 12, key: 'total_costprice' },
-            { index: 13, key: 'total_grossamount' },
-            { index: 14, key: 'total_costamount' },
-            { index: 15, key: 'total_discamount' },
-            { index: 16, key: 'total_netamount' },
-            { index: 17, key: 'vatablesales' },
-            { index: 18, key: 'vat' },
-            { index: 19, key: 'cash' },
-            { index: 20, key: 'charge' },
-            { index: 21, key: 'representation' },
-            { index: 22, key: 'gcash' },
-            { index: 23, key: 'foodpanda' },
-            { index: 24, key: 'grabfood' },
-            { index: 25, key: 'mrktgdisc' },
-            { index: 26, key: 'rddisc' },
-            { index: 27, key: 'bw_products' },
-            { index: 28, key: 'merchandise' },
-            { index: 29, key: 'partycakes' }
-        ];
+        const footerRow = api.table().footer();
+        if (footerRow) {
+            const footerCells = footerRow.querySelectorAll('td, th');
+            
+            // Map of column indices to their corresponding total keys
+            const columnMappings = [
+                { index: 11, key: 'total_qty', round: true },
+                { index: 12, key: 'total_costprice' },
+                { index: 13, key: 'total_grossamount' },
+                { index: 14, key: 'total_costamount' },
+                { index: 15, key: 'total_discamount' },
+                { index: 16, key: 'total_netamount' },
+                { index: 17, key: 'vatablesales' },
+                { index: 18, key: 'vat' },
+                { index: 19, key: 'cash' },
+                { index: 20, key: 'charge' },
+                { index: 21, key: 'representation' },
+                { index: 22, key: 'gcash' },
+                { index: 23, key: 'foodpanda' },
+                { index: 24, key: 'grabfood' },
+                { index: 25, key: 'mrktgdisc' },
+                { index: 26, key: 'rddisc' },
+                { index: 27, key: 'bw_products' },
+                { index: 28, key: 'merchandise' },
+                { index: 29, key: 'partycakes' }
+            ];
 
-        // Update footer cells with filtered totals
-        columnMappings.forEach(({ index, key, round }) => {
-            const total = filteredTotals[key];
-            if (footerRow[index]) {
-                footerRow[index].textContent = round ? 
-                    Math.round(total).toString() : 
-                    total.toFixed(2);
-            }
-        });
+            // Update footer cells with filtered totals
+            columnMappings.forEach(({ index, key, round }) => {
+                const total = filteredTotals[key];
+                if (footerCells[index]) {
+                    footerCells[index].textContent = round ? 
+                        Math.round(total).toString() : 
+                        total.toFixed(2);
+                }
+            });
+        }
     }
 };
 
@@ -375,7 +370,7 @@ const exportToExcel = (dt) => {
     const worksheet = workbook.addWorksheet('Sales Data');
     
     // Define columns with proper width and number formats
-    const columns = [
+    const excelColumns = [
         { header: 'STORE', key: 'storename', width: 20 },
         { header: 'STAFF', key: 'staff', width: 15 },
         { header: 'DATE', key: 'createddate', width: 12 },
@@ -405,10 +400,11 @@ const exportToExcel = (dt) => {
         { header: 'RD DISC', key: 'rddisc', width: 12, style: { numFmt: '#,##0.00' } },
         { header: 'BW PRODUCTS', key: 'bw_products', width: 15, style: { numFmt: '#,##0.00' } },
         { header: 'MERCHANDISE', key: 'merchandise', width: 15, style: { numFmt: '#,##0.00' } },
-        { header: 'PARTY CAKES', key: 'partycakes', width: 15, style: { numFmt: '#,##0.00' } }
+        { header: 'PARTY CAKES', key: 'partycakes', width: 15, style: { numFmt: '#,##0.00' } },
+        { header: 'NOTE', key: 'remarks', width: 20 }
     ];
 
-    worksheet.columns = columns;
+    worksheet.columns = excelColumns;
 
     // Style the header row
     const headerRow = worksheet.getRow(1);
@@ -455,7 +451,8 @@ const exportToExcel = (dt) => {
             rddisc: Number(row.rddisc) || 0,
             bw_products: Number(row.bw_products) || 0,
             merchandise: Number(row.merchandise) || 0,
-            partycakes: Number(row.partycakes) || 0
+            partycakes: Number(row.partycakes) || 0,
+            remarks: row.remarks || ''
         });
     });
 
@@ -533,7 +530,8 @@ const exportToExcel = (dt) => {
         rddisc: filteredTotals.rddisc,
         bw_products: filteredTotals.bw_products,
         merchandise: filteredTotals.merchandise,
-        partycakes: filteredTotals.partycakes
+        partycakes: filteredTotals.partycakes,
+        remarks: ''
     });
 
     // Style totals row
@@ -628,14 +626,13 @@ const populatePaymentMethodColumns = (data) => {
         const paymentMethod = row.paymentmethod ? row.paymentmethod.toLowerCase() : '';
         const grossAmount = parseFloat(row.total_grossamount) || 0;
         const discAmount = parseFloat(row.total_discamount) || 0;
-        const netAmount = parseFloat(row.total_netamount) || 0; // Use the actual netamount from data
+        const netAmount = parseFloat(row.total_netamount) || 0;
         const promoType = row.discofferid ? row.discofferid.toUpperCase() : '';
         const itemGroupValue = row.itemgroup ? row.itemgroup.toUpperCase() : '';
         const itemName = row.itemname ? row.itemname.toUpperCase() : '';
 
         // Handle payment methods - use netAmount for all payment methods
-        // For negative values, we should still use netAmount to maintain consistency
-        const paymentAmount = netAmount; // This ensures consistency regardless of positive/negative values
+        const paymentAmount = netAmount;
 
         switch(paymentMethod) {
             case 'cash':
@@ -720,7 +717,6 @@ const syncPaymentMethods = async () => {
         isLoading.value = false;  
     }
 };
-
 
 </script>
 

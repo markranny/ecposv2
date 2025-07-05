@@ -36,11 +36,12 @@ return [
     */
 
     'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
-        ],
+    'web' => [
+        'driver' => 'session',
+        'provider' => 'users',
+        'expire_on_close' => false, // Keep session alive when browser closes
     ],
+],
 
     /*
     |--------------------------------------------------------------------------

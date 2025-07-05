@@ -848,7 +848,8 @@ public function tsales(Request $request)
             DB::raw('rbotransactionsalestrans.netamountnotincltax as vatablesales'),
             DB::raw('rbotransactionsalestrans.taxinclinprice as vat'),
             'rbotransactionsalestrans.store as storename',
-            'rbotransactionsalestrans.staff'
+            'rbotransactionsalestrans.staff',
+            'rbotransactionsalestrans.remarks'
         )
         ->leftJoin('rbostoretables', 'rbotransactionsalestrans.store', '=', 'rbostoretables.STOREID')
         ->orderBy('rbotransactionsalestrans.transactionid', 'DESC');
