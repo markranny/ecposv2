@@ -332,6 +332,10 @@ Route::middleware(['auth', 'role:SUPERADMIN,STORE,ADMIN,OPIC,PLANNING'])->group(
     Route::get('tsales-report', [ECReportController::class, 'tsales'])->name('reports.tsales');
     Route::get('itemsales-report', [ECReportController::class, 'itemsales'])->name('reports.itemsales');
 
+    Route::post('/inventory/update', [InventoryUpdateController::class, 'updateInventorySummaries']);
+    Route::post('/inventory/update-all', [InventoryUpdateController::class, 'updateAllStores']);
+    Route::get('/inventory/summary', [InventoryUpdateController::class, 'getInventorySummary']);
+
     /*<==================CUSTOMERS====================>*/
     Route::resource('customers', CustomersController::class);
     Route::get('ledger/{accountnum}', [LedgerController::class, 'ledger'])->name('ledger');
