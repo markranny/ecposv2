@@ -1,13 +1,11 @@
 <script setup>
-import { useForm } from '@inertiajs/vue3';
-import { router } from '@inertiajs/vue3';
+import { useForm, router } from '@inertiajs/vue3';
 import Create from "@/Components/Items/Create.vue";
 import Enable from "@/Components/Items/Enable.vue";
 import Update from "@/Components/Items/Update.vue";
 import UpdateMOQ from "@/Components/Items/UpdateMOQ.vue";
 import More from "@/Components/Items/More.vue";
 import PrimaryButton from "@/Components/Buttons/PrimaryButton.vue";
-import TransparentButton from "@/Components/Buttons/TransparentButton.vue";
 import TableContainer from "@/Components/Tables/TableContainer.vue";
 import Main from "@/Layouts/AdminPanel.vue";
 import StorePanel from "@/Layouts/Main.vue";
@@ -15,18 +13,12 @@ import Excel from "@/Components/Exports/Excel.vue";
 
 import Add from "@/Components/Svgs/Add.vue";
 import Enabled from "@/Components/Svgs/Enabled.vue";
-import editblue from "@/Components/Svgs/editblue.vue";
 import Import from "@/Components/Svgs/Import.vue";
-import moreblue from "@/Components/Svgs/moreblue.vue";
-import Link from "@/Components/Svgs/Link.vue";
 
-import { ref, computed, toRefs, onMounted, nextTick } from 'vue';
+import { ref, computed, toRefs, watch } from 'vue';
 import axios from 'axios';
 
-import DataTable from 'datatables.net-vue3';
-import DataTablesCore from 'datatables.net';
-DataTable.use(DataTablesCore);
-
+// Reactive refs
 const itemid = ref('');
 const itemname = ref('');
 const cost = ref('');
@@ -34,238 +26,193 @@ const itemgroup = ref('');
 const specialgroup = ref('');
 const price = ref('');
 const moq = ref('');
-// Added missing price fields
 const manilaprice = ref('');
 const foodpandaprice = ref('');
 const grabfoodprice = ref('');
 const mallprice = ref('');
 const production = ref('');
 
-const allSelected = ref(false);
 const selectedItems = ref([]);
 const showImportModal = ref(false);
 
+// Pagination and filtering state
+const currentPage = ref(1);
+const itemsPerPage = ref(50);
+const searchQuery = ref('');
+const selectedCategory = ref('');
+const selectedStatus = ref('');
+
+// Props with proper validation and defaults
 const props = defineProps({
     items: {
         type: Array,
         required: true,
+        default: () => []
     },
-    itemids: Array,
+    itemids: {
+        type: Array,
+        default: () => []
+    },
     auth: {
         type: Object,
         required: true,
+        default: () => ({})
     },
-    rboinventitemretailgroups:{
+    rboinventitemretailgroups: {
         type: Array,
         required: true,
+        default: () => []
     },
 });
 
+// Computed properties with proper null checking
 const layoutComponent = computed(() => {
-  return props.auth === 'STORE' ? StorePanel : Main;
+    return props.auth?.user?.role === 'STORE' ? StorePanel : Main;
 });
 
-const { user } = toRefs(props.auth);
-const userRole = ref(user.value.role);
+const { auth } = toRefs(props);
+const user = computed(() => auth.value?.user || {});
+const userRole = computed(() => user.value?.role || '');
+
 const isOpic = computed(() => userRole.value === 'SUPERADMIN');
 const isAdmin = computed(() => userRole.value === 'OPIC');
 const isRso = computed(() => userRole.value === 'ADMIN');
 
+// Modal states
 const showModalUpdate = ref(false);
 const showModalUpdateMOQ = ref(false);
 const showCreateModal = ref(false);
 const showEnableModal = ref(false);
 const showModalMore = ref(false);
 
-const navigateToLinks = (itemid) => {
-    router.visit(route('item-links.index', itemid));
-};
-
-const columns = computed(() => {
-  const baseColumns = [
-    { data: 'Activeondelivery', title: 'ENABLEORDER' },
-    { data: 'itemid', title: 'PRODUCTCODE' },
-    { data: 'itemname', title: 'DESCRIPTION' },
-    { data: 'barcode', title: 'BARCODE' },
-    { data: 'itemgroup', title: 'CATEGORY' },
-    { data: 'specialgroup', title: 'RETAILGROUP' },
-    { data: 'production', title: 'PRODUCTION' },
-    { data: 'moq', title: 'MOQ' },
-    {
-      data: 'cost',
-      title: 'COST',
-      render: (data, type, row) => {
-        if (type === 'display') {
-          return row.cost != null ? Number(row.cost).toFixed(2) : '0.00';
-        }
-        return data;
-      },
-    },
-    {
-      data: 'price',
-      title: 'SRP',
-      render: (data, type, row) => {
-        if (type === 'display') {
-          return row.price != null ? Number(row.price).toFixed(2) : '0.00';
-        }
-        return data;
-      },
-    },
-    {
-      data: 'manilaprice',
-      title: 'MANILA',
-      render: (data, type, row) => {
-        if (type === 'display') {
-          return row.manilaprice != null ? Number(row.manilaprice).toFixed(2) : '0.00';
-        }
-        return data;
-      },
-    },
-    {
-      data: 'mallprice',
-      title: 'MALL',
-      render: (data, type, row) => {
-        if (type === 'display') {
-          return row.mallprice != null ? Number(row.mallprice).toFixed(2) : '0.00';
-        }
-        return data;
-      },
-    },
-    {
-      data: 'grabfoodprice',
-      title: 'GRABFOOD',
-      render: (data, type, row) => {
-        if (type === 'display') {
-          return row.grabfoodprice != null ? Number(row.grabfoodprice).toFixed(2) : '0.00';
-        }
-        return data;
-      },
-    },
-    {
-      data: 'foodpandaprice',
-      title: 'FOODPANDA',
-      render: (data, type, row) => {
-        if (type === 'display') {
-          return row.foodpandaprice != null ? Number(row.foodpandaprice).toFixed(2) : '0.00';
-        }
-        return data;
-      },
-    },
-    // Added default fields to columns
-    {
-      data: 'default1',
-      title: 'DEFAULT1',
-      render: (data, type, row) => {
-        if (type === 'display') {
-          return row.default1 ? 'Yes' : 'No';
-        }
-        return data;
-      },
-    },
-    {
-      data: 'default2',
-      title: 'DEFAULT2',
-      render: (data, type, row) => {
-        if (type === 'display') {
-          return row.default2 ? 'Yes' : 'No';
-        }
-        return data;
-      },
-    },
-    {
-      data: 'default3',
-      title: 'DEFAULT3',
-      render: (data, type, row) => {
-        if (type === 'display') {
-          return row.default3 ? 'Yes' : 'No';
-        }
-        return data;
-      },
-    },
-  ];
-
-  if (isOpic.value || isAdmin.value || isRso.value) {
-    baseColumns.unshift({
-      data: null,
-      title: '<input type="checkbox" id="selectAll" class="form-checkbox h-5 w-5 text-blue-600 rounded-full">',
-      orderable: false,
-      render: (data, type, row) => {
-        return `<input type="checkbox" class="select-item form-checkbox h-5 w-5 text-blue-600 rounded-full" data-id="${row.itemid}">`;
-      }
-    });
-    baseColumns.push({
-      data: null,
-      render: '#action',
-      title: 'ACTIONS'
-    });
-  }
-  return baseColumns;
+// Computed properties for filtering and pagination with proper null checking
+const categories = computed(() => {
+    if (!props.items || !Array.isArray(props.items)) return [];
+    const cats = new Set(props.items.map(item => item?.itemgroup).filter(Boolean));
+    return Array.from(cats).sort();
 });
 
-const options = {
-    paging: false,
-    scrollX: true,
-    scrollY: "60vh",
-    scrollCollapse: true,
-};
+const filteredItems = computed(() => {
+    if (!props.items || !Array.isArray(props.items)) return [];
+    
+    let filtered = [...props.items];
 
-const toggleAllSelection = () => {
-    allSelected.value = !allSelected.value;
-    const checkboxes = document.querySelectorAll('.select-item');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = allSelected.value;
-    });
-    updateSelectedItems();
-};
+    // Search filter
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase();
+        filtered = filtered.filter(item => 
+            item?.itemid?.toLowerCase().includes(query) ||
+            item?.itemname?.toLowerCase().includes(query) ||
+            item?.barcode?.toLowerCase().includes(query)
+        );
+    }
 
-const updateSelectedItems = () => {
-    const checkboxes = document.querySelectorAll('.select-item:checked');
-    selectedItems.value = Array.from(checkboxes).map(checkbox => checkbox.dataset.id);
-};
+    // Category filter
+    if (selectedCategory.value) {
+        filtered = filtered.filter(item => item?.itemgroup === selectedCategory.value);
+    }
 
-const getSelectedItems = () => {
-    return selectedItems.value;
-};
+    // Status filter
+    if (selectedStatus.value !== '') {
+        const status = selectedStatus.value === '1';
+        filtered = filtered.filter(item => Boolean(item?.Activeondelivery) === status);
+    }
 
-// Updated to accept all required parameters including price fields
-const toggleUpdateModal = (newID, newItemName, newItemGroup, newPrice, newCost, newMoq, newManilaPrice, newFoodPandaPrice, newGrabFoodPrice, newMallPrice, newProduction) => {
-    itemid.value = newID;
-    itemname.value = newItemName;
-    itemgroup.value = newItemGroup;
-    price.value = newPrice;
-    cost.value = newCost;
-    moq.value = newMoq;
-    manilaprice.value = newManilaPrice || 0;
-    foodpandaprice.value = newFoodPandaPrice || 0;
-    grabfoodprice.value = newGrabFoodPrice || 0;
-    mallprice.value = newMallPrice || 0;
-    production.value = newProduction || '';
+    return filtered;
+});
+
+const totalPages = computed(() => {
+    const itemCount = filteredItems.value?.length || 0;
+    return Math.ceil(itemCount / itemsPerPage.value);
+});
+
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value);
+
+const paginatedItems = computed(() => {
+    if (!filteredItems.value || !Array.isArray(filteredItems.value)) return [];
+    const start = startIndex.value;
+    const end = start + itemsPerPage.value;
+    return filteredItems.value.slice(start, end);
+});
+
+const visiblePages = computed(() => {
+    const pages = [];
+    const maxVisible = 5;
+    const total = totalPages.value;
+    const current = currentPage.value;
+    
+    if (total <= maxVisible) {
+        for (let i = 1; i <= total; i++) {
+            pages.push(i);
+        }
+    } else {
+        const start = Math.max(1, current - Math.floor(maxVisible / 2));
+        const end = Math.min(total, start + maxVisible - 1);
+        
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+    }
+    return pages;
+});
+
+const allSelected = computed({
+    get() {
+        if (!paginatedItems.value || paginatedItems.value.length === 0) return false;
+        return paginatedItems.value.every(item => selectedItems.value.includes(item?.itemid));
+    },
+    set(value) {
+        if (!paginatedItems.value || paginatedItems.value.length === 0) return;
+        
+        if (value) {
+            const newSelections = paginatedItems.value.map(item => item?.itemid).filter(Boolean);
+            selectedItems.value = [...new Set([...selectedItems.value, ...newSelections])];
+        } else {
+            const pageIds = paginatedItems.value.map(item => item?.itemid).filter(Boolean);
+            selectedItems.value = selectedItems.value.filter(id => !pageIds.includes(id));
+        }
+    }
+});
+
+// Modal handlers
+const toggleUpdateModal = (item) => {
+    if (!item) return;
+    
+    itemid.value = item.itemid || '';
+    itemname.value = item.itemname || '';
+    itemgroup.value = item.itemgroup || '';
+    price.value = item.price || '';
+    cost.value = item.cost || '';
+    moq.value = item.moq || '';
+    manilaprice.value = item.manilaprice || 0;
+    foodpandaprice.value = item.foodpandaprice || 0;
+    grabfoodprice.value = item.grabfoodprice || 0;
+    mallprice.value = item.mallprice || 0;
+    production.value = item.production || '';
     showModalUpdate.value = true;
 };
 
-const toggleMoreModal = (newID) => {
-    itemid.value = newID;
+const toggleMoreModal = (item) => {
+    if (!item) return;
+    itemid.value = item.itemid || '';
     showModalMore.value = true;
 };
 
-const toggleUpdateMOQModal = (newID, newItemName, newItemGroup, newPrice, newCost, newMoq, newProduction) => {
-    itemid.value = newID;
-    itemname.value = newItemName;
-    itemgroup.value = newItemGroup;
-    price.value = newPrice;
-    cost.value = newCost;
-    moq.value = newMoq;
-    production.value = newProduction || '';
+const toggleUpdateMOQModal = (item) => {
+    if (!item) return;
+    
+    itemid.value = item.itemid || '';
+    itemname.value = item.itemname || '';
+    itemgroup.value = item.itemgroup || '';
+    price.value = item.price || '';
+    cost.value = item.cost || '';
+    moq.value = item.moq || '';
+    production.value = item.production || '';
     showModalUpdateMOQ.value = true;
 };
 
 const toggleCreateModal = () => {
     showCreateModal.value = true;
-};
-
-const toggleEnableModal = (newID) => {
-    itemid.value = newID;
-    showEnableModal.value = true;
 };
 
 const updateModalHandler = () => {
@@ -280,10 +227,6 @@ const createModalHandler = () => {
     showCreateModal.value = false;
 };
 
-const enableModalHandler = () => {
-    showCreateModal.value = false;
-};
-
 const MoreModalHandler = () => {
     showModalMore.value = false;
 };
@@ -294,7 +237,7 @@ const importForm = useForm({
 });
 
 const handleFileUpload = (event) => {
-    importForm.file = event.target.files[0];
+    importForm.file = event.target.files?.[0] || null;
 };
 
 const submitImportForm = () => {
@@ -310,7 +253,6 @@ const submitImportForm = () => {
             const fileInput = document.getElementById('fileInput');
             if (fileInput) fileInput.value = '';
             showImportModal.value = false;
-            // Reload the page to show imported items
             window.location.reload();
         },
         onError: (errors) => {
@@ -323,92 +265,110 @@ const downloadTemplate = () => {
     window.location.href = '/download-import-template';
 };
 
-const handleSelectedCategory = (category) => {
-    console.log('Selected Category:', category);
+// Table event handlers
+const handleEditItem = (item) => {
+    toggleUpdateModal(item);
 };
 
-onMounted(() => {
-  const dataTable = ref(null);
-  
-  nextTick(() => {
-    if (isAdmin.value || isOpic.value) {
-      const selectAllCheckbox = document.getElementById('selectAll');
-      if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', toggleAllSelection);
-      }
+const handleViewLinks = (item) => {
+    if (!item?.itemid) return;
+    router.visit(route('item-links.index', item.itemid));
+};
 
-      const itemCheckboxes = document.querySelectorAll('.select-item');
-      itemCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateSelectedItems);
-      });
+const handleMoreActions = (item) => {
+    toggleMoreModal(item);
+};
+
+const handleBulkEnable = (itemIds) => {
+    const validIds = Array.isArray(itemIds) ? itemIds.filter(Boolean) : [];
+    
+    if (validIds.length === 0) {
+        alert('Please select at least one item.');
+        return;
     }
-  });
-});
 
-const ClickEnable = () => {
-  if (selectedItems.value.length === 0) {
-    alert('Please select at least one item.');
-    return;
-  }
-
-  axios.post('/EnableOrder', {
-    itemids: selectedItems.value
-  })
-  .then(response => {
-    alert(response.data.message);
-    location.reload();
-  })
-  
-  .catch(error => {
-    console.error('Error updating items:', error);
-    alert('An error occurred while updating items.');
-  });
+    axios.post('/EnableOrder', {
+        itemids: validIds
+    })
+    .then(response => {
+        alert(response.data?.message || 'Items updated successfully');
+        location.reload();
+    })
+    .catch(error => {
+        console.error('Error updating items:', error);
+        alert('An error occurred while updating items.');
+    });
 };
 
-const dataTable = ref(null);
-
-if (dataTable.value) {
-  dataTable.value.api = dataTable.value.dt;
-  }
-
-const getFilteredData = () => {
-  if (dataTable.value && dataTable.value.api) {
-    return dataTable.value.api.rows({ search: 'applied' }).data().toArray();
-  }
-  return props.items;
+const handleSelectionChanged = (newSelection) => {
+    selectedItems.value = Array.isArray(newSelection) ? newSelection : [];
 };
 
-// Enhanced export data with all fields
+// Export data preparation
 const getExportData = () => {
-  const data = getFilteredData();
-  return data.map(item => ({
-    itemid: item.itemid,
-    itemname: item.itemname,
-    barcode: item.barcode,
-    itemgroup: item.itemgroup,
-    specialgroup: item.specialgroup,
-    production: item.production,
-    moq: item.moq,
-    cost: item.cost ? Number(item.cost).toFixed(2) : '0.00',
-    price: item.price ? Number(item.price).toFixed(2) : '0.00',
-    manilaprice: item.manilaprice ? Number(item.manilaprice).toFixed(2) : '0.00',
-    mallprice: item.mallprice ? Number(item.mallprice).toFixed(2) : '0.00',
-    grabfoodprice: item.grabfoodprice ? Number(item.grabfoodprice).toFixed(2) : '0.00',
-    foodpandaprice: item.foodpandaprice ? Number(item.foodpandaprice).toFixed(2) : '0.00',
-    default1: item.default1 ? 'Yes' : 'No',
-    default2: item.default2 ? 'Yes' : 'No',
-    default3: item.default3 ? 'Yes' : 'No',
-    Activeondelivery: item.Activeondelivery
-  }));
+    if (!props.items || !Array.isArray(props.items)) return [];
+    
+    return props.items.map(item => ({
+        itemid: item?.itemid || '',
+        itemname: item?.itemname || '',
+        barcode: item?.barcode || '',
+        itemgroup: item?.itemgroup || '',
+        specialgroup: item?.specialgroup || '',
+        production: item?.production || '',
+        moq: item?.moq || '',
+        cost: item?.cost ? Number(item.cost).toFixed(2) : '0.00',
+        price: item?.price ? Number(item.price).toFixed(2) : '0.00',
+        manilaprice: item?.manilaprice ? Number(item.manilaprice).toFixed(2) : '0.00',
+        mallprice: item?.mallprice ? Number(item.mallprice).toFixed(2) : '0.00',
+        grabfoodprice: item?.grabfoodprice ? Number(item.grabfoodprice).toFixed(2) : '0.00',
+        foodpandaprice: item?.foodpandaprice ? Number(item.foodpandaprice).toFixed(2) : '0.00',
+        default1: item?.default1 ? 'Yes' : 'No',
+        default2: item?.default2 ? 'Yes' : 'No',
+        default3: item?.default3 ? 'Yes' : 'No',
+        Activeondelivery: item?.Activeondelivery || false
+    }));
+};
+
+// Utility functions
+const formatCurrency = (value) => {
+    if (value == null || value === '') return '0.00';
+    return Number(value).toFixed(2);
+};
+
+const toggleAllSelection = () => {
+    allSelected.value = !allSelected.value;
+};
+
+const previousPage = () => {
+    if (currentPage.value > 1) {
+        currentPage.value--;
+    }
+};
+
+const nextPage = () => {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value++;
+    }
+};
+
+const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+    }
 };
 
 const products = () => {
-  window.location.href = '/items';
+    window.location.href = '/items';
 };
 
 const nonproducts = () => {
-  window.location.href = '/warehouse';
+    window.location.href = '/warehouse';
 };
+
+// Reset to first page when filters change
+watch([searchQuery, selectedCategory, selectedStatus], () => {
+    currentPage.value = 1;
+});
 </script>
 
 <template>
@@ -423,9 +383,12 @@ const nonproducts = () => {
 
     <component :is="layoutComponent" active-tab="RETAILITEMS">
       <template v-slot:modals>
-        <Create :show-modal="showCreateModal" @toggle-active="createModalHandler" :rboinventitemretailgroups="props.rboinventitemretailgroups"  @select-item="handleSelectedCategory"/>
+        <Create 
+          :show-modal="showCreateModal" 
+          @toggle-active="createModalHandler" 
+          :rboinventitemretailgroups="props.rboinventitemretailgroups"
+        />
 
-        <!-- Updated Update component with all required props -->
         <Update
           :show-modal="showModalUpdate"
           :itemid="itemid"
@@ -463,7 +426,7 @@ const nonproducts = () => {
         <Enable
           :show-modal="showEnableModal"
           :itemids="selectedItems"
-          @click="ClickEnable"
+          @click="handleBulkEnable"
         />
 
         <!-- Import Modal -->
@@ -512,215 +475,263 @@ const nonproducts = () => {
             </div>
           </div>
         </div>
-
       </template>
 
-
       <template v-slot:main>
-
         <TableContainer>
-
-          <div class="md:hidden">
-            <div class="absolute adjust">
-              <div class="flex flex-col" id="panel" v-show="showPanel">
-                <div class="flex flex-wrap items-center">
-                  <PrimaryButton
-                    v-if="isAdmin || isOpic"
-                    type="button"
-                    @click="toggleCreateModal"
-                    class="m-2 bg-navy"
-                  >
-                    <Add class="h-4" />
-                  </PrimaryButton>
-
-                  <PrimaryButton
-                    v-if="isAdmin || isOpic"
-                    type="button"
-                    @click="ClickEnable"
-                    class="m-2 bg-navy"
-                  >
-                    <Enabled class="h-4" />
-                  </PrimaryButton>
-                  
-                  <!-- Export Button -->
-                  <Excel
-                    :data="getExportData()"
-                    :headers="['ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 'PRODUCTION', 'MOQ', 'COST', 'SRP', 'MANILA', 'MALL', 'GRABFOOD', 'FOODPANDA', 'DEFAULT1', 'DEFAULT2', 'DEFAULT3', 'ENABLEORDER']"
-                    :row-name-props="['itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice', 'grabfoodprice', 'foodpandaprice', 'default1', 'default2', 'default3', 'Activeondelivery']"
-                    class="m-2 bg-green-500"
-                    v-if="isAdmin || isOpic"
-                  />
-                  
-                  <!-- Import Button -->
-                  <PrimaryButton 
-                    class="m-2 bg-blue-500 hover:bg-blue-700" 
-                    @click="showImportModal = true" 
-                    v-if="isAdmin || isOpic"
-                  >
-                    <Import class="h-4" />
-                  </PrimaryButton>
-                </div>
-              </div>
-            </div> 
-          </div>
-
-            <div class="hidden md:block">
-              <div class="absolute adjust">
-              <div class="flex flex-col sm:flex-row justify-start items-center" id="panel" v-show="showPanel">
-                
-                <div class="flex flex-wrap justify-center sm:justify-start w-full sm:w-auto">
-                  <PrimaryButton
-                    v-if="isOpic "
-                    type="button"
-                    @click="toggleCreateModal"
-                    class="m-2 sm:m-6 bg-navy"
-                  >
-                    <Add class="h-4" />
-                  </PrimaryButton>
-
-                  <PrimaryButton
-                    v-if="isAdmin || isOpic"
-                    type="button"
-                    @click="ClickEnable"
-                    class="m-2 sm:m-6 bg-navy"
-                  >
-                    <Enabled class="h-4" />
-                  </PrimaryButton>
-
-                  <!-- Export Button -->
-                  <Excel
-                    :data="getExportData()"
-                    :headers="['ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 'PRODUCTION', 'MOQ', 'COST', 'SRP', 'MANILA', 'MALL', 'GRABFOOD', 'FOODPANDA', 'DEFAULT1', 'DEFAULT2', 'DEFAULT3', 'ENABLEORDER']"
-                    :row-name-props="['itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice', 'grabfoodprice', 'foodpandaprice', 'default1', 'default2', 'default3', 'Activeondelivery']"
-                    class="m-2 sm:m-6 bg-green-500"
-                    v-if="isAdmin || isOpic"
-                  />
-                  
-                  <!-- Import Button -->
-                  <PrimaryButton 
-                    class="m-2 sm:m-6 bg-blue-500 hover:bg-blue-700" 
-                    @click="showImportModal = true" 
-                    v-if="isOpic"
-                  >
-                    <Import class="h-4" />
-                  </PrimaryButton>
-                </div>
+          <!-- Header Controls -->
+          <div class="p-4 bg-gray-50 rounded-lg mb-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <!-- Action Buttons -->
+              <div class="flex flex-wrap gap-2">
+                <PrimaryButton
+                  v-if="isOpic"
+                  type="button"
+                  @click="toggleCreateModal"
+                  class="bg-navy hover:bg-navy-dark"
+                >
+                  <Add class="h-4 mr-2" />
+                  Add Item
+                </PrimaryButton>
 
                 <PrimaryButton
-                    type="button"
-                    @click="products"
-                    class="sm:m-2 bg-navy"
-                  >
-                    BW PRODUCTS
-                  </PrimaryButton>
+                  v-if="isAdmin || isOpic"
+                  type="button"
+                  @click="showEnableModal = true"
+                  class="bg-green-600 hover:bg-green-700"
+                  :disabled="selectedItems.length === 0"
+                >
+                  <Enabled class="h-4 mr-2" />
+                  Enable Selected ({{ selectedItems.length }})
+                </PrimaryButton>
 
-                  <PrimaryButton
-                    type="button"
-                    @click="nonproducts"
-                    class="sm:m-2 bg-red-900"
-                  >
-                    WAREHOUSE
-                  </PrimaryButton>
+                <!-- Export Button -->
+                <Excel
+                  :data="getExportData()"
+                  :headers="[
+                    'ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 
+                    'PRODUCTION', 'MOQ', 'COST', 'SRP', 'MANILA', 'MALL', 
+                    'GRABFOOD', 'FOODPANDA', 'DEFAULT1', 'DEFAULT2', 'DEFAULT3', 'ENABLEORDER'
+                  ]"
+                  :row-name-props="[
+                    'itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 
+                    'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice', 
+                    'grabfoodprice', 'foodpandaprice', 'default1', 'default2', 'default3', 'Activeondelivery'
+                  ]"
+                  class="bg-green-500 hover:bg-green-600"
+                  v-if="isAdmin || isOpic"
+                >
+                  Export Excel
+                </Excel>
+                
+                <!-- Import Button -->
+                <PrimaryButton 
+                  class="bg-blue-500 hover:bg-blue-700" 
+                  @click="showImportModal = true" 
+                  v-if="isOpic"
+                >
+                  <Import class="h-4 mr-2" />
+                  Import CSV
+                </PrimaryButton>
+              </div>
 
+              <!-- Navigation Buttons -->
+              <div class="flex gap-2">
+                <PrimaryButton
+                  type="button"
+                  @click="products"
+                  class="bg-navy hover:bg-navy-dark"
+                >
+                  BW Products
+                </PrimaryButton>
+
+                <PrimaryButton
+                  type="button"
+                  @click="nonproducts"
+                  class="bg-red-600 hover:bg-red-700"
+                >
+                  Warehouse
+                </PrimaryButton>
               </div>
             </div>
           </div>
-          
-          <DataTable
-                    :data="items"
-                    :columns="columns"
-                    class="w-full relative display mt-10"
-                    :options="options"
-                    ref="dataTable"
+
+          <!-- Table with Pagination -->
+          <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-4 border-b border-gray-200">
+              <div class="flex flex-col sm:flex-row gap-4">
+                <!-- Search -->
+                <div class="flex-1">
+                  <input
+                    v-model="searchQuery"
+                    type="text"
+                    placeholder="Search items by ID, name, or barcode..."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                </div>
+                
+                <!-- Filters -->
+                <div class="flex gap-2">
+                  <select
+                    v-model="selectedCategory"
+                    class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Categories</option>
+                    <option v-for="category in categories" :key="category" :value="category">
+                      {{ category }}
+                    </option>
+                  </select>
+                  
+                  <select
+                    v-model="selectedStatus"
+                    class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Status</option>
+                    <option value="1">Active</option>
+                    <option value="0">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Items Display -->
+            <div class="overflow-x-auto">
+              <div class="max-h-96 overflow-y-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th v-if="isAdmin || isOpic" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <input
+                          type="checkbox"
+                          :checked="allSelected"
+                          @change="toggleAllSelection"
+                          class="form-checkbox h-4 w-4 text-blue-600"
+                        >
+                      </th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                      <th v-if="isAdmin || isOpic" scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    <tr v-for="item in paginatedItems" :key="item?.itemid" class="hover:bg-gray-50">
+                      <td v-if="isAdmin || isOpic" class="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          :value="item?.itemid"
+                          v-model="selectedItems"
+                          class="form-checkbox h-4 w-4 text-blue-600"
+                        >
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span :class="[
+                          'px-2 py-1 text-xs rounded-full',
+                          item?.Activeondelivery ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        ]">
+                          {{ item?.Activeondelivery ? 'Active' : 'Inactive' }}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">{{ item?.itemid || '' }}</td>
+                      <td class="px-6 py-4 text-sm font-medium text-gray-900">
+                        <div class="max-w-xs truncate" :title="item?.itemname">{{ item?.itemname || '' }}</div>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item?.itemgroup || '' }}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">₱{{ formatCurrency(item?.cost) }}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono font-medium">₱{{ formatCurrency(item?.price) }}</td>
+                      <td v-if="isAdmin || isOpic" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex justify-end space-x-2">
+                          <button
+                            @click="handleEditItem(item)"
+                            class="text-blue-600 hover:text-blue-900"
+                            title="Edit Item"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            @click="handleViewLinks(item)"
+                            class="text-green-600 hover:text-green-900"
+                            title="Item Links"
+                          >
+                            Links
+                          </button>
+                          <button
+                            @click="handleMoreActions(item)"
+                            class="text-gray-600 hover:text-gray-900"
+                            title="More Actions"
+                          >
+                            More
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200" v-if="totalPages > 1">
+              <div class="flex-1 flex justify-between sm:hidden">
+                <button
+                  @click="previousPage"
+                  :disabled="currentPage === 1"
+                  class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
-                    <template #action="data">
-                        <!-- Updated to pass all required data including price fields -->
-                        <TransparentButton
-                            type="button"
-                            v-if="isAdmin || isOpic"
-                            @click="
-                                toggleUpdateModal(
-                                    data.cellData.itemid,
-                                    data.cellData.itemname,
-                                    data.cellData.itemgroup,
-                                    data.cellData.price,
-                                    data.cellData.cost,
-                                    data.cellData.moq,
-                                    data.cellData.manilaprice,
-                                    data.cellData.foodpandaprice,
-                                    data.cellData.grabfoodprice,
-                                    data.cellData.mallprice,
-                                    data.cellData.production
-                                )
-                            "
-                            class="me-1"
-                        >
-                            <editblue class="h-6"></editblue>
-                        </TransparentButton>
-
-                        <!-- New Links Button -->
-                        <TransparentButton
-                            type="button"
-                            @click="navigateToLinks(data.cellData.itemid)"
-                            class="me-1"
-                            v-if="isAdmin || isOpic"
-                            title="Manage Item Links"
-                        >
-                            <Link class="h-6"></Link>
-                        </TransparentButton>
-
-                        <TransparentButton
-                            type="button"
-                            @click="toggleMoreModal(data.cellData.itemid)"
-                            class="me-1"
-                        >
-                            <moreblue class="h-6"></moreblue>
-                        </TransparentButton>
-
-                        <TransparentButton
-                            type="button"
-                            v-if="isRso || isOpic"
-                            @click="
-                                toggleUpdateMOQModal(
-                                    data.cellData.itemid,
-                                    data.cellData.itemname,
-                                    data.cellData.itemgroup,
-                                    data.cellData.price,
-                                    data.cellData.cost,
-                                    data.cellData.moq,
-                                    data.cellData.production
-                                )
-                            "
-                            class="me-1"
-                        >
-                            <editblue class="h-6"></editblue>
-                        </TransparentButton>
-                    </template>
-                </DataTable>
+                  Previous
+                </button>
+                <button
+                  @click="nextPage"
+                  :disabled="currentPage === totalPages"
+                  class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+              <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p class="text-sm text-gray-700">
+                    Showing {{ startIndex + 1 }} to {{ Math.min(startIndex + itemsPerPage, (filteredItems?.length || 0)) }} of {{ filteredItems?.length || 0 }} results
+                  </p>
+                </div>
+                <div>
+                  <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                    <button
+                      @click="previousPage"
+                      :disabled="currentPage === 1"
+                      class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      v-for="page in visiblePages"
+                      :key="page"
+                      @click="goToPage(page)"
+                      :class="[
+                        'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
+                        page === currentPage
+                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                      ]"
+                    >
+                      {{ page }}
+                    </button>
+                    <button
+                      @click="nextPage"
+                      :disabled="currentPage === totalPages"
+                      class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          </div>
         </TableContainer>
       </template>
     </component>
   </template>
-
-
-<script>
-import RetailPanel from "@/Layouts/RetailPanel.vue";
-
-export default {
-  components: {
-    RetailPanel
-  },
-  data() {
-    return {
-      showPanel: true 
-    };
-  },
-
-  methods: {
-    hidePanel() {
-      this.showPanel = false;
-    }
-  }
-};
-
-</script>
