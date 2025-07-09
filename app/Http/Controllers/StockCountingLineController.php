@@ -207,6 +207,8 @@ class StockCountingLineController extends Controller
                         ->where('ITEMID', $record->ITEMID) 
                         ->where('TRANSDATE', $currentDateTime)
                         ->update([
+                            /* 'ADJUSTMENT' => $record->ADJUSTMENT,
+                            'RECEIVEDCOUNT' => $record->ADJUSTMENT, */
                             'ADJUSTMENT' => $record->ADJUSTMENT,
                             'RECEIVEDCOUNT' => $record->ADJUSTMENT,
                             'updated_at' => now()

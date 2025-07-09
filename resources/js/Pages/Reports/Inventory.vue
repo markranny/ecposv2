@@ -37,7 +37,7 @@ const props = defineProps({
             selectedStores: []
         })
     },
-    url: {  // Add the url prop to handle the Inertia error
+    url: {
         type: String,
         default: () => route('reports.inventory')
     }
@@ -51,6 +51,21 @@ const selectedStores = ref(props.filters.selectedStores || []);
 const startDate = ref(props.filters.startDate || '');
 const endDate = ref(props.filters.endDate || '');
 const isTableLoading = ref(true);
+
+// Adjustment modal state
+const showAdjustmentModal = ref(false);
+const selectedItem = ref(null);
+const adjustmentForm = ref({
+    adjustment_value: '',
+    adjustment_type: 'set',
+    remarks: ''
+});
+const adjustmentLoading = ref(false);
+
+// History modal state
+const showHistoryModal = ref(false);
+const adjustmentHistory = ref([]);
+const historyLoading = ref(false);
 
 // Compute totals efficiently with memoization
 const totals = computed(() => {
@@ -125,6 +140,139 @@ const totalPositiveVariance = computed(() => {
     }, 0) || 0;
 });
 
+// Open adjustment modal
+const openAdjustmentModal = (item) => {
+    console.log('Opening adjustment modal for item:', item);
+    selectedItem.value = item;
+    adjustmentForm.value = {
+        adjustment_value: '',
+        adjustment_type: 'set',
+        remarks: ''
+    };
+    showAdjustmentModal.value = true;
+};
+
+// Close adjustment modal
+const closeAdjustmentModal = () => {
+    showAdjustmentModal.value = false;
+    selectedItem.value = null;
+    adjustmentForm.value = {
+        adjustment_value: '',
+        adjustment_type: 'set',
+        remarks: ''
+    };
+};
+
+// Submit adjustment
+const submitAdjustment = async () => {
+    if (!selectedItem.value || !adjustmentForm.value.adjustment_value || !adjustmentForm.value.remarks.trim()) {
+        alert('Please fill in all required fields');
+        return;
+    }
+
+    // Check if item has an ID
+    if (!selectedItem.value.id) {
+        alert('Item ID is missing. Please refresh the page and try again.');
+        return;
+    }
+
+    adjustmentLoading.value = true;
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        if (!csrfToken) {
+            throw new Error('CSRF token not found');
+        }
+
+        const requestData = {
+            id: selectedItem.value.id,
+            adjustment_value: parseFloat(adjustmentForm.value.adjustment_value),
+            adjustment_type: adjustmentForm.value.adjustment_type,
+            remarks: adjustmentForm.value.remarks.trim()
+        };
+
+        console.log('Submitting adjustment:', requestData);
+
+        const response = await fetch('/inventory/adjust-item-count', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Response:', data);
+
+        if (data.success) {
+            alert('Item count adjusted successfully');
+            closeAdjustmentModal();
+            // Refresh the page to show updated data
+            window.location.reload();
+        } else {
+            alert(data.message || 'Failed to adjust item count');
+            if (data.errors) {
+                console.error('Validation errors:', data.errors);
+            }
+        }
+    } catch (error) {
+        console.error('Error adjusting item count:', error);
+        alert('An error occurred while adjusting item count: ' + error.message);
+    } finally {
+        adjustmentLoading.value = false;
+    }
+};
+
+// Open history modal
+const openHistoryModal = async (item) => {
+    selectedItem.value = item;
+    showHistoryModal.value = true;
+    historyLoading.value = true;
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        const response = await fetch('/inventory/adjustment-history', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                itemid: item.itemid,
+                storename: item.storename
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            adjustmentHistory.value = data.data;
+        } else {
+            console.error('Failed to fetch adjustment history:', data.message);
+        }
+    } catch (error) {
+        console.error('Error fetching adjustment history:', error);
+    } finally {
+        historyLoading.value = false;
+    }
+};
+
+// Close history modal
+const closeHistoryModal = () => {
+    showHistoryModal.value = false;
+    selectedItem.value = null;
+    adjustmentHistory.value = [];
+};
+
 const columns = [
     { 
         data: 'itemname',
@@ -195,7 +343,34 @@ const columns = [
         data: 'item_count',
         title: 'Item Count',
         className: 'text-right',
-        render: (data) => Number(data || 0).toFixed(2)
+        render: (data, type, row) => {
+            const value = Number(data || 0).toFixed(2);
+            const rowId = `adjust-${row.id || Math.random()}`;
+            const historyId = `history-${row.id || Math.random()}`;
+            return `
+                <div class="flex items-center justify-between">
+                    <span>${value}</span>
+                    <div class="flex gap-1 ml-2">
+                        <button 
+                            id="${rowId}"
+                            class="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 border border-blue-300 rounded adjust-btn"
+                            title="Adjust Item Count"
+                            data-item='${JSON.stringify(row)}'
+                        >
+                            Adjust
+                        </button>
+                        <button 
+                            id="${historyId}"
+                            class="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-300 rounded history-btn"
+                            title="View History"
+                            data-item='${JSON.stringify(row)}'
+                        >
+                            History
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
     },
     {
         data: 'ending',
@@ -214,6 +389,25 @@ const columns = [
         }
     }
 ];
+
+// Setup event listeners for dynamically created buttons
+const setupButtonEventListeners = () => {
+    // Remove existing listeners to prevent duplicates
+    document.removeEventListener('click', handleButtonClick);
+    
+    // Add new listener
+    document.addEventListener('click', handleButtonClick);
+};
+
+const handleButtonClick = (event) => {
+    if (event.target.classList.contains('adjust-btn')) {
+        const itemData = JSON.parse(event.target.getAttribute('data-item'));
+        openAdjustmentModal(itemData);
+    } else if (event.target.classList.contains('history-btn')) {
+        const itemData = JSON.parse(event.target.getAttribute('data-item'));
+        openHistoryModal(itemData);
+    }
+};
 
 // DataTable options
 const options = {
@@ -240,6 +434,8 @@ const options = {
     ],
     drawCallback: function() {
         isTableLoading.value = false;
+        // Setup event listeners after table is drawn
+        setTimeout(setupButtonEventListeners, 100);
     }
 };
 
@@ -296,6 +492,7 @@ watch([selectedStores, startDate, endDate], () => {
 // Cleanup
 onUnmounted(() => {
     clearTimeout(filterTimeout);
+    document.removeEventListener('click', handleButtonClick);
 });
 
 // Initialize component
@@ -306,6 +503,9 @@ onMounted(() => {
     
     // Log inventory data for debugging
     console.log("Inventory data:", props.inventory);
+    
+    // Setup event listeners
+    setupButtonEventListeners();
     
     // Set loading to false after initialization
     setTimeout(() => {
@@ -473,6 +673,184 @@ onMounted(() => {
                         :options="options"
                     />
                 </TableContainer>
+            </div>
+
+            <!-- Adjustment Modal -->
+            <div v-if="showAdjustmentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                    <div class="mt-3">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">
+                            Adjust Item Count
+                        </h3>
+                        
+                        <div v-if="selectedItem" class="mb-4 p-3 bg-gray-50 rounded">
+                            <p class="text-sm font-medium">{{ selectedItem.itemname }}</p>
+                            <p class="text-sm text-gray-600">Store: {{ selectedItem.storename }}</p>
+                            <p class="text-sm text-gray-600">Current Count: {{ Number(selectedItem.item_count || 0).toFixed(2) }}</p>
+                            <p class="text-xs text-gray-500">ID: {{ selectedItem.id || 'No ID' }}</p>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Adjustment Type</label>
+                                <select 
+                                    v-model="adjustmentForm.adjustment_type"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                >
+                                    <option value="set">Set to Value</option>
+                                    <option value="add">Add to Current</option>
+                                    <option value="subtract">Subtract from Current</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">
+                                    <span v-if="adjustmentForm.adjustment_type === 'set'">New Value</span>
+                                    <span v-else-if="adjustmentForm.adjustment_type === 'add'">Amount to Add</span>
+                                    <span v-else>Amount to Subtract</span>
+                                </label>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    v-model="adjustmentForm.adjustment_value"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    placeholder="Enter value"
+                                    required
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Remarks *</label>
+                                <textarea 
+                                    v-model="adjustmentForm.remarks"
+                                    rows="3"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    placeholder="Reason for adjustment (required)"
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <div v-if="adjustmentForm.adjustment_type !== 'set' && adjustmentForm.adjustment_value && selectedItem" class="p-3 bg-blue-50 rounded">
+                                <p class="text-sm text-blue-700">
+                                    <span v-if="adjustmentForm.adjustment_type === 'add'">
+                                        New value will be: {{ (Number(selectedItem.item_count || 0) + Number(adjustmentForm.adjustment_value || 0)).toFixed(2) }}
+                                    </span>
+                                    <span v-else>
+                                        New value will be: {{ (Number(selectedItem.item_count || 0) - Number(adjustmentForm.adjustment_value || 0)).toFixed(2) }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3 mt-6">
+                            <button 
+                                @click="closeAdjustmentModal"
+                                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                                :disabled="adjustmentLoading"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                @click="submitAdjustment"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+                                :disabled="adjustmentLoading || !adjustmentForm.adjustment_value || !adjustmentForm.remarks.trim()"
+                            >
+                                <span v-if="adjustmentLoading">Processing...</span>
+                                <span v-else>Apply Adjustment</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Modal -->
+            <div v-if="showHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                <div class="relative top-10 mx-auto p-5 border w-4/5 max-w-4xl shadow-lg rounded-md bg-white">
+                    <div class="mt-3">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">
+                            Adjustment History
+                        </h3>
+                        
+                        <div v-if="selectedItem" class="mb-4 p-3 bg-gray-50 rounded">
+                            <p class="text-sm font-medium">{{ selectedItem.itemname }}</p>
+                            <p class="text-sm text-gray-600">Store: {{ selectedItem.storename }}</p>
+                        </div>
+
+                        <div v-if="historyLoading" class="flex justify-center items-center py-8">
+                            <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+                            <span class="ml-3">Loading history...</span>
+                        </div>
+
+                        <div v-else-if="adjustmentHistory.length === 0" class="text-center py-8 text-gray-500">
+                            No adjustment history found for this item.
+                        </div>
+
+                        <div v-else class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Old Value</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">New Value</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adjustment</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adjusted By</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="record in adjustmentHistory" :key="record.id">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {{ new Date(record.created_at).toLocaleString() }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                                                  :class="{
+                                                    'bg-blue-100 text-blue-800': record.adjustment_type === 'set',
+                                                    'bg-green-100 text-green-800': record.adjustment_type === 'add',
+                                                    'bg-red-100 text-red-800': record.adjustment_type === 'subtract'
+                                                  }">
+                                                {{ record.adjustment_type.toUpperCase() }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {{ Number(record.old_item_count).toFixed(2) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {{ Number(record.new_item_count).toFixed(2) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm"
+                                            :class="{
+                                              'text-green-600': record.adjustment_type === 'add' || (record.adjustment_type === 'set' && record.new_item_count > record.old_item_count),
+                                              'text-red-600': record.adjustment_type === 'subtract' || (record.adjustment_type === 'set' && record.new_item_count < record.old_item_count)
+                                            }">
+                                            <span v-if="record.adjustment_type === 'add'">+</span>
+                                            <span v-else-if="record.adjustment_type === 'subtract'">-</span>
+                                            {{ Number(record.adjustment_value).toFixed(2) }}
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-900">
+                                            <div class="max-w-xs truncate" :title="record.remarks">
+                                                {{ record.remarks }}
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {{ record.adjusted_by_name || 'Unknown' }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-end mt-6">
+                            <button 
+                                @click="closeHistoryModal"
+                                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </template>
     </component>

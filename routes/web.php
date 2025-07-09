@@ -186,6 +186,12 @@ Route::middleware(['auth', 'role:ADMIN,SUPERADMIN'])->group(function () {
 
     Route::resource('attendance', AttendanceController::class);
 
+    Route::post('/inventory/adjust-item-count', [ECReportController::class, 'adjustItemCount'])
+        ->name('inventory.adjust');
+        
+    Route::post('/inventory/adjustment-history', [ECReportController::class, 'getAdjustmentHistory'])
+        ->name('inventory.adjustment-history');
+
 });
 
 // ADMIN && SUPERADMIN && OPIC routes

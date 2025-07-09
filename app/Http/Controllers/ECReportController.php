@@ -24,373 +24,6 @@ use Illuminate\Http\Request;
 
 class ECReportController extends Controller
 {
-
-
-/**
-     * Update inventory summaries for a specific date and store
-     */
-    public function updateInventorySummaries(Request $request)
-    {
-        $request->validate([
-            'store_name' => 'required|string',
-            'date' => 'nullable|date'
-        ]);
-
-        $storeName = $request->input('store_name');
-        $date = $request->input('date', Carbon::today()->format('Y-m-d'));
-        $yesterday = Carbon::parse($date)->subDay()->format('Y-m-d');
-
-        try {
-            DB::beginTransaction();
-
-            // Update item_count from stockcountingtrans
-            $this->updateItemCount($storeName, $date);
-
-            // Update throw_away (waste count)
-            $this->updateThrowAway($storeName, $date);
-
-            // Update received_delivery
-            $this->updateReceivedDelivery($storeName, $date);
-
-            // Update sales
-            $this->updateSales($storeName, $date);
-
-            // Update bundle_sales
-            $this->updateBundleSales($storeName, $date);
-
-            // Update beginning inventory from previous day
-            $this->updateBeginning($storeName, $date, $yesterday);
-
-            // Update ending inventory
-            $this->updateEnding($date);
-
-            // Update item_count for items with no activity
-            $this->updateItemCountForNoActivity($date);
-
-            // Update variance
-            $this->updateVariance($date);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => "Inventory summaries updated successfully for {$storeName} on {$date}"
-            ]);
-
-        } catch (Exception $e) {
-            DB::rollBack();
-            Log::error('Error updating inventory summaries: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Error updating inventory summaries: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Update all stores for a specific date
-     */
-    public function updateAllStores(Request $request)
-    {
-        $request->validate([
-            'date' => 'nullable|date'
-        ]);
-
-        $date = $request->input('date', Carbon::today()->format('Y-m-d'));
-        
-        // Get all store names from rbostoretables
-        $stores = DB::table('rbostoretables')->pluck('NAME');
-        
-        $results = [];
-        
-        foreach ($stores as $storeName) {
-            try {
-                $this->processStoreUpdate($storeName, $date);
-                $results[] = ['store' => $storeName, 'status' => 'success'];
-            } catch (Exception $e) {
-                $results[] = ['store' => $storeName, 'status' => 'error', 'message' => $e->getMessage()];
-                Log::error("Error updating store {$storeName}: " . $e->getMessage());
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Batch update completed',
-            'results' => $results
-        ]);
-    }
-
-    /**
-     * Process update for a single store
-     */
-    private function processStoreUpdate($storeName, $date)
-    {
-        $yesterday = Carbon::parse($date)->subDay()->format('Y-m-d');
-
-        DB::beginTransaction();
-
-        try {
-            $this->updateItemCount($storeName, $date);
-            $this->updateThrowAway($storeName, $date);
-            $this->updateReceivedDelivery($storeName, $date);
-            $this->updateSales($storeName, $date);
-            $this->updateBundleSales($storeName, $date);
-            $this->updateBeginning($storeName, $date, $yesterday);
-            $this->updateEnding($date);
-            $this->updateItemCountForNoActivity($date);
-            $this->updateVariance($date);
-
-            DB::commit();
-        } catch (Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
-    }
-
-    /**
-     * Update item_count from stockcountingtrans COUNTED field
-     */
-    private function updateItemCount($storeName, $date)
-    {
-        DB::statement("
-            UPDATE inventory_summaries 
-            SET item_count = (
-                SELECT COUNTED 
-                FROM stockcountingtrans 
-                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
-                  AND STORENAME = ?
-                  AND CAST(TRANSDATE AS DATE) = ?
-                  AND COUNTED > 0
-            )
-            WHERE CAST(report_date AS DATE) = ?
-              AND storename = ?
-              AND EXISTS (
-                SELECT 1 
-                FROM stockcountingtrans 
-                WHERE stockcountingtrans.itemid = inventory_summaries.itemid
-                  AND STORENAME = ?
-                  AND CAST(TRANSDATE AS DATE) = ?
-                  AND COUNTED > 0
-            )
-        ", [$storeName, $date, $date, $storeName, $storeName, $date]);
-    }
-
-    /**
-     * Update throw_away from stockcountingtrans WASTECOUNT
-     */
-    private function updateThrowAway($storeName, $date)
-    {
-        DB::statement("
-            UPDATE inventory_summaries 
-            SET throw_away = (
-                SELECT COALESCE(SUM(WASTECOUNT), 0)
-                FROM stockcountingtrans 
-                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
-                  AND STORENAME = ?
-                  AND CAST(TRANSDATE AS DATE) = ?
-            )
-            WHERE CAST(report_date AS DATE) = ?
-              AND storename = ?
-        ", [$storeName, $date, $date, $storeName]);
-    }
-
-    /**
-     * Update received_delivery from stockcountingtrans RECEIVEDCOUNT
-     */
-    private function updateReceivedDelivery($storeName, $date)
-    {
-        DB::statement("
-            UPDATE inventory_summaries 
-            SET received_delivery = (
-                SELECT COALESCE(SUM(RECEIVEDCOUNT), 0)
-                FROM stockcountingtrans 
-                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
-                  AND STORENAME = ?
-                  AND CAST(TRANSDATE AS DATE) = ?
-            )
-            WHERE CAST(report_date AS DATE) = ?
-              AND storename = ?
-        ", [$storeName, $date, $date, $storeName]);
-    }
-
-    /**
-     * Update sales from transaction tables
-     */
-    private function updateSales($storeName, $date)
-    {
-        DB::statement("
-            UPDATE inventory_summaries 
-            SET sales = (
-                SELECT COALESCE(SUM(b.qty), 0)
-                FROM rbotransactiontables a 
-                LEFT JOIN rbotransactionsalestrans b ON a.transactionid = b.transactionid 
-                LEFT JOIN rboinventtables c ON b.itemid = c.itemid 
-                WHERE a.store = ?
-                AND CAST(a.createddate AS DATE) = ?
-                AND c.itemid = inventory_summaries.itemid
-            )
-            WHERE CAST(report_date AS DATE) = ?
-              AND storename = ?
-        ", [$storeName, $date, $date, $storeName]);
-    }
-
-    /**
-     * Update bundle_sales using item_links table
-     */
-    private function updateBundleSales($storeName, $date)
-    {
-        // Check if item_links table exists
-        if (!DB::getSchemaBuilder()->hasTable('item_links')) {
-            Log::info('item_links table does not exist, skipping bundle sales update');
-            return;
-        }
-
-        DB::statement("
-            UPDATE inventory_summaries invs
-            JOIN (
-                SELECT 
-                    il.parent_itemid,
-                    il.quantity AS link_quantity,
-                    COALESCE(SUM(rst.qty), 0) * il.quantity AS result
-                FROM item_links il
-                LEFT JOIN rbotransactionsalestrans rst 
-                    ON rst.itemid = il.parent_itemid OR rst.itemid = il.child_itemid
-                WHERE 
-                    CAST(rst.createddate AS DATE) = ?
-                    AND rst.store = ?
-                    AND rst.itemgroup LIKE '%PROMO%'
-                GROUP BY il.parent_itemid, il.quantity
-            ) AS bundle_data
-            ON invs.itemid = bundle_data.parent_itemid
-               AND invs.storename = ?
-            SET invs.bundle_sales = bundle_data.result
-            WHERE CAST(invs.report_date AS DATE) = ?
-        ", [$date, $storeName, $storeName, $date]);
-    }
-
-    /**
-     * Update beginning inventory from previous day's item_count
-     */
-    private function updateBeginning($storeName, $date, $yesterday)
-    {
-        DB::statement("
-            UPDATE inventory_summaries 
-            SET beginning = (
-                SELECT item_count 
-                FROM inventory_summaries prev
-                WHERE prev.ITEMID = inventory_summaries.ITEMID
-                  AND prev.STORENAME = ?
-                  AND CAST(prev.report_date AS DATE) = ?
-            )
-            WHERE CAST(report_date AS DATE) = ?
-              AND storename = ?
-              AND EXISTS (
-                SELECT 1 
-                FROM inventory_summaries prev
-                WHERE prev.ITEMID = inventory_summaries.ITEMID
-                  AND prev.STORENAME = ?
-                  AND CAST(prev.report_date AS DATE) = ?
-            )
-        ", [$storeName, $yesterday, $date, $storeName, $storeName, $yesterday]);
-    }
-
-    /**
-     * Update ending inventory calculation
-     */
-    private function updateEnding($date)
-    {
-        DB::statement("
-            UPDATE inventory_summaries 
-            SET ending = CASE 
-                WHEN beginning IS NOT NULL 
-                     AND beginning != 0
-                     AND COALESCE(received_delivery, 0) = 0
-                     AND COALESCE(stock_transfer, 0) = 0
-                     AND COALESCE(sales, 0) = 0
-                     AND COALESCE(bundle_sales, 0) = 0
-                     AND COALESCE(throw_away, 0) = 0
-                     AND COALESCE(early_molds, 0) = 0
-                     AND COALESCE(pull_out, 0) = 0
-                     AND COALESCE(rat_bites, 0) = 0
-                     AND COALESCE(ant_bites, 0) = 0
-                THEN beginning
-                ELSE COALESCE(beginning, 0) + COALESCE(received_delivery, 0) - COALESCE(stock_transfer, 0) 
-                     - COALESCE(sales, 0) - COALESCE(bundle_sales, 0) - COALESCE(throw_away, 0) 
-                     - COALESCE(early_molds, 0) - COALESCE(pull_out, 0) - COALESCE(rat_bites, 0) 
-                     - COALESCE(ant_bites, 0)
-            END
-            WHERE CAST(report_date AS DATE) = ?
-        ", [$date]);
-    }
-
-    /**
-     * Update item_count for items with no activity
-     */
-    private function updateItemCountForNoActivity($date)
-    {
-        DB::statement("
-            UPDATE inventory_summaries 
-            SET item_count = CASE 
-                WHEN beginning IS NOT NULL 
-                     AND beginning != 0
-                     AND COALESCE(received_delivery, 0) = 0
-                     AND COALESCE(stock_transfer, 0) = 0
-                     AND COALESCE(sales, 0) = 0
-                     AND COALESCE(bundle_sales, 0) = 0
-                     AND COALESCE(throw_away, 0) = 0
-                     AND COALESCE(early_molds, 0) = 0
-                     AND COALESCE(pull_out, 0) = 0
-                     AND COALESCE(rat_bites, 0) = 0
-                     AND COALESCE(ant_bites, 0) = 0
-                THEN beginning 
-                ELSE item_count 
-            END
-            WHERE CAST(report_date AS DATE) = ?
-        ", [$date]);
-    }
-
-    /**
-     * Update variance calculation
-     */
-    private function updateVariance($date)
-    {
-        DB::statement("
-            UPDATE inventory_summaries 
-            SET variance = COALESCE(ending, 0) - COALESCE(item_count, 0)
-            WHERE CAST(report_date AS DATE) = ?
-        ", [$date]);
-    }
-
-    /**
-     * Get inventory summary for a specific date and store
-     */
-    public function getInventorySummary(Request $request)
-    {
-        $request->validate([
-            'store_name' => 'required|string',
-            'date' => 'nullable|date'
-        ]);
-
-        $storeName = $request->input('store_name');
-        $date = $request->input('date', Carbon::today()->format('Y-m-d'));
-
-        $summary = DB::table('inventory_summaries')
-            ->where('storename', $storeName)
-            ->whereDate('report_date', $date)
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $summary,
-            'store' => $storeName,
-            'date' => $date
-        ]);
-    }
-
-
-
-
     /**
      * Display a listing of the resource.
      */
@@ -1215,8 +848,7 @@ public function tsales(Request $request)
             DB::raw('rbotransactionsalestrans.netamountnotincltax as vatablesales'),
             DB::raw('rbotransactionsalestrans.taxinclinprice as vat'),
             'rbotransactionsalestrans.store as storename',
-            'rbotransactionsalestrans.staff',
-            'rbotransactionsalestrans.remarks'
+            'rbotransactionsalestrans.staff'
         )
         ->leftJoin('rbostoretables', 'rbotransactionsalestrans.store', '=', 'rbostoretables.STOREID')
         ->orderBy('rbotransactionsalestrans.transactionid', 'DESC');
@@ -1499,4 +1131,192 @@ public function md(Request $request)
     {
         //
     }
+
+    /**
+ * Adjust item count with remarks
+ */
+public function adjustItemCount(Request $request)
+{
+    try {
+        $request->validate([
+            'id' => 'required|integer',
+            'adjustment_value' => 'required|numeric',
+            'adjustment_type' => 'required|in:add,subtract,set',
+            'remarks' => 'required|string|max:500'
+        ]);
+
+        DB::beginTransaction();
+
+        // Find the inventory summary record
+        $inventorySummary = DB::table('inventory_summaries')->where('id', $request->id)->first();
+        
+        if (!$inventorySummary) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Inventory record not found'
+            ], 404);
+        }
+
+        $currentItemCount = (float) ($inventorySummary->item_count ?? 0);
+        $adjustmentValue = (float) $request->adjustment_value;
+        $newItemCount = $currentItemCount;
+
+        // Calculate new item count based on adjustment type
+        switch ($request->adjustment_type) {
+            case 'add':
+                $newItemCount = $currentItemCount + $adjustmentValue;
+                break;
+            case 'subtract':
+                $newItemCount = $currentItemCount - $adjustmentValue;
+                break;
+            case 'set':
+                $newItemCount = $adjustmentValue;
+                break;
+        }
+
+        // Ensure item count doesn't go negative
+        if ($newItemCount < 0) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Item count cannot be negative'
+            ], 400);
+        }
+
+        // Update inventory summary
+        DB::table('inventory_summaries')
+            ->where('id', $request->id)
+            ->update([
+                'item_count' => $newItemCount,
+                'remarks' => $request->remarks,
+                'updated_at' => now()
+            ]);
+
+        // Recalculate variance after adjustment
+        $ending = (float) ($inventorySummary->ending ?? 0);
+        $newVariance = $ending - $newItemCount;
+        
+        DB::table('inventory_summaries')
+            ->where('id', $request->id)
+            ->update([
+                'variance' => $newVariance
+            ]);
+
+        // Check if inventory_adjustments table exists before logging
+        if (Schema::hasTable('inventory_adjustments')) {
+            // Log the adjustment for audit trail
+            DB::table('inventory_adjustments')->insert([
+                'inventory_summary_id' => $request->id,
+                'itemid' => $inventorySummary->itemid,
+                'storename' => $inventorySummary->storename,
+                'report_date' => $inventorySummary->report_date,
+                'old_item_count' => $currentItemCount,
+                'new_item_count' => $newItemCount,
+                'adjustment_value' => $adjustmentValue,
+                'adjustment_type' => $request->adjustment_type,
+                'remarks' => $request->remarks,
+                'adjusted_by' => Auth::id(),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Item count adjusted successfully',
+            'data' => [
+                'old_item_count' => $currentItemCount,
+                'new_item_count' => $newItemCount,
+                'new_variance' => $newVariance
+            ]
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error adjusting item count: ' . $e->getMessage(), [
+            'request_data' => $request->all(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while adjusting item count. Please try again.'
+        ], 500);
+    }
+}
+
+/**
+ * Get adjustment history for an item
+ */
+public function getAdjustmentHistory(Request $request)
+{
+    try {
+        $request->validate([
+            'itemid' => 'required|string',
+            'storename' => 'required|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date'
+        ]);
+
+        // Check if inventory_adjustments table exists
+        if (!Schema::hasTable('inventory_adjustments')) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'message' => 'No adjustment history available'
+            ]);
+        }
+
+        $query = DB::table('inventory_adjustments')
+            ->where('itemid', $request->itemid)
+            ->where('storename', $request->storename)
+            ->leftJoin('users', 'inventory_adjustments.adjusted_by', '=', 'users.id')
+            ->select(
+                'inventory_adjustments.*',
+                'users.name as adjusted_by_name'
+            );
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('inventory_adjustments.created_at', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('inventory_adjustments.created_at', '<=', $request->end_date);
+        }
+
+        $adjustments = $query->orderBy('inventory_adjustments.created_at', 'desc')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $adjustments
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        Log::error('Error fetching adjustment history: ' . $e->getMessage(), [
+            'request_data' => $request->all(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while fetching adjustment history'
+        ], 500);
+    }
+}
 }

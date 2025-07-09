@@ -26,7 +26,8 @@ class InventorySummary extends Model
         'item_count',
         'ending',
         'variance',
-        'report_date'
+        'report_date',
+        'remarks'
     ];
 
     protected $casts = [

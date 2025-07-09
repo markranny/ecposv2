@@ -244,8 +244,31 @@ class ApisStockCountingLineController extends Controller
             try {
                 Log::info('Starting item generation transaction');
                 
-                // Insert new records
-                DB::table('stockcountingtrans')
+                if($storename == 'COMMUNITY'){
+                    // Insert new records
+                    DB::table('stockcountingtrans')
+                        ->insertUsing(
+                            ['JOURNALID', 'ITEMDEPARTMENT', 'TRANSDATE', 'ITEMID', 'ADJUSTMENT', 'RECEIVEDCOUNT', 'WASTECOUNT', 'COUNTED', 'STORENAME'],
+                            function ($query) use ($journalid, $currentDateTime, $storename) {
+                                $query->select(
+                                    DB::raw("'{$journalid}' as JOURNALID"),
+                                    'b.itemdepartment',
+                                    DB::raw("'{$currentDateTime}' as TRANSDATE"),
+                                    'a.itemid as ITEMID',
+                                    DB::raw('0 as ADJUSTMENT'),
+                                    DB::raw('0 as RECEIVEDCOUNT'),
+                                    DB::raw('0 as WASTECOUNT'),
+                                    DB::raw('0 as COUNTED'),
+                                    DB::raw("'{$storename}' as STORENAME")
+                                )
+                                ->from('inventtables as a')
+                                ->leftJoin('rboinventtables as b', 'a.itemid', '=', 'b.itemid')
+                                ->where('b.activeondelivery', '1');
+                            }
+                        );
+                
+                }else{
+                    DB::table('stockcountingtrans')
                     ->insertUsing(
                         ['JOURNALID', 'ITEMDEPARTMENT', 'TRANSDATE', 'ITEMID', 'ADJUSTMENT', 'RECEIVEDCOUNT', 'WASTECOUNT', 'COUNTED', 'STORENAME'],
                         function ($query) use ($journalid, $currentDateTime, $storename) {
@@ -262,12 +285,13 @@ class ApisStockCountingLineController extends Controller
                             )
                             ->from('inventtables as a')
                             ->leftJoin('rboinventtables as b', 'a.itemid', '=', 'b.itemid')
-                            ->where('b.activeondelivery', '1');
+                            ->where('a.itemname','not like', '%CLASS B%');
                         }
                     );
-
+                }
+                
                 Log::info('Active inventory items inserted');
-
+                
                 $yesterday = Carbon::yesterday()->format('Y-m-d');
                 Log::info('Fetching yesterday\'s journal records', ['date' => $yesterday]);
 
@@ -287,8 +311,8 @@ class ApisStockCountingLineController extends Controller
                         ->where('ITEMID', $record->ITEMID) 
                         ->where('TRANSDATE', $currentDateTime)
                         ->update([
-                            'ADJUSTMENT' => $record->ADJUSTMENT,
-                            'RECEIVEDCOUNT' => $record->ADJUSTMENT,
+                            'ADJUSTMENT' => 0,
+                            'RECEIVEDCOUNT' => 0,
                             'updated_at' => now()
                         ]);
                 }
@@ -372,7 +396,7 @@ class ApisStockCountingLineController extends Controller
                 ->OrderBy('a.ADJUSTMENT', 'DESC')
                 ->get();
 
-            Log::info('Stock counting records retrieved', [
+            Log::info('Stock counting data retrieved', [
                 'count' => $stockcountingtrans->count()
             ]);
 
@@ -381,11 +405,11 @@ class ApisStockCountingLineController extends Controller
                 ->where('storeid', $storeName)
                 ->value('posted') ?? 0;
 
-            return Inertia::render('StockCountingLine/show', [
+            return Inertia::render('StockCountingLine/index', [
                 'journalid' => $journalid,
                 'stockcountingtrans' => $stockcountingtrans,
                 'isPosted' => $isPosted,
-                'currentDate' => $currentDate,
+                'currentDate' => $currentDate, 
             ]);
 
         } catch (\Exception $e) {
@@ -395,7 +419,7 @@ class ApisStockCountingLineController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             return back()
-                ->with('message', 'Error loading stock counting line: ' . $e->getMessage())
+                ->with('message', 'Error loading stock counting: ' . $e->getMessage())
                 ->with('isError', true);
         }
     }
@@ -451,6 +475,7 @@ class ApisStockCountingLineController extends Controller
         Log::info('Accessing post method', ['request' => $request->all()]);
         try {
             $currentDateTime = Carbon::now('Asia/Manila')->toDateString();
+            $yesterday = Carbon::yesterday('Asia/Manila')->toDateString();
             $storename = Auth::user()->storeid;
             $journalid = $request->journalid;
             $role = Auth::user()->role;
@@ -469,9 +494,12 @@ class ApisStockCountingLineController extends Controller
                 ->whereDate(DB::raw('cast(posteddatetime as date)'), $currentDateTime)
                 ->update(['posted' => '1']);
 
+            // Execute the inventory summary updates using prepared statements
+            $this->updateInventorySummaries($storename, $currentDateTime, $yesterday);
+
             DB::commit();
             Log::info('Transaction committed', ['affected_rows' => $affected]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Posted successfully',
@@ -491,19 +519,200 @@ class ApisStockCountingLineController extends Controller
         }
     }
 
+    private function updateInventorySummaries($storename, $currentDateTime, $yesterday)
+    {
+        // Update item_count
+        DB::statement("
+            UPDATE inventory_summaries 
+            SET item_count = (
+                SELECT COUNTED 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+                  AND COUNTED > 0
+            )
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+              AND EXISTS (
+                SELECT 1 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.itemid = inventory_summaries.itemid
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+                  AND COUNTED > 0
+            )
+        ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+
+        // Update throw_away
+        DB::statement("
+            UPDATE inventory_summaries 
+            SET throw_away = (
+                SELECT SUM(WASTECOUNT) 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+              AND EXISTS (
+                SELECT 1 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.itemid = inventory_summaries.itemid
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+        ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+
+        // Update received_delivery
+        DB::statement("
+            UPDATE inventory_summaries 
+            SET received_delivery = (
+                SELECT SUM(RECEIVEDCOUNT) 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+              AND EXISTS (
+                SELECT 1 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.itemid = inventory_summaries.itemid
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+        ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+
+        // Update sales
+        DB::statement("
+            UPDATE inventory_summaries 
+            SET sales = (
+                SELECT COALESCE(SUM(b.qty), 0)
+                FROM rbotransactiontables a 
+                LEFT JOIN rbotransactionsalestrans b ON a.transactionid = b.transactionid 
+                LEFT JOIN rboinventtables c ON b.itemid = c.itemid 
+                WHERE a.store = ?
+                AND CAST(a.createddate AS DATE) = ?
+                AND b.itemgroup not like '%PROMO%'
+                AND c.itemid = inventory_summaries.itemid
+            )
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+              AND inventory_summaries.itemid IN (
+                SELECT DISTINCT c.itemid 
+                FROM rbotransactiontables a 
+                LEFT JOIN rbotransactionsalestrans b ON a.transactionid = b.transactionid 
+                LEFT JOIN rboinventtables c ON b.itemid = c.itemid 
+                WHERE a.store = ?
+                AND CAST(a.createddate AS DATE) = ?
+                AND b.itemgroup not like '%PROMO%'
+                AND c.itemid IS NOT NULL
+            )
+        ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+
+        // Update bundle_sales
+        DB::statement("
+            UPDATE inventory_summaries invs
+            JOIN (
+                SELECT 
+                    il.child_itemid,
+                    il.quantity AS link_quantity,
+                    COALESCE(SUM(rst.qty), 0) * il.quantity AS result
+                FROM item_links il
+                LEFT JOIN rbotransactionsalestrans rst 
+                    ON rst.itemid = il.parent_itemid OR rst.itemid = il.child_itemid
+                WHERE 
+                    CAST(rst.createddate AS DATE) = ?
+                    AND rst.store = ?
+                    AND rst.itemgroup LIKE '%PROMO%'
+                GROUP BY il.child_itemid, il.quantity
+            ) AS bundle_data
+            ON invs.itemid = bundle_data.child_itemid
+               AND invs.storename = ?
+            SET invs.bundle_sales = bundle_data.result
+            WHERE CAST(invs.report_date AS DATE) = ?
+        ", [$currentDateTime, $storename, $storename, $currentDateTime]);
+
+        // Update beginning
+        DB::statement("
+            UPDATE inventory_summaries 
+            SET beginning = (
+                SELECT item_count 
+                FROM inventory_summaries prev
+                WHERE prev.ITEMID = inventory_summaries.ITEMID
+                  AND prev.STORENAME = ?
+                  AND CAST(prev.report_date AS DATE) = ?
+            )
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+              AND EXISTS (
+                SELECT 1 
+                FROM inventory_summaries prev
+                WHERE prev.ITEMID = inventory_summaries.ITEMID
+                  AND prev.STORENAME = ?
+                  AND CAST(prev.report_date AS DATE) = ?
+            )
+        ", [$storename, $yesterday, $currentDateTime, $storename, $storename, $yesterday]);
+
+        // Update ending
+        DB::statement("
+            UPDATE inventory_summaries 
+            SET ending = CASE 
+                WHEN beginning IS NOT NULL 
+                     AND beginning != 0
+                     AND COALESCE(received_delivery, 0) = 0
+                     AND COALESCE(stock_transfer, 0) = 0
+                     AND COALESCE(sales, 0) = 0
+                     AND COALESCE(bundle_sales, 0) = 0
+                     AND COALESCE(throw_away, 0) = 0
+                     AND COALESCE(early_molds, 0) = 0
+                     AND COALESCE(pull_out, 0) = 0
+                     AND COALESCE(rat_bites, 0) = 0
+                     AND COALESCE(ant_bites, 0) = 0
+                THEN beginning
+                ELSE COALESCE(beginning, 0) + COALESCE(received_delivery, 0) - COALESCE(stock_transfer, 0) - COALESCE(sales, 0) - COALESCE(bundle_sales, 0) - COALESCE(throw_away, 0) - COALESCE(early_molds, 0) - COALESCE(pull_out, 0) - COALESCE(rat_bites, 0) - COALESCE(ant_bites, 0)
+            END
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+        ", [$currentDateTime, $storename]);
+
+        // Update item_count (second update)
+        DB::statement("
+            UPDATE inventory_summaries 
+            SET item_count = CASE 
+                WHEN beginning IS NOT NULL 
+                     AND beginning != 0
+                     AND received_delivery = 0
+                     AND stock_transfer = 0
+                     AND sales = 0
+                     AND bundle_sales = 0
+                     AND throw_away = 0
+                     AND early_molds = 0
+                     AND pull_out = 0
+                     AND rat_bites = 0
+                     AND ant_bites = 0
+                THEN beginning 
+                ELSE item_count 
+            END
+            WHERE CAST(report_date AS DATE) = ?
+            AND storename = ?
+        ", [$currentDateTime, $storename]);
+
+        // Update variance
+        DB::statement("
+            UPDATE inventory_summaries 
+            SET variance = COALESCE(ending, 0) - COALESCE(item_count, 0)
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+        ", [$currentDateTime, $storename]);
+    }
+
     public function postbatchline($itemid, $storeid, $journalid, $adjustment, $receivedcount, $transfercount, $wastecount, $wastetype, $counted)
     {
         try {
-            $storename = Auth::user()->storeid;
-            $currentDate = Carbon::now('Asia/Manila')->toDateString();
-            $yesterday = Carbon::yesterday()->format('Y-m-d');
-            
-            Log::info('Updating stock counting record', [
-                'itemid' => $itemid,
-                'storeid' => $storeid,
-                'journalid' => $journalid
-            ]);
-
             $updated = stockcountingtrans::where([
                 'ITEMID' => $itemid,
                 'STORENAME' => $storeid,
@@ -529,175 +738,17 @@ class ApisStockCountingLineController extends Controller
             ->whereDate('TRANSDATE', Carbon::today())
             ->first();
 
-            // Update inventory summaries
-            $this->updateInventorySummaries($itemid, $storeid, $currentDate, $yesterday);
-
             return response()->json([
                 'status' => 'success',
                 'message' => 'Stock counting records updated successfully',
                 'data' => $stockCount
             ], 200);
         } catch (\Exception $e) {
-            Log::error('Error in postbatchline', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update stock counting records',
                 'error' => $e->getMessage()
             ], 500);
-        }
-    }
-
-    private function updateInventorySummaries($itemid, $storename, $currentDate, $yesterday)
-    {
-        try {
-            DB::beginTransaction();
-
-            // Update item_count
-            DB::table('inventory_summaries')
-                ->where('itemid', $itemid)
-                ->where('STORENAME', $storename)
-                ->whereDate('report_date', $currentDate)
-                ->update([
-                    'item_count' => DB::raw("(
-                        SELECT COUNTED 
-                        FROM stockcountingtrans 
-                        WHERE stockcountingtrans.ITEMID = '{$itemid}'
-                          AND STORENAME = '{$storename}'
-                          AND CAST(TRANSDATE AS DATE) = '{$currentDate}'
-                          AND COUNTED > 0
-                    )")
-                ]);
-
-            // Update throw_away
-            DB::table('inventory_summaries')
-                ->where('itemid', $itemid)
-                ->where('STORENAME', $storename)
-                ->whereDate('report_date', $currentDate)
-                ->update([
-                    'throw_away' => DB::raw("(
-                        SELECT COALESCE(SUM(WASTECOUNT), 0)
-                        FROM stockcountingtrans 
-                        WHERE stockcountingtrans.ITEMID = '{$itemid}'
-                          AND STORENAME = '{$storename}'
-                          AND CAST(TRANSDATE AS DATE) = '{$currentDate}'
-                    )")
-                ]);
-
-            // Update received_delivery
-            DB::table('inventory_summaries')
-                ->where('itemid', $itemid)
-                ->where('STORENAME', $storename)
-                ->whereDate('report_date', $currentDate)
-                ->update([
-                    'received_delivery' => DB::raw("(
-                        SELECT COALESCE(SUM(RECEIVEDCOUNT), 0)
-                        FROM stockcountingtrans 
-                        WHERE stockcountingtrans.ITEMID = '{$itemid}'
-                          AND STORENAME = '{$storename}'
-                          AND CAST(TRANSDATE AS DATE) = '{$currentDate}'
-                    )")
-                ]);
-
-            // Update sales
-            DB::table('inventory_summaries')
-                ->where('itemid', $itemid)
-                ->where('STORENAME', $storename)
-                ->whereDate('report_date', $currentDate)
-                ->update([
-                    'sales' => DB::raw("(
-                        SELECT COALESCE(SUM(b.qty), 0)
-                        FROM rbotransactiontables a 
-                        LEFT JOIN rbotransactionsalestrans b ON a.transactionid = b.transactionid 
-                        LEFT JOIN rboinventtables c ON b.itemid = c.itemid 
-                        WHERE a.store = '{$storename}'
-                        AND CAST(a.createddate AS DATE) = '{$currentDate}'
-                        AND c.itemid = '{$itemid}'
-                    )")
-                ]);
-
-            // Update beginning inventory
-            DB::table('inventory_summaries')
-                ->where('itemid', $itemid)
-                ->where('STORENAME', $storename)
-                ->whereDate('report_date', $currentDate)
-                ->update([
-                    'beginning' => DB::raw("(
-                        SELECT COALESCE(item_count, 0)
-                        FROM inventory_summaries prev
-                        WHERE prev.itemid = '{$itemid}'
-                          AND prev.STORENAME = '{$storename}'
-                          AND CAST(prev.report_date AS DATE) = '{$yesterday}'
-                    )")
-                ]);
-
-            // Update ending inventory
-            DB::table('inventory_summaries')
-                ->where('itemid', $itemid)
-                ->where('STORENAME', $storename)
-                ->whereDate('report_date', $currentDate)
-                ->update([
-                    'ending' => DB::raw("CASE 
-                        WHEN beginning IS NOT NULL 
-                             AND beginning != 0
-                             AND received_delivery = 0
-                             AND stock_transfer = 0
-                             AND sales = 0
-                             AND bundle_sales = 0
-                             AND throw_away = 0
-                             AND early_molds = 0
-                             AND pull_out = 0
-                             AND rat_bites = 0
-                             AND ant_bites = 0
-                        THEN beginning
-                        ELSE beginning + received_delivery - stock_transfer - sales - bundle_sales - throw_away - early_molds - pull_out - rat_bites - ant_bites
-                    END")
-                ]);
-
-            // Update item_count based on conditions
-            DB::table('inventory_summaries')
-                ->where('itemid', $itemid)
-                ->where('STORENAME', $storename)
-                ->whereDate('report_date', $currentDate)
-                ->update([
-                    'item_count' => DB::raw("CASE 
-                        WHEN beginning IS NOT NULL 
-                             AND beginning != 0
-                             AND received_delivery = 0
-                             AND stock_transfer = 0
-                             AND sales = 0
-                             AND bundle_sales = 0
-                             AND throw_away = 0
-                             AND early_molds = 0
-                             AND pull_out = 0
-                             AND rat_bites = 0
-                             AND ant_bites = 0
-                        THEN beginning 
-                        ELSE item_count 
-                    END")
-                ]);
-
-            // Update variance
-            DB::table('inventory_summaries')
-                ->where('itemid', $itemid)
-                ->where('STORENAME', $storename)
-                ->whereDate('report_date', $currentDate)
-                ->update([
-                    'variance' => DB::raw('ending - item_count')
-                ]);
-
-            DB::commit();
-            Log::info('Inventory summaries updated successfully');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error updating inventory summaries', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
         }
     }
     
@@ -706,17 +757,12 @@ class ApisStockCountingLineController extends Controller
         try {
             $storename = Auth::user()->storeid;
             
-            Log::info('Fetching stock transfer data', [
-                'journalId' => $journalid,
-                'store' => $storename
-            ]);
-            
             DB::beginTransaction();
             $journalRecords = DB::table('stock_transfers as a')
                 ->leftJoin('stock_transfer_items as b', 'a.id', '=', 'b.stock_transfer_id')
                 ->select('b.itemid', DB::raw('SUM(b.quantity) as qty'))
                 ->whereDate('a.transfer_date', now())
-                ->where('a.store_id', $storename)
+                ->where('a.store', $storename)
                 ->groupBy('b.itemid')
                 ->get();
 
@@ -728,6 +774,7 @@ class ApisStockCountingLineController extends Controller
                 DB::table('stockcountingtrans')
                     ->where('ITEMID', $record->itemid)
                     ->where('JOURNALID', $journalid)
+                    ->where('STORENAME', $storename)
                     ->whereDate('TRANSDATE', now())
                     ->update([
                         'TRANSFERCOUNT' => $record->qty,
@@ -736,7 +783,7 @@ class ApisStockCountingLineController extends Controller
             }
 
             DB::commit();
-            Log::info('Stock transfer update completed successfully');
+            Log::info('Transaction committed successfully');
 
             return redirect()
                 ->route('StockCountingLine', ['journalid' => $journalid])
