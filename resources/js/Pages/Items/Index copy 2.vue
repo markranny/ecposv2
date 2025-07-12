@@ -35,21 +35,14 @@ const mallprice = ref('');
 const foodpandamallprice = ref('');
 const grabfoodmallprice = ref('');
 const production = ref('');
-const default1 = ref(false);
-const default2 = ref(false);
-const default3 = ref(false);
 
 const selectedItems = ref([]);
 const showImportModal = ref(false);
 const showItemInfoModal = ref(false);
 const selectedItemInfo = ref(null);
 const showFloatingMenu = ref(false);
-const showContextMenu = ref(false);
-const contextMenuX = ref(0);
-const contextMenuY = ref(0);
-const contextMenuItem = ref(null);
 
-// Click tracking - FIXED to use right-click for links
+// Click tracking
 const clickTimeout = ref(null);
 const clickCount = ref(0);
 const longPressTimeout = ref(null);
@@ -194,7 +187,7 @@ const allSelected = computed({
     }
 });
 
-// FIXED: Click handling functions - Changed triple tap to right-click for links
+// Click handling functions
 const handleItemClick = (item) => {
     clearTimeout(clickTimeout.value);
     clickCount.value++;
@@ -209,20 +202,14 @@ const handleItemClick = (item) => {
         clearTimeout(clickTimeout.value);
         toggleUpdateModal(item);
         clickCount.value = 0;
+    } else if (clickCount.value === 3) {
+        // Triple click - show item links
+        clearTimeout(clickTimeout.value);
+        handleViewLinks(item);
+        clickCount.value = 0;
     }
-    // Removed triple click handler
 };
 
-// FIXED: Right-click context menu for item links
-const handleRightClick = (item, event) => {
-    event.preventDefault();
-    contextMenuItem.value = item;
-    contextMenuX.value = event.clientX;
-    contextMenuY.value = event.clientY;
-    showContextMenu.value = true;
-};
-
-// FIXED: Touch events for mobile - swipe right for links
 const handleTouchStart = (item, event) => {
     isLongPress.value = false;
     longPressTimeout.value = setTimeout(() => {
@@ -236,36 +223,6 @@ const handleTouchEnd = (item, event) => {
     if (!isLongPress.value) {
         handleItemClick(item);
     }
-};
-
-// FIXED: Swipe detection for mobile
-let touchStartX = 0;
-let touchStartY = 0;
-
-const handleTouchStartSwipe = (item, event) => {
-    touchStartX = event.touches[0].clientX;
-    touchStartY = event.touches[0].clientY;
-    handleTouchStart(item, event);
-};
-
-const handleTouchEndSwipe = (item, event) => {
-    if (!event.changedTouches || event.changedTouches.length === 0) return;
-    
-    const touchEndX = event.changedTouches[0].clientX;
-    const touchEndY = event.changedTouches[0].clientY;
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = touchEndY - touchStartY;
-    
-    // Check if it's a horizontal swipe (more horizontal than vertical)
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-        if (deltaX > 0) {
-            // Swipe right - view links
-            handleViewLinks(item);
-            return;
-        }
-    }
-    
-    handleTouchEnd(item, event);
 };
 
 const handleMouseDown = (item, event) => {
@@ -288,26 +245,6 @@ const showItemInfo = (item) => {
     showItemInfoModal.value = true;
 };
 
-// Context menu actions
-const handleViewLinksFromContext = () => {
-    if (contextMenuItem.value) {
-        handleViewLinks(contextMenuItem.value);
-    }
-    showContextMenu.value = false;
-};
-
-const handleEditFromContext = () => {
-    if (contextMenuItem.value) {
-        toggleUpdateModal(contextMenuItem.value);
-    }
-    showContextMenu.value = false;
-};
-
-const closeContextMenu = () => {
-    showContextMenu.value = false;
-    contextMenuItem.value = null;
-};
-
 // Floating Menu Functions
 const toggleFloatingMenu = () => {
     showFloatingMenu.value = !showFloatingMenu.value;
@@ -317,7 +254,7 @@ const closeFloatingMenu = () => {
     showFloatingMenu.value = false;
 };
 
-// Modal handlers - FIXED to pass all default values
+// Modal handlers
 const toggleUpdateModal = (item) => {
     if (!item) return;
     
@@ -334,10 +271,6 @@ const toggleUpdateModal = (item) => {
     foodpandamallprice.value = item.foodpandamallprice || 0;
     grabfoodmallprice.value = item.grabfoodmallprice || 0;
     production.value = item.production || '';
-    // FIXED: Pass actual default values
-    default1.value = item.default1 || false;
-    default2.value = item.default2 || false;
-    default3.value = item.default3 || false;
     showModalUpdate.value = true;
     closeFloatingMenu();
 };
@@ -435,26 +368,24 @@ const handleMoreActions = (item) => {
     toggleMoreModal(item);
 };
 
-// FIXED: Enable selected functionality
-const handleBulkEnable = () => {
-    const validIds = Array.isArray(selectedItems.value) ? selectedItems.value.filter(Boolean) : [];
+const handleBulkEnable = (itemIds) => {
+    const validIds = Array.isArray(itemIds) ? itemIds.filter(Boolean) : [];
     
     if (validIds.length === 0) {
         alert('Please select at least one item.');
         return;
     }
 
-    // FIXED: Use the correct endpoint and method for enabling items
     axios.post('/EnableOrder', {
         itemids: validIds
     })
     .then(response => {
-        alert(response.data?.message || 'Items enabled successfully');
+        alert(response.data?.message || 'Items updated successfully');
         location.reload();
     })
     .catch(error => {
-        console.error('Error enabling items:', error);
-        alert('An error occurred while enabling items.');
+        console.error('Error updating items:', error);
+        alert('An error occurred while updating items.');
     });
 
     closeFloatingMenu();
@@ -469,18 +400,25 @@ const getExportData = () => {
     if (!props.items || !Array.isArray(props.items)) return [];
     
     return props.items.map(item => ({
-        PRODUCTCODE: item?.itemid || '',
-        DESCRIPTION: item?.itemname || '',
-        BARCODE: item?.barcode || '',
-        CATEGORY: item?.itemgroup || '',
-        RETAILGROUP: item?.specialgroup || '',
-        SRP: item?.price ? Number(item.price).toFixed(2) : '0.00',
-        MANILA: item?.manilaprice ? Number(item.manilaprice).toFixed(2) : '0.00',
-        MALL: item?.mallprice ? Number(item.mallprice).toFixed(2) : '0.00',
-        GRABFOOD: item?.grabfoodprice ? Number(item.grabfoodprice).toFixed(2) : '0.00',
-        FOODPANDA: item?.foodpandaprice ? Number(item.foodpandaprice).toFixed(2) : '0.00',
-        GRABFOODMALL: item?.grabfoodmallprice ? Number(item.grabfoodmallprice).toFixed(2) : '0.00',
-        FOODPANDAMALL: item?.foodpandamallprice ? Number(item.foodpandamallprice).toFixed(2) : '0.00'
+        itemid: item?.itemid || '',
+        itemname: item?.itemname || '',
+        barcode: item?.barcode || '',
+        itemgroup: item?.itemgroup || '',
+        specialgroup: item?.specialgroup || '',
+        production: item?.production || '',
+        moq: item?.moq || '',
+        cost: item?.cost ? Number(item.cost).toFixed(2) : '0.00',
+        price: item?.price ? Number(item.price).toFixed(2) : '0.00',
+        manilaprice: item?.manilaprice ? Number(item.manilaprice).toFixed(2) : '0.00',
+        mallprice: item?.mallprice ? Number(item.mallprice).toFixed(2) : '0.00',
+        grabfoodprice: item?.grabfoodprice ? Number(item.grabfoodprice).toFixed(2) : '0.00',
+        foodpandaprice: item?.foodpandaprice ? Number(item.foodpandaprice).toFixed(2) : '0.00',
+        foodpandamallprice: item?.foodpandamallprice ? Number(item.foodpandamallprice).toFixed(2) : '0.00',
+        grabfoodmallprice: item?.grabfoodmallprice ? Number(item.grabfoodmallprice).toFixed(2) : '0.00',
+        default1: item?.default1 ? 'Yes' : 'No',
+        default2: item?.default2 ? 'Yes' : 'No',
+        default3: item?.default3 ? 'Yes' : 'No',
+        Activeondelivery: item?.Activeondelivery || false
     }));
 };
 
@@ -522,29 +460,16 @@ const nonproducts = () => {
     closeFloatingMenu();
 };
 
-// FIXED: Click outside handler for context menu
-const handleClickOutside = (event) => {
-    if (showContextMenu.value) {
-        closeContextMenu();
-    }
-};
-
 // Cleanup timeouts
 onUnmounted(() => {
     clearTimeout(clickTimeout.value);
     clearTimeout(longPressTimeout.value);
-    document.removeEventListener('click', handleClickOutside);
-});
-
-onMounted(() => {
-    document.addEventListener('click', handleClickOutside);
 });
 
 // Reset to first page when filters change
 watch([searchQuery, selectedCategory, selectedStatus], () => {
     currentPage.value = 1;
 });
-
 </script>
 
 <template>
@@ -580,10 +505,6 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
           :foodpandamallprice="foodpandamallprice"
           :grabfoodmallprice="grabfoodmallprice"
           :production="production"
-          :default1="default1"
-          :default2="default2"
-          :default3="default3"
-          :rboinventitemretailgroups="props.rboinventitemretailgroups"
           @toggle-active="updateModalHandler"
         />
 
@@ -610,24 +531,6 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
           :itemids="selectedItems"
           @click="handleBulkEnable"
         />
-
-        <!-- Context Menu for Right-click -->
-        <div v-if="showContextMenu" 
-             :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
-             class="fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
-          <button
-            @click="handleEditFromContext"
-            class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-          >
-            Edit Item
-          </button>
-          <button
-            @click="handleViewLinksFromContext"
-            class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-          >
-            View Links
-          </button>
-        </div>
 
         <!-- Item Info Modal -->
         <div v-if="showItemInfoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click="showItemInfoModal = false">
@@ -776,7 +679,7 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                 <PrimaryButton
                   v-if="isAdmin || isOpic"
                   type="button"
-                  @click="handleBulkEnable"
+                  @click="showEnableModal = true"
                   class="bg-green-600 hover:bg-green-700"
                   :disabled="selectedItems.length === 0"
                 >
@@ -788,12 +691,16 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                 <Excel
                   :data="getExportData()"
                   :headers="[
-                    'PRODUCTCODE', 'DESCRIPTION', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 
-                    'SRP', 'MANILA', 'MALL', 'GRABFOOD', 'FOODPANDA', 'GRABFOODMALL', 'FOODPANDAMALL'
+                    'ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 
+                    'PRODUCTION', 'MOQ', 'COST', 'SRP', 'MANILA', 'MALL', 
+                    'GRABFOOD', 'FOODPANDA', 'FOODPANDA_MALL', 'GRABFOOD_MALL',
+                    'DEFAULT1', 'DEFAULT2', 'DEFAULT3', 'ENABLEORDER'
                   ]"
                   :row-name-props="[
-                    'PRODUCTCODE', 'DESCRIPTION', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 
-                    'SRP', 'MANILA', 'MALL', 'GRABFOOD', 'FOODPANDA', 'GRABFOODMALL', 'FOODPANDAMALL'
+                    'itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 
+                    'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice', 
+                    'grabfoodprice', 'foodpandaprice', 'foodpandamallprice', 'grabfoodmallprice',
+                    'default1', 'default2', 'default3', 'Activeondelivery'
                   ]"
                   class="bg-green-500 hover:bg-green-600"
                   v-if="isAdmin || isOpic"
@@ -870,14 +777,13 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                 </div>
               </div>
 
-              <!-- Instructions for mobile - UPDATED -->
+              <!-- Instructions for mobile -->
               <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md lg:hidden">
                 <p class="text-sm text-blue-800">
                   <strong>Instructions:</strong><br>
                   • Hold press: View item info<br>
                   • Double tap: Edit item<br>
-                  • Swipe right: View links<br>
-                  • Right-click (desktop): Context menu
+                  • Triple tap: View links
                 </p>
               </div>
             </div>
@@ -889,11 +795,10 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                 <div class="lg:hidden">
                   <div v-for="item in paginatedItems" :key="item?.itemid" 
                        class="border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors"
-                       @touchstart="handleTouchStartSwipe(item, $event)"
-                       @touchend="handleTouchEndSwipe(item, $event)"
+                       @touchstart="handleTouchStart(item, $event)"
+                       @touchend="handleTouchEnd(item, $event)"
                        @mousedown="handleMouseDown(item, $event)"
-                       @mouseup="handleMouseUp(item, $event)"
-                       @contextmenu="handleRightClick(item, $event)">
+                       @mouseup="handleMouseUp(item, $event)">
                     
                     <div class="flex items-center justify-between mb-2">
                       <div v-if="isAdmin || isOpic" class="flex items-center">
@@ -986,8 +891,7 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                         class="hover:bg-gray-50 cursor-pointer transition-colors"
                         @click="handleItemClick(item)"
                         @mousedown="handleMouseDown(item, $event)"
-                        @mouseup="handleMouseUp(item, $event)"
-                        @contextmenu="handleRightClick(item, $event)">
+                        @mouseup="handleMouseUp(item, $event)">
                       <td v-if="isAdmin || isOpic" class="px-6 py-4 whitespace-nowrap" @click.stop>
                         <input
                           type="checkbox"
@@ -1125,7 +1029,7 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
             <!-- Enable Selected -->
             <button
               v-if="(isAdmin || isOpic) && selectedItems.length > 0"
-              @click="handleBulkEnable"
+              @click="showEnableModal = true"
               class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
             >
               <Enabled class="h-4 w-4 mr-3 text-green-500" />
@@ -1137,12 +1041,16 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
               <Excel
                 :data="getExportData()"
                 :headers="[
-                  'PRODUCTCODE', 'DESCRIPTION', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 
-                  'SRP', 'MANILA', 'MALL', 'GRABFOOD', 'FOODPANDA', 'GRABFOODMALL', 'FOODPANDAMALL'
+                  'ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 
+                  'PRODUCTION', 'MOQ', 'COST', 'SRP', 'MANILA', 'MALL', 
+                  'GRABFOOD', 'FOODPANDA', 'FOODPANDA_MALL', 'GRABFOOD_MALL',
+                  'DEFAULT1', 'DEFAULT2', 'DEFAULT3', 'ENABLEORDER'
                 ]"
                 :row-name-props="[
-                  'PRODUCTCODE', 'DESCRIPTION', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 
-                  'SRP', 'MANILA', 'MALL', 'GRABFOOD', 'FOODPANDA', 'GRABFOODMALL', 'FOODPANDAMALL'
+                  'itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 
+                  'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice', 
+                  'grabfoodprice', 'foodpandaprice', 'foodpandamallprice', 'grabfoodmallprice',
+                  'default1', 'default2', 'default3', 'Activeondelivery'
                 ]"
                 class="w-full text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center p-0 bg-transparent border-0 hover:text-gray-900"
               >
@@ -1215,4 +1123,3 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
       </template>
     </component>
   </template>
-

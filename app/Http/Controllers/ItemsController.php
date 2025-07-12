@@ -32,7 +32,7 @@ class ItemsController extends Controller
             'c.itemdepartment as specialgroup',
             'c.production as production',
             'c.moq as moq',
-            // Added default fields
+            // FIXED: Added default fields to the select query
             'c.default1 as default1',
             'c.default2 as default2',
             'c.default3 as default3',

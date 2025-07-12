@@ -351,7 +351,7 @@ const availableCategories = computed(() => {
   return props.rboinventitemretailgroups.map(group => group.NAME || group.name).filter(Boolean);
 });
 
-// Helper function to convert values to boolean
+// Helper function to convert values to boolean - FIXED
 const toBool = (value) => {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value === 1;
@@ -359,9 +359,13 @@ const toBool = (value) => {
   return false;
 };
 
-// Watch for prop changes and update form
+// Watch for prop changes and update form - FIXED to properly handle default values
 watch(() => props.showModal, (newVal) => {
   if (newVal) {
+    // Reset form first
+    form.reset();
+    
+    // Then populate with current values
     form.itemid = props.itemid;
     form.itemname = props.itemname;
     form.itemgroup = props.itemgroup;
@@ -376,7 +380,7 @@ watch(() => props.showModal, (newVal) => {
     form.grabfoodmallprice = props.grabfoodmallprice;
     form.production = props.production;
     
-    // Properly convert default values to boolean
+    // FIXED: Properly convert and set default values
     form.default1 = toBool(props.default1);
     form.default2 = toBool(props.default2);
     form.default3 = toBool(props.default3);
