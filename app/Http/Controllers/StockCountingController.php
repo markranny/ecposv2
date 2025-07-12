@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\stockcountingtables;
 use App\Models\stockcountingtrans;
 use App\Models\nubersequencevalues;
-use App\Services\DatabaseConnectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -16,13 +15,6 @@ use Exception;
 
 class StockCountingController extends Controller
 {
-    protected DatabaseConnectionService $dbService;
-
-    public function __construct(DatabaseConnectionService $dbService)
-    {
-        $this->dbService = $dbService;
-    }
-
     /**
      * Display a listing of the resource.
      */
@@ -31,12 +23,9 @@ class StockCountingController extends Controller
         try {
             $storeId = Auth::user()->storeid;
             $role = Auth::user()->role;
-            
-            // For admin, use HQ2 database
-            $db = $this->dbService->switchDatabase($role === 'ADMIN' ? 'HQ2' : $storeId);
 
             if ($role == "ADMIN") {
-                $stockcountingtables = $db->table('stockcountingtables AS a')
+                $stockcountingtables = DB::table('stockcountingtables AS a')
                     ->select('a.journalid', 'a.storeid', 'a.description',
                             DB::raw('SUM(CAST(b.COUNTED AS UNSIGNED)) AS QTY'),
                             DB::raw('SUM(CAST(c.priceincltax AS DECIMAL(10,2))) AS AMOUNT'),
@@ -49,7 +38,7 @@ class StockCountingController extends Controller
                     ->orderBy('a.createddatetime', 'DESC')
                     ->get();
             } else {
-                $stockcountingtables = $db->table('stockcountingtables AS a')
+                $stockcountingtables = DB::table('stockcountingtables AS a')
                     ->select('a.journalid', 'a.storeid', 'a.description',
                             DB::raw('SUM(CAST(b.COUNTED AS UNSIGNED)) AS qty'),
                             DB::raw('SUM(CAST(c.priceincltax AS DECIMAL(10,2)) * CAST(b.COUNTED AS UNSIGNED)) AS amount'),
@@ -68,7 +57,7 @@ class StockCountingController extends Controller
             
             $orders = [];
             if ($role === "STORE") {
-                $orders = $db->table('stockcountingtables as b')
+                $orders = DB::table('stockcountingtables as b')
                     ->select(
                         'b.journalid',
                         'b.POSTEDDATETIME as POSTEDDATETIME',
@@ -110,10 +99,7 @@ class StockCountingController extends Controller
             $storeId = Auth::user()->storeid;
             $userId = Auth::user()->id;
 
-            // Switch to appropriate database
-            $db = $this->dbService->switchDatabase($storeId);
-
-            $existingOrder = $db->table('stockcountingtables')
+            $existingOrder = DB::table('stockcountingtables')
                 ->whereDate('CREATEDDATETIME', $currentDateTime)
                 ->where('STOREID', $storeId)
                 ->exists();
@@ -122,21 +108,21 @@ class StockCountingController extends Controller
                 throw new Exception('You have already Stock Counting this time.');
             }
 
-            $stocknextrec = db::table('nubersequencevalues')
+            $stocknextrec = DB::table('nubersequencevalues')
                 ->where('storeid', $storeId)
                 ->lockForUpdate()
                 ->value('stocknextrec');
 
             $stocknextrec = $stocknextrec !== null ? (int)$stocknextrec + 1 : 1;
 
-            db::table('nubersequencevalues')
+            DB::table('nubersequencevalues')
                 ->where('STOREID', $storeId)
                 ->update(['stocknextrec' => $stocknextrec]);
 
             $journalId = $userId . str_pad($stocknextrec, 8, '0', STR_PAD_LEFT);
             $description = "BATCH" . $journalId;
 
-            $db->table('stockcountingtables')->insert([
+            DB::table('stockcountingtables')->insert([
                 'JOURNALID' => $journalId,
                 'STOREID' => $storeId,
                 'DESCRIPTION' => $description,

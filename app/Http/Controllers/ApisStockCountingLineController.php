@@ -295,7 +295,7 @@ class ApisStockCountingLineController extends Controller
                 $yesterday = Carbon::yesterday()->format('Y-m-d');
                 Log::info('Fetching yesterday\'s journal records', ['date' => $yesterday]);
 
-                $journalRecords = DB::connection('remote_db')
+                /* $journalRecords = DB::connection('remote_db')
                     ->table('inventjournaltables as a')
                     ->leftJoin('inventjournaltrans as b', 'a.journalid', '=', 'b.journalid') 
                     ->whereDate('a.posteddatetime', $yesterday)
@@ -315,7 +315,7 @@ class ApisStockCountingLineController extends Controller
                             'RECEIVEDCOUNT' => 0,
                             'updated_at' => now()
                         ]);
-                }
+                } */
 
                 DB::commit();
                 Log::info('Transaction committed successfully');
@@ -661,6 +661,28 @@ class ApisStockCountingLineController extends Controller
         DB::statement("
             UPDATE inventory_summaries 
             SET ending = CASE 
+                WHEN beginning IS NOT NULL 
+                     AND beginning != 0
+                     AND COALESCE(received_delivery, 0) = 0
+                     AND COALESCE(stock_transfer, 0) = 0
+                     AND COALESCE(sales, 0) = 0
+                     AND COALESCE(bundle_sales, 0) = 0
+                     AND COALESCE(throw_away, 0) = 0
+                     AND COALESCE(early_molds, 0) = 0
+                     AND COALESCE(pull_out, 0) = 0
+                     AND COALESCE(rat_bites, 0) = 0
+                     AND COALESCE(ant_bites, 0) = 0
+                THEN beginning
+                ELSE COALESCE(beginning, 0) + COALESCE(received_delivery, 0) - COALESCE(stock_transfer, 0) - COALESCE(sales, 0) - COALESCE(bundle_sales, 0) - COALESCE(throw_away, 0) - COALESCE(early_molds, 0) - COALESCE(pull_out, 0) - COALESCE(rat_bites, 0) - COALESCE(ant_bites, 0)
+            END
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+        ", [$currentDateTime, $storename]);
+
+        // Update ending
+        DB::statement("
+            UPDATE inventory_summaries 
+            SET item_count = CASE 
                 WHEN beginning IS NOT NULL 
                      AND beginning != 0
                      AND COALESCE(received_delivery, 0) = 0

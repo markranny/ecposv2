@@ -9,7 +9,6 @@ use App\Models\inventtables;
 use App\Models\control;
 use App\Models\rboinventtables;
 use App\Models\inventtablemodules;
-use App\Services\DatabaseConnectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -23,20 +22,11 @@ use Illuminate\Validation\ValidationException;
 
 class StockCountingLineController extends Controller
 {
-    protected DatabaseConnectionService $dbService;
-
-    public function __construct(DatabaseConnectionService $dbService)
-    {
-        $this->dbService = $dbService;
-    }
-
     public function index()
     {
         try {
             $storename = Auth::user()->storeid;
             $role = Auth::user()->role;
-            
-            $db = $this->dbService->switchDatabase($role === 'ADMIN' ? 'HQ2' : $storename);
 
             $stockcountingtrans = DB::table('stockcountingtables as a')
                 ->Join('stockcountingtrans as b', 'a.JOURNALID', '=', 'b.JOURNALID')
@@ -65,7 +55,6 @@ class StockCountingLineController extends Controller
             
             $currentDateTime = Carbon::now('Asia/Manila')->toDateString();
             $storename = Auth::user()->storeid;
-            $db = $this->dbService->switchDatabase($storename);
 
             DB::table('stockcountingtrans')->insert([
                 'JOURNALID' => $request->JOURNALID,
@@ -100,7 +89,6 @@ class StockCountingLineController extends Controller
         try {
             $storeName = Auth::user()->storeid;
             $currentDate = Carbon::now('Asia/Manila')->toDateString();
-            $db = $this->dbService->switchDatabase($storeName);
 
             $stockcountingtrans = DB::table('stockcountingtrans AS a')
                 ->select(
@@ -150,9 +138,6 @@ class StockCountingLineController extends Controller
             $journalid = $request->JOURNALID;
             $storename = Auth::user()->storeid;
             $role = Auth::user()->role;
-            
-            // Get current store database connection
-            $db = $this->dbService->switchDatabase($storename);
 
             // Check for existing records
             $record = DB::table('stockcountingtrans')
@@ -166,9 +151,8 @@ class StockCountingLineController extends Controller
                     ->with('isError', true);
             }
 
-            // Begin transaction on the specific store database
-            $db->beginTransaction();
-            DB::beginTransaction(); // Ensure default DB also starts a transaction
+            // Begin transaction
+            DB::beginTransaction();
 
             try {
                 // Insert active inventory items
@@ -207,16 +191,13 @@ class StockCountingLineController extends Controller
                         ->where('ITEMID', $record->ITEMID) 
                         ->where('TRANSDATE', $currentDateTime)
                         ->update([
-                            /* 'ADJUSTMENT' => $record->ADJUSTMENT,
-                            'RECEIVEDCOUNT' => $record->ADJUSTMENT, */
                             'ADJUSTMENT' => $record->ADJUSTMENT,
                             'RECEIVEDCOUNT' => $record->ADJUSTMENT,
                             'updated_at' => now()
                         ]);
                 }
 
-                // Commit both transactions
-                $db->commit();
+                // Commit transaction
                 DB::commit();
 
                 return redirect()
@@ -224,8 +205,7 @@ class StockCountingLineController extends Controller
                     ->with('message', 'Generate Item Successfully')
                     ->with('isSuccess', true);
             } catch (\Exception $e) {
-                // Rollback both transactions
-                $db->rollBack();
+                // Rollback transaction
                 DB::rollBack();
 
                 return back()
@@ -241,13 +221,10 @@ class StockCountingLineController extends Controller
         }
     }
 
-
-
     public function getstocktransfer(Request $request, $journalid)
     {
         try {
             $storename = Auth::user()->storeid;
-            $db = $this->dbService->switchDatabase($storename);
             
             DB::beginTransaction();
 
@@ -283,132 +260,6 @@ class StockCountingLineController extends Controller
         }
     }
 
-    /* public function updateAllCountedValues(Request $request) {
-        Log::info('updateAllCountedValues method called', ['request' => $request->all()]);
-    
-        $user = Auth::user()->storeid;
-    
-        Log::info('Authenticated user store ID', ['storeid' => $user]);
-    
-        if (!$user) {
-            Log::warning('Unauthorized access attempt - no store ID found', ['user' => Auth::user()]);
-    
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ], 401);
-        }
-        
-        Log::info('Store ID retrieved successfully', ['storeid' => $user]);
-
-        $validated = $request->validate([
-            'journalId' => 'required|string',
-            'updatedValues' => 'required|array',
-            'updatedValues.*' => 'array',
-            'updatedValues.*.RECEIVEDCOUNT' => 'nullable|numeric|min:0',
-            'updatedValues.*.WASTECOUNT' => 'nullable|numeric|min:0',
-            'updatedValues.*.COUNTED' => 'nullable|numeric|min:0',
-            'updatedValues.*.TRANSFERCOUNT' => 'nullable|numeric|min:0',
-            'updatedValues.*.WASTETYPE' => 'nullable|string|in:throw_away,early_molds,pull_out,rat_bites,ant_bites'
-        ]);
-
-        Log::info('Validation successful, validated data', ['validated_data' => $validated]);
-
-        $storename = $user;  
-        $db = $this->dbService->switchDatabase($storename);
-
-        Log::info('Database switched successfully', ['storeid' => $storename]);
-
-        $db->beginTransaction();                  
-            $currentDate = Carbon::now('Asia/Manila')->toDateString();
-            $successCount = 0;
-            $errors = [];          
-            
-            foreach ($validated['updatedValues'] as $itemId => $values) {             
-                $record = DB::table('stockcountingtrans')
-                    ->where('JOURNALID', $validated['journalId'])
-                    ->where('ITEMID', $itemId)
-                    ->first();              
-                
-                if (!$record) {
-                    $errors[] = "Record not found for ITEMID: $itemId";
-                    continue;
-                }              
-                
-                if ($record->POSTED === 1) {
-                    $errors[] = "Cannot update posted record for ITEMID: $itemId";
-                    continue;
-                }              
-                
-                $recordDate = Carbon::parse($record->TRANSDATE)->toDateString();
-                if (isset($values['RECEIVEDCOUNT']) && $recordDate !== $currentDate) {
-                    $errors[] = "Cannot update RECEIVEDCOUNT for past date records. ITEMID: $itemId";
-                    continue;
-                }
-    
-                if (isset($values['TRANSFERCOUNT']) && $recordDate !== $currentDate) {
-                    $errors[] = "Cannot update TRANSFERCOUNT for past date records. ITEMID: $itemId";
-                    continue;
-                }
-                
-                if (isset($values['WASTETYPE'])) {
-                    if ($record->WASTETYPE !== null) {
-                        $errors[] = "Cannot update waste type for ITEMID: $itemId - waste type already set";
-                        continue;
-                    }
-                    
-                    if (empty($values['WASTECOUNT']) && empty($record->WASTECOUNT)) {
-                        $errors[] = "Waste count is required when setting waste type for ITEMID: $itemId";
-                        continue;
-                    }
-                }
-                
-                if (isset($values['WASTECOUNT']) && $values['WASTECOUNT'] == 0 && 
-                    (isset($values['WASTETYPE']) || $record->WASTETYPE !== null)) {
-                    $errors[] = "Waste count cannot be 0 when waste type is set for ITEMID: $itemId";
-                    continue;
-                }
-                
-                $updateData = [];
-                foreach ($values as $field => $value) {
-                    if (in_array($field, ['RECEIVEDCOUNT', 'WASTECOUNT', 'WASTETYPE', 'COUNTED', 'TRANSFERCOUNT'])) {
-                        $updateData[$field] = $value;
-                    }
-                }
-                
-                if (isset($values['WASTECOUNT']) || isset($values['WASTETYPE'])) {
-                    $updateData['WASTEDATE'] = $currentDate;
-                }
-                
-                if (!empty($updateData)) {
-                    $updateData['updated_at'] = now();
-                    $updated = DB::table('stockcountingtrans')
-                        ->where('JOURNALID', $validated['journalId'])
-                        ->where('ITEMID', $itemId)
-                        ->update($updateData);
-                        
-                    if ($updated) {
-                        $successCount++;
-                    }
-                }
-            }   
-
-            if (empty($errors)) {
-                $db->commit();
-                return response()->json([
-                    'success' => true,
-                    'message' => "$successCount records updated successfully"
-                ]);
-            } else {
-                $db->rollBack();
-                return response()->json([
-                    'success' => false,
-                    'errors' => $errors
-                ], 422);
-            }
-    
-    } */
-
     public function updateAllCountedValues(Request $request) {
         try {
             Log::info('updateAllCountedValues method called', ['request' => $request->all()]);
@@ -439,12 +290,11 @@ class StockCountingLineController extends Controller
     
             Log::info('Validation successful, validated data', ['validated_data' => $validated]);
     
-            $storename = $user;  
-            $db = $this->dbService->switchDatabase($storename);
-            Log::info('Database switched successfully', ['storeid' => $storename]);
+            $storename = $user;
+            Log::info('Processing with store name', ['storeid' => $storename]);
     
             try {
-                $db->beginTransaction();
+                DB::beginTransaction();
                 $currentDate = Carbon::now('Asia/Manila')->toDateString();
                 $successCount = 0;
                 $errors = [];          
@@ -529,20 +379,20 @@ class StockCountingLineController extends Controller
                 }   
     
                 if (empty($errors)) {
-                    $db->commit();
+                    DB::commit();
                     return response()->json([
                         'success' => true,
                         'message' => "$successCount records updated successfully"
                     ]);
                 } else {
-                    $db->rollBack();
+                    DB::rollBack();
                     return response()->json([
                         'success' => false,
                         'errors' => $errors
                     ], 422);
                 }
             } catch (Exception $e) {
-                $db->rollBack();
+                DB::rollBack();
                 Log::error('Transaction error', [
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString()
@@ -580,7 +430,6 @@ class StockCountingLineController extends Controller
     {
         try {
             $storename = Auth::user()->storeid;
-            $db = $this->dbService->switchDatabase($storename);
             
             $currentDate = Carbon::now('Asia/Manila')->toDateString();
 
@@ -617,8 +466,6 @@ class StockCountingLineController extends Controller
             $storename = Auth::user()->storeid;
             $journalid = $request->journalid;
             $role = Auth::user()->role;
-            
-            $db = $this->dbService->switchDatabase($storename);
        
             DB::beginTransaction();
             
@@ -654,49 +501,36 @@ class StockCountingLineController extends Controller
             DB::beginTransaction();
             
             try {
-                $db = $this->dbService->switchDatabase($storeName);
-                $db->beginTransaction();
-                
-                try {
-                    $storeStockCountingTables = DB::table('stockcountingtables')
-                        ->get()
-                        ->map(function ($item) {
-                            return (array) $item;
-                        })
-                        ->toArray();
-                        
-                    $storeStockCountingTrans = DB::table('stockcountingtrans')
-                        ->get()
-                        ->map(function ($item) {
-                            return (array) $item;
-                        })
-                        ->toArray();
+                $storeStockCountingTables = DB::table('stockcountingtables')
+                    ->get()
+                    ->map(function ($item) {
+                        return (array) $item;
+                    })
+                    ->toArray();
+                    
+                $storeStockCountingTrans = DB::table('stockcountingtrans')
+                    ->get()
+                    ->map(function ($item) {
+                        return (array) $item;
+                    })
+                    ->toArray();
 
-                    DB::table('stockcountingtables')->insert($storeStockCountingTables);
-                    DB::table('stockcountingtrans')->insert($storeStockCountingTrans);
+                DB::table('stockcountingtables')->insert($storeStockCountingTables);
+                DB::table('stockcountingtrans')->insert($storeStockCountingTrans);
 
-                    DB::table('vstockcountingtables')->insert($storeStockCountingTables);
-                    DB::table('vstockcountingtrans')->insert($storeStockCountingTrans);
+                DB::table('vstockcountingtables')->insert($storeStockCountingTables);
+                DB::table('vstockcountingtrans')->insert($storeStockCountingTrans);
 
-                    DB::table('stockcountingtables')->update(['posted' => 1]);
-                    DB::table('stockcountingtables')->update(['posted' => 1]);
-                    DB::table('vstockcountingtables')->update(['posted' => 1]);
+                DB::table('stockcountingtables')->update(['posted' => 1]);
+                DB::table('vstockcountingtables')->update(['posted' => 1]);
 
-                    DB::commit();
-                    $db->commit();
+                DB::commit();
 
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Data processed successfully',
-                        'count' => count($storeStockCountingTables) + count($storeStockCountingTrans)
-                    ]);
-
-                } catch (\Exception $e) {
-                    if ($db->transactionLevel() > 0) {
-                        $db->rollBack();
-                    }
-                    throw $e;
-                }
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Data processed successfully',
+                    'count' => count($storeStockCountingTables) + count($storeStockCountingTrans)
+                ]);
 
             } catch (\Exception $e) {
                 if (DB::transactionLevel() > 0) {

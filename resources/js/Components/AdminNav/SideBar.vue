@@ -88,6 +88,10 @@ const logout = () => {
                 </List>
             </li>
 
+            <div class="tooltip tooltip-right tooltip-primary" data-tip="Batch Counting">
+                <List :active-tab="activeTab" tabName="STOCK" url="/StockCounting"><Stock class="h-6 lg:h-8"/> </List>
+            </div>
+
             <div class="tooltip tooltip-right tooltip-primary" data-tip="Customer">
                 <List :active-tab="activeTab" tabName="CUSTOMERS" url="/customers"><Customers class="h-6 lg:h-8"/> </List>
             </div>

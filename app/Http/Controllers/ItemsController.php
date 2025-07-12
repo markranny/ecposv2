@@ -98,105 +98,112 @@ public function index()
     }
 
     public function store(Request $request)
-    {
-        try {
-            $request->validate([
-                'itemid'=> 'required|string|unique:inventtables,itemid',
-                'itemname'=> 'required|string',
-                'itemdepartment'=> 'required|string',
-                'itemgroup'=> 'required|string',
-                'barcode' => 'required|numeric|digits:13|unique:barcodes,barcode',
-                'cost'=> 'required|numeric|min:0',
-                'price'=> 'required|numeric|min:0',
-            ]);
+{
+    try {
+        $request->validate([
+            'itemid'=> 'required|string|unique:inventtables,itemid',
+            'itemname'=> 'required|string',
+            'itemdepartment'=> 'required|string',
+            'itemgroup'=> 'required|string',
+            'barcode' => 'required|numeric|digits:13|unique:barcodes,barcode',
+            'cost'=> 'required|numeric|min:0',
+            'price'=> 'required|numeric|min:0',
+        ]);
 
-            // Begin transaction
-            DB::beginTransaction();
+        // Begin transaction
+        DB::beginTransaction();
 
-            inventtablemodules::create([
-                'itemid'=> $request->itemid,
-                'moduletype'=> '1',
-                'unitid'=> '1',
-                'price'=> $request->cost,
-                'priceunit'=> '1',
-                'priceincltax'=> $request->price,
-                'blocked'=> '0',
-                'inventlocationid'=> 'S0001',
-                'pricedate'=> Carbon::now(),
-                'taxitemgroupid'=> '1',
-                // Initialize all price fields to 0
-                'manilaprice'=> 0,
-                'grabfood'=> 0,
-                'foodpanda'=> 0,
-                'mallprice'=> 0,
-                'foodpandamall'=> 0,
-                'grabfoodmall'=> 0,                      
-            ]);
+        inventtablemodules::create([
+            'itemid'=> $request->itemid,
+            'moduletype'=> '1',
+            'unitid'=> '1',
+            'price'=> $request->cost,
+            'priceunit'=> '1',
+            'priceincltax'=> $request->price,
+            'blocked'=> '0',
+            'inventlocationid'=> 'S0001',
+            'pricedate'=> Carbon::now(),
+            'taxitemgroupid'=> '1',
+            // Initialize all price fields to 0
+            'manilaprice'=> 0,
+            'grabfood'=> 0,
+            'foodpanda'=> 0,
+            'mallprice'=> 0,
+            'foodpandamall'=> 0,
+            'grabfoodmall'=> 0,                      
+        ]);
 
-            inventtables::create([
-                'itemgroupid'=> '1',
-                'itemid'=> $request->itemid,
-                'itemname'=> $request->itemname,
-                'itemtype'=> '1',
-                'notes'=> 'NA',
-            ]);
+        inventtables::create([
+            'itemgroupid'=> '1',
+            'itemid'=> $request->itemid,
+            'itemname'=> $request->itemname,
+            'itemtype'=> '1',
+            'notes'=> 'NA',
+        ]);
 
-            rboinventtables::create([
-                'itemid'=> $request->itemid,
-                'itemgroup'=> $request->itemgroup,
-                'itemdepartment'=> $request->itemdepartment,
-                'barcode'=> $request->barcode,
-                'activeondelivery'=> '1',
-                'production'=> 'NEWCOM',
-                'moq'=> null, // Allow null MOQ
-                // Initialize default fields
-                'default1'=> 0,
-                'default2'=> 0,
-                'default3'=> 0,
-            ]);
+        rboinventtables::create([
+            'itemid'=> $request->itemid,
+            'itemgroup'=> $request->itemgroup,
+            'itemdepartment'=> $request->itemdepartment,
+            'barcode'=> $request->barcode,
+            'activeondelivery'=> '1',
+            'production'=> 'NEWCOM',
+            'moq'=> null,
+            // Initialize default fields
+            'default1'=> 0,
+            'default2'=> 0,
+            'default3'=> 0,
+        ]);
 
-            $name = Auth::user()->name;
+        $name = Auth::user()->name;
 
-            barcodes::create([
-                'barcode'=> $request->barcode,
-                'description'=> $request->itemname,
-                'generateby'=> $name,
-                'generatedate'=> Carbon::now(),
-                'modifiedby'=> $name,
-                'IsUse'=> 1,
-            ]);
+        barcodes::create([
+            'barcode'=> $request->barcode,
+            'description'=> $request->itemname,
+            'generateby'=> $name,
+            'generatedate'=> Carbon::now(),
+            'modifiedby'=> $name,
+            'IsUse'=> 1,
+        ]);
 
-            inventitembarcodes::create([
-                'itembarcode'=> $request->barcode,
-                'itemid'=> $request->itemid,
-                'description'=> $request->itemname,
-                'blocked'=> '0',
-                'modifiedby'=> $name,
-                'qty'=> 0,
-                'unitid'=> '1',
-                'rbovariantid'=> '',
-                'barcodesetupid'=> '',
-            ]);
+        inventitembarcodes::create([
+            'itembarcode'=> $request->barcode,
+            'itemid'=> $request->itemid,
+            'description'=> $request->itemname,
+            'blocked'=> '0',
+            'modifiedby'=> $name,
+            'qty'=> 0,
+            'unitid'=> '1',
+            'rbovariantid'=> '',
+            'barcodesetupid'=> '',
+        ]);
 
-            DB::commit();
+        DB::commit();
 
-            return redirect()->route('items.index')
+        // Check if category is 'BW PROMO' and redirect to item links
+        if ($request->itemgroup === 'BW PROMO') {
+            return redirect()->route('item-links.index', $request->itemid)
+                ->with('message', 'Product created successfully. Configure item links for this promo item.')
+                ->with('isSuccess', true);
+        }
+
+        return redirect()->route('items.index')
             ->with('message', 'Product created successfully')
             ->with('isSuccess', true);
 
-        } catch (ValidationException $e) {
-            DB::rollBack();
-            return back()->withErrors($e->errors())
+    } catch (ValidationException $e) {
+        DB::rollBack();
+        return back()->withErrors($e->errors())
             ->withInput()
             ->with('message', 'Validation failed')
             ->with('isSuccess', false);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()
             ->with('message', 'Error creating product: ' . $e->getMessage())
             ->with('isSuccess', false);
-        }
     }
+}
 
     public function show(string $id)
     {
@@ -367,6 +374,221 @@ public function index()
      */
     public function downloadTemplate()
 {
+    try {
+        // Get current items data (same query as index function)
+        $items = DB::table('inventtablemodules as a')
+            ->select(
+                'a.ITEMID as itemid',
+                'b.itemname as itemname',
+                DB::raw("CASE 
+                    WHEN c.barcode IS NOT NULL AND c.barcode != '' THEN c.barcode 
+                    WHEN d.ITEMBARCODE IS NOT NULL AND d.ITEMBARCODE != '' THEN d.itembarcode 
+                    ELSE '' 
+                END as barcode"),
+                'c.itemgroup as itemgroup',
+                'c.itemdepartment as specialgroup',
+                'c.production as production',
+                'c.moq as moq',
+                DB::raw('CAST(a.price as float) as cost'),
+                DB::raw('CAST(a.priceincltax as float) as price'),
+                DB::raw('CAST(COALESCE(a.manilaprice, 0) as float) as manilaprice'),
+                DB::raw('CAST(COALESCE(a.mallprice, 0) as float) as mallprice'),
+                DB::raw('CAST(COALESCE(a.grabfood, 0) as float) as grabfoodprice'),
+                DB::raw('CAST(COALESCE(a.foodpanda, 0) as float) as foodpandaprice'),
+                DB::raw('CAST(COALESCE(a.foodpandamall, 0) as float) as foodpandamallprice'),
+                DB::raw('CAST(COALESCE(a.grabfoodmall, 0) as float) as grabfoodmallprice'),
+                'c.default1 as default1',
+                'c.default2 as default2',
+                'c.default3 as default3',
+                'c.Activeondelivery as Activeondelivery'
+            )
+            ->leftJoin('inventtables as b', 'a.ITEMID', '=', 'b.itemid')
+            ->leftJoin('rboinventtables as c', 'b.itemid', '=', 'c.itemid')
+            ->leftJoin('inventitembarcodes as d', function($join) {
+                $join->on('c.itemid', '=', 'd.itemid')
+                     ->orOn('c.barcode', '=', 'd.ITEMBARCODE');
+            })
+            ->where('c.itemdepartment', '=', 'REGULAR PRODUCT')
+            ->whereNotNull('b.itemid')
+            ->whereNotNull('c.itemid')
+            ->limit(1000) // Limit to prevent memory issues
+            ->get();
+
+        $headers = [
+            'itemid',
+            'itemname', 
+            'barcode',
+            'itemgroup',
+            'specialgroup',
+            'production',
+            'moq',
+            'cost',
+            'price',
+            'manilaprice',
+            'mallprice', 
+            'grabfoodprice',
+            'foodpandaprice',
+            'foodpandamallprice',
+            'grabfoodmallprice',
+            'default1',
+            'default2', 
+            'default3',
+            'Activeondelivery'
+        ];
+
+        $filename = 'items_template_with_data_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        $callback = function() use ($headers, $items) {
+            $file = fopen('php://output', 'w');
+            
+            // Add UTF-8 BOM for Excel compatibility
+            fwrite($file, "\xEF\xBB\xBF");
+            
+            // Write headers
+            fputcsv($file, $headers);
+            
+            // Add sample/instruction rows first
+            fputcsv($file, [
+                '# SAMPLE ROWS - DELETE THESE BEFORE IMPORTING',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                ''
+            ]);
+            
+            fputcsv($file, [
+                'ACC-SUP-036',
+                'GIFT TAG',
+                '1234567890123',
+                'MERCHANDISE',
+                'REGULAR PRODUCT',
+                'NEWCOM',
+                '5',
+                '2.00',
+                '15.00',
+                '16.00',
+                '17.00',
+                '18.00',
+                '19.00',
+                '20.00',
+                '21.00',
+                '0',
+                '0',
+                '0',
+                '1'
+            ]);
+            
+            fputcsv($file, [
+                'BEV-TRA-001',
+                'COKE 1.5 liters',
+                '0245698563542',
+                'BEVERAGES',
+                'REGULAR PRODUCT',
+                'NEWCOM',
+                '10',
+                '85.00',
+                '99.00',
+                '0.00',
+                '0.00',
+                '0.00',
+                '0.00',
+                '0.00',
+                '0.00',
+                '0',
+                '0',
+                '0',
+                '1'
+            ]);
+            
+            // Add separator
+            fputcsv($file, [
+                '# CURRENT ITEMS DATA - MODIFY AS NEEDED',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                ''
+            ]);
+            
+            // Write actual items data
+            foreach ($items as $item) {
+                fputcsv($file, [
+                    $item->itemid ?? '',
+                    $item->itemname ?? '',
+                    $item->barcode ?? '',
+                    $item->itemgroup ?? '',
+                    $item->specialgroup ?? 'REGULAR PRODUCT',
+                    $item->production ?? 'NEWCOM',
+                    $item->moq ?? '',
+                    number_format((float)($item->cost ?? 0), 2, '.', ''),
+                    number_format((float)($item->price ?? 0), 2, '.', ''),
+                    number_format((float)($item->manilaprice ?? 0), 2, '.', ''),
+                    number_format((float)($item->mallprice ?? 0), 2, '.', ''),
+                    number_format((float)($item->grabfoodprice ?? 0), 2, '.', ''),
+                    number_format((float)($item->foodpandaprice ?? 0), 2, '.', ''),
+                    number_format((float)($item->foodpandamallprice ?? 0), 2, '.', ''),
+                    number_format((float)($item->grabfoodmallprice ?? 0), 2, '.', ''),
+                    $item->default1 ?? '0',
+                    $item->default2 ?? '0',
+                    $item->default3 ?? '0',
+                    $item->Activeondelivery ?? '1'
+                ]);
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error generating template with data', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        // Fallback to basic template
+        return $this->downloadBasicTemplate();
+    }
+}
+
+/**
+ * Fallback method for basic template
+ */
+private function downloadBasicTemplate()
+{
     $headers = [
         'itemid',
         'itemname', 
@@ -389,19 +611,19 @@ public function index()
         'Activeondelivery'
     ];
 
-    $filename = 'items_import_template.csv';
+    $filename = 'items_import_template_basic.csv';
     
     $callback = function() use ($headers) {
         $file = fopen('php://output', 'w');
         fputcsv($file, $headers);
         
-        // Add sample rows with realistic data - showing optional barcode
+        // Add basic sample rows
         fputcsv($file, [
             'ACC-SUP-036',
             'GIFT TAG',
-            '1234567890123', // With barcode
+            '1234567890123',
             'MERCHANDISE',
-            'REGULAR PRODUCT', // Fixed: was NON PRODUCT
+            'REGULAR PRODUCT',
             'NEWCOM',
             '5',
             '2.00',
@@ -412,51 +634,6 @@ public function index()
             '19.00',
             '20.00',
             '21.00',
-            '0',
-            '0',
-            '0',
-            '1'
-        ]);
-        
-        fputcsv($file, [
-            'BEV-TRA-001',
-            'COKE 1.5 liters',
-            '0245698563542', // With barcode
-            'BEVERAGES',
-            'REGULAR PRODUCT', // Fixed: was NON PRODUCT
-            'NEWCOM',
-            '10',
-            '85.00',
-            '99.00',
-            '0.00',
-            '0.00',
-            '0.00',
-            '0.00',
-            '0.00',
-            '0.00',
-            '0',
-            '0',
-            '0',
-            '1'
-        ]);
-        
-        // Example without barcode
-        fputcsv($file, [
-            'SER-REP-001',
-            'Repair Service',
-            '', // No barcode (empty)
-            'SERVICES',
-            'REGULAR PRODUCT', // Fixed: was NON PRODUCT
-            'NEWCOM',
-            '',
-            '100.00',
-            '150.00',
-            '0.00',
-            '0.00',
-            '0.00',
-            '0.00',
-            '0.00',
-            '0.00',
             '0',
             '0',
             '0',
