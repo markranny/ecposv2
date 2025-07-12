@@ -121,16 +121,62 @@ class ApisStockCountingLineController extends Controller
     }
 
     public function show($storeids, $journalId)
-    {
-        try {
-            $store = DB::table('rbostoretables')
-                ->where('name', $storeids)
-                ->value('name');
-            
-            $storeName = $store;
-            $currentDate = Carbon::now('Asia/Manila')->toDateString();
-            Log::info('User store', ['store' => $storeName]);
+{
+    try {
+        $store = DB::table('rbostoretables')
+            ->where('name', $storeids)
+            ->value('name');
+        
+        $storeName = $store;
+        $currentDate = Carbon::now('Asia/Manila')->toDateString();
+        Log::info('User store', ['store' => $storeName]);
 
+        $stockcountingtrans = DB::table('stockcountingtrans AS a')
+            ->select(
+                'a.*', 
+                'b.*', 
+                'c.*', 
+                'st.posted',
+                DB::raw("DATE(a.TRANSDATE) as TRANSDATE")  
+            )
+            ->leftJoin('inventtables AS b', 'a.itemid', '=', 'b.itemid')
+            ->leftJoin('rboinventtables AS c', 'b.itemid', '=', 'c.itemid')
+            ->leftJoin('stockcountingtables as st', function($join) use ($storeName) {
+                $join->on('a.journalid', '=', 'st.journalid')
+                    ->where('st.storeid', '=', $storeName);
+            })
+            ->where('a.journalid', $journalId)
+            ->where('a.storename', $storeName)
+            ->OrderBy('a.ADJUSTMENT', 'DESC')
+            ->get();
+
+        // Always check for missing items and sync, regardless of whether stockcountingtrans is empty or not
+        Log::info('Checking for missing items to sync', [
+            'journalId' => $journalId,
+            'store' => $storeName,
+            'currentItemsCount' => $stockcountingtrans->count()
+        ]);
+        
+        // Create a new request instance with all required parameters
+        $request = new Request();
+        $request->merge([
+            'JOURNALID' => $journalId,
+            'storeids' => $storeids
+        ]);
+        
+        // Call getbwproducts method to sync any missing items
+        $syncResponse = $this->getbwproducts($request, $storeids, $journalId);
+        
+        // Check if sync was successful
+        $syncData = json_decode($syncResponse->getContent(), true);
+        if ($syncData['success']) {
+            Log::info('Sync completed', [
+                'journalId' => $journalId,
+                'syncMessage' => $syncData['message'],
+                'syncData' => $syncData['data'] ?? null
+            ]);
+            
+            // Re-fetch the data after sync to get the complete updated list
             $stockcountingtrans = DB::table('stockcountingtrans AS a')
                 ->select(
                     'a.*', 
@@ -149,48 +195,47 @@ class ApisStockCountingLineController extends Controller
                 ->where('a.storename', $storeName)
                 ->OrderBy('a.ADJUSTMENT', 'DESC')
                 ->get();
-
-            // Check if no data was found
-            if ($stockcountingtrans->isEmpty()) {
-                Log::info('No data found, redirecting to getbwproducts', [
-                    'journalId' => $journalId,
-                    'store' => $storeName
-                ]);
                 
-                // Create a new request instance with all required parameters
-                $request = new Request();
-                $request->merge([
-                    'JOURNALID' => $journalId,
-                    'storeids' => $storeids
-                ]);
-                
-                // Call getbwproducts method with all required parameters
-                return $this->getbwproducts($request, $storeids, $journalId);
-            }
-
-            $isPosted = DB::table('stockcountingtables')
-                ->where('journalid', $journalId)
-                ->where('storeid', $storeName)
-                ->value('posted') ?? 0;
-                
-            return response()->json([
-                'journalid' => $journalId,
-                'stockcountingtrans' => $stockcountingtrans,
-                'isPosted' => $isPosted,
-                'currentDate' => $currentDate, 
+            Log::info('Data re-fetched after sync', [
+                'finalItemsCount' => $stockcountingtrans->count()
             ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error in show method', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+        } else {
+            Log::warning('Sync failed', [
+                'journalId' => $journalId,
+                'syncMessage' => $syncData['message'] ?? 'Unknown error'
             ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Error retrieving record: ' . $e->getMessage()
-            ], 500);
         }
+
+        $isPosted = DB::table('stockcountingtables')
+            ->where('journalid', $journalId)
+            ->where('storeid', $storeName)
+            ->value('posted') ?? 0;
+            
+        return response()->json([
+            'journalid' => $journalId,
+            'stockcountingtrans' => $stockcountingtrans,
+            'isPosted' => $isPosted,
+            'currentDate' => $currentDate,
+            'syncInfo' => [
+                'syncPerformed' => true,
+                'syncSuccess' => $syncData['success'] ?? false,
+                'syncMessage' => $syncData['message'] ?? null,
+                'newItemsAdded' => $syncData['data']['newly_added_count'] ?? 0,
+                'totalItems' => $syncData['data']['total_count'] ?? $stockcountingtrans->count()
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error in show method', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Error retrieving record: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     public function getbwproducts(Request $request, $storeids, $journalId)
     {
