@@ -330,28 +330,30 @@ class ItemsController extends Controller
     }
 
     /**
-     * Download import template
+     * Download import template - Updated to match export format
      */
     public function downloadTemplate()
     {
         $headers = [
             'itemid',
-            'itemname',
-            'itemgroup',
+            'itemname', 
             'barcode',
+            'itemgroup',
+            'specialgroup',
+            'production',
+            'moq',
             'cost',
             'price',
             'manilaprice',
-            'foodpandaprice',
+            'mallprice', 
             'grabfoodprice',
-            'mallprice',
+            'foodpandaprice',
             'foodpandamallprice',
             'grabfoodmallprice',
-            'production',
-            'moq',
             'default1',
-            'default2',
-            'default3'
+            'default2', 
+            'default3',
+            'Activeondelivery'
         ];
 
         $filename = 'items_import_template.csv';
@@ -360,13 +362,16 @@ class ItemsController extends Controller
             $file = fopen('php://output', 'w');
             fputcsv($file, $headers);
             
-            // Add sample row
+            // Add sample rows with realistic data
             fputcsv($file, [
-                'SAMPLE001',
-                'Sample Item Name',
-                'SAMPLE CATEGORY',
+                'ACC-SUP-036',
+                'GIFT TAG',
                 '1234567890123',
-                '10.00',
+                'MERCHANDISE',
+                'NON PRODUCT',
+                'NEWCOM',
+                '5',
+                '2.00',
                 '15.00',
                 '16.00',
                 '17.00',
@@ -374,11 +379,32 @@ class ItemsController extends Controller
                 '19.00',
                 '20.00',
                 '21.00',
+                '0',
+                '0',
+                '0',
+                '1'
+            ]);
+            
+            fputcsv($file, [
+                'BEV-TRA-001',
+                'COKE 1.5 liters',
+                '0245698563542',
+                'BEVERAGES',
+                'NON PRODUCT',
                 'NEWCOM',
-                '5',
+                '10',
+                '85.00',
+                '99.00',
+                '0.00',
+                '0.00',
+                '0.00',
+                '0.00',
+                '0.00',
+                '0.00',
                 '0',
                 '0',
-                '0'
+                '0',
+                '1'
             ]);
             
             fclose($file);
@@ -388,5 +414,187 @@ class ItemsController extends Controller
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
+    }
+
+    /**
+     * Import items from CSV - Updated to handle new format
+     */
+    public function import(Request $request)
+    {
+        try {
+            $request->validate([
+                'file' => 'required|file|mimes:csv,txt'
+            ]);
+
+            $file = $request->file('file');
+            $csv = array_map('str_getcsv', file($file->getRealPath()));
+            $header = array_shift($csv); // Remove header row
+
+            // Validate header format
+            $expectedHeaders = [
+                'itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 
+                'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice',
+                'grabfoodprice', 'foodpandaprice', 'foodpandamallprice', 
+                'grabfoodmallprice', 'default1', 'default2', 'default3', 'Activeondelivery'
+            ];
+
+            if (count(array_diff($expectedHeaders, $header)) > 0) {
+                return back()->with('message', 'CSV header format is incorrect. Please use the provided template.')
+                              ->with('isSuccess', false);
+            }
+
+            DB::beginTransaction();
+            $successCount = 0;
+            $errorCount = 0;
+            $errors = [];
+
+            foreach ($csv as $rowIndex => $row) {
+                if (count($row) !== count($header)) continue; // Skip malformed rows
+                
+                $data = array_combine($header, $row);
+                
+                try {
+                    // Check if item already exists
+                    if (inventtables::where('itemid', $data['itemid'])->exists()) {
+                        $errors[] = "Row " . ($rowIndex + 2) . ": Item ID {$data['itemid']} already exists";
+                        $errorCount++;
+                        continue;
+                    }
+
+                    // Check if barcode already exists
+                    if (barcodes::where('barcode', $data['barcode'])->exists()) {
+                        $errors[] = "Row " . ($rowIndex + 2) . ": Barcode {$data['barcode']} already exists";
+                        $errorCount++;
+                        continue;
+                    }
+
+                    $name = Auth::user()->name;
+
+                    // Create inventtablemodules record
+                    inventtablemodules::create([
+                        'itemid' => $data['itemid'],
+                        'moduletype' => '1',
+                        'unitid' => '1', 
+                        'price' => floatval($data['cost']),
+                        'priceunit' => '1',
+                        'priceincltax' => floatval($data['price']),
+                        'blocked' => '0',
+                        'inventlocationid' => 'S0001',
+                        'pricedate' => Carbon::now(),
+                        'taxitemgroupid' => '1',
+                        'manilaprice' => floatval($data['manilaprice'] ?? 0),
+                        'grabfood' => floatval($data['grabfoodprice'] ?? 0),
+                        'foodpanda' => floatval($data['foodpandaprice'] ?? 0),
+                        'mallprice' => floatval($data['mallprice'] ?? 0),
+                        'foodpandamall' => floatval($data['foodpandamallprice'] ?? 0),
+                        'grabfoodmall' => floatval($data['grabfoodmallprice'] ?? 0),
+                    ]);
+
+                    // Create inventtables record
+                    inventtables::create([
+                        'itemgroupid' => '1',
+                        'itemid' => $data['itemid'],
+                        'itemname' => $data['itemname'],
+                        'itemtype' => '1',
+                        'notes' => 'Imported',
+                    ]);
+
+                    // Create rboinventtables record
+                    rboinventtables::create([
+                        'itemid' => $data['itemid'],
+                        'itemgroup' => $data['itemgroup'],
+                        'itemdepartment' => $data['specialgroup'],
+                        'barcode' => $data['barcode'],
+                        'activeondelivery' => $data['Activeondelivery'] == '1' ? 1 : 0,
+                        'production' => $data['production'],
+                        'moq' => !empty($data['moq']) ? intval($data['moq']) : null,
+                        'default1' => $data['default1'] == '1' ? 1 : 0,
+                        'default2' => $data['default2'] == '1' ? 1 : 0,
+                        'default3' => $data['default3'] == '1' ? 1 : 0,
+                    ]);
+
+                    // Create barcodes record
+                    barcodes::create([
+                        'barcode' => $data['barcode'],
+                        'description' => $data['itemname'],
+                        'generateby' => $name,
+                        'generatedate' => Carbon::now(),
+                        'modifiedby' => $name,
+                        'IsUse' => 1,
+                    ]);
+
+                    // Create inventitembarcodes record
+                    inventitembarcodes::create([
+                        'itembarcode' => $data['barcode'],
+                        'itemid' => $data['itemid'],
+                        'description' => $data['itemname'],
+                        'blocked' => '0',
+                        'modifiedby' => $name,
+                        'qty' => 0,
+                        'unitid' => '1',
+                        'rbovariantid' => '',
+                        'barcodesetupid' => '',
+                    ]);
+
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    $errors[] = "Row " . ($rowIndex + 2) . ": " . $e->getMessage();
+                    $errorCount++;
+                }
+            }
+
+            DB::commit();
+
+            $message = "Import completed. Success: {$successCount}, Errors: {$errorCount}";
+            if (!empty($errors)) {
+                $message .= "\n\nErrors:\n" . implode("\n", array_slice($errors, 0, 10));
+                if (count($errors) > 10) {
+                    $message .= "\n... and " . (count($errors) - 10) . " more errors.";
+                }
+            }
+
+            return redirect()->route('items.index')
+                ->with('message', $message)
+                ->with('isSuccess', $successCount > 0);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()
+                ->with('message', 'Import failed: ' . $e->getMessage())
+                ->with('isSuccess', false);
+        }
+    }
+
+    /**
+     * Bulk enable items for ordering
+     */
+    public function bulkEnable(Request $request)
+    {
+        try {
+            $request->validate([
+                'itemids' => 'required|array',
+                'itemids.*' => 'required|string'
+            ]);
+
+            DB::beginTransaction();
+
+            $updated = rboinventtables::whereIn('itemid', $request->itemids)
+                ->update(['activeondelivery' => 1]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => "Successfully enabled {$updated} items for ordering",
+                'success' => true
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error enabling items: ' . $e->getMessage(),
+                'success' => false
+            ], 500);
+        }
     }
 }

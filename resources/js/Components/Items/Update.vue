@@ -32,12 +32,16 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Category <span class="text-red-500">*</span></label>
-              <input
+              <select
                 v-model="form.itemgroup"
-                type="text"
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
+                <option value="">Select a category</option>
+                <option v-for="category in availableCategories" :key="category" :value="category">
+                  {{ category }}
+                </option>
+              </select>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Production <span class="text-red-500">*</span></label>
@@ -240,7 +244,7 @@
 
 <script setup>
 import { useForm } from '@inertiajs/vue3';
-import { watch, onMounted } from 'vue';
+import { watch, onMounted, computed } from 'vue';
 
 const props = defineProps({
   showModal: {
@@ -298,6 +302,22 @@ const props = defineProps({
   production: {
     type: String,
     default: ''
+  },
+  default1: {
+    type: [Boolean, Number, String],
+    default: false
+  },
+  default2: {
+    type: [Boolean, Number, String],
+    default: false
+  },
+  default3: {
+    type: [Boolean, Number, String],
+    default: false
+  },
+  rboinventitemretailgroups: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -323,6 +343,22 @@ const form = useForm({
   confirm_defaults: false
 });
 
+// Available categories from retail groups
+const availableCategories = computed(() => {
+  if (!props.rboinventitemretailgroups || !Array.isArray(props.rboinventitemretailgroups)) {
+    return [];
+  }
+  return props.rboinventitemretailgroups.map(group => group.NAME || group.name).filter(Boolean);
+});
+
+// Helper function to convert values to boolean
+const toBool = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') return value === '1' || value.toLowerCase() === 'true';
+  return false;
+};
+
 // Watch for prop changes and update form
 watch(() => props.showModal, (newVal) => {
   if (newVal) {
@@ -339,6 +375,12 @@ watch(() => props.showModal, (newVal) => {
     form.foodpandamallprice = props.foodpandamallprice;
     form.grabfoodmallprice = props.grabfoodmallprice;
     form.production = props.production;
+    
+    // Properly convert default values to boolean
+    form.default1 = toBool(props.default1);
+    form.default2 = toBool(props.default2);
+    form.default3 = toBool(props.default3);
+    
     form.confirm_defaults = false;
   }
 });

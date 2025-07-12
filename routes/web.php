@@ -130,6 +130,9 @@ Route::resource('announcement', AnnouncementController::class);
 Route::get('/announcements/{id}', [HomeController::class, 'downloadFile'])->name('announcements.download');
 Route::resource('partycakes', PartyCakesController::class);
 
+Route::post('/ImportProducts', [ItemsController::class, 'import'])->name('items.import');
+Route::get('/download-import-template', [ItemsController::class, 'downloadTemplate'])->name('items.download-template');
+
 // SUPERADMIN routes
 Route::middleware(['auth', 'role:SUPERADMIN'])->group(function () {
     Route::post('/ImportProducts', [ItemsManageController::class, 'store'])->name('import.products');
