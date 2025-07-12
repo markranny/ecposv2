@@ -14,15 +14,18 @@ use App\Models\inventitembarcodes;
 use App\Models\rboinventitemretailgroups;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Carbon\Carbon;
 
 class ItemsController extends Controller
 {
-    public function index()
-    {
+public function index()
+{
+    try {
         $rboinventitemretailgroups = DB::table('rboinventitemretailgroups')->get();
 
+        // Fixed query with better error handling and proper joins
         $items = DB::table('inventtablemodules as a')
         ->select(
             'a.ITEMID as itemid',
@@ -45,19 +48,49 @@ class ItemsController extends Controller
             DB::raw('CAST(COALESCE(a.foodpandamall, 0) as float) as foodpandamallprice'),
             DB::raw('CAST(COALESCE(a.grabfoodmall, 0) as float) as grabfoodmallprice'),
             DB::raw('CAST(a.price as float) as cost'),
-            DB::raw("CASE WHEN d.ITEMBARCODE <> '' THEN d.itembarcode ELSE 'N/A' END as barcode")
+            // FIXED: Better barcode handling - use rboinventtables.barcode as primary, fallback to inventitembarcodes
+            DB::raw("CASE 
+                WHEN c.barcode IS NOT NULL AND c.barcode != '' THEN c.barcode 
+                WHEN d.ITEMBARCODE IS NOT NULL AND d.ITEMBARCODE != '' THEN d.itembarcode 
+                ELSE 'N/A' 
+            END as barcode")
         )
         ->leftJoin('inventtables as b', 'a.ITEMID', '=', 'b.itemid')
         ->leftJoin('rboinventtables as c', 'b.itemid', '=', 'c.itemid')
-        ->leftJoin('inventitembarcodes as d', 'c.barcode', '=', 'd.ITEMBARCODE')
+        ->leftJoin('inventitembarcodes as d', function($join) {
+            $join->on('c.itemid', '=', 'd.itemid')
+                 ->orOn('c.barcode', '=', 'd.ITEMBARCODE');
+        })
         ->where('c.itemdepartment', '=', 'REGULAR PRODUCT') 
+        ->whereNotNull('b.itemid') // Ensure we have a valid item
+        ->whereNotNull('c.itemid') // Ensure we have rboinventtables data
         ->get();
+
+        // Log the query for debugging
+        \Log::info('Items index query executed', [
+            'total_items_found' => $items->count(),
+            'sample_item' => $items->first()
+        ]);
 
         return Inertia::render('Items/Index', [
             'items' => $items, 
             'rboinventitemretailgroups' => $rboinventitemretailgroups
         ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error in items index', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        // Return empty result with error message
+        return Inertia::render('Items/Index', [
+            'items' => collect([]), 
+            'rboinventitemretailgroups' => collect([]),
+            'error' => 'Error loading items: ' . $e->getMessage()
+        ]);
     }
+}
 
     public function create()
     {
@@ -333,151 +366,396 @@ class ItemsController extends Controller
      * Download import template - Updated to match export format
      */
     public function downloadTemplate()
-    {
-        $headers = [
-            'itemid',
-            'itemname', 
-            'barcode',
-            'itemgroup',
-            'specialgroup',
-            'production',
-            'moq',
-            'cost',
-            'price',
-            'manilaprice',
-            'mallprice', 
-            'grabfoodprice',
-            'foodpandaprice',
-            'foodpandamallprice',
-            'grabfoodmallprice',
-            'default1',
-            'default2', 
-            'default3',
-            'Activeondelivery'
-        ];
+{
+    $headers = [
+        'itemid',
+        'itemname', 
+        'barcode',
+        'itemgroup',
+        'specialgroup',
+        'production',
+        'moq',
+        'cost',
+        'price',
+        'manilaprice',
+        'mallprice', 
+        'grabfoodprice',
+        'foodpandaprice',
+        'foodpandamallprice',
+        'grabfoodmallprice',
+        'default1',
+        'default2', 
+        'default3',
+        'Activeondelivery'
+    ];
 
-        $filename = 'items_import_template.csv';
+    $filename = 'items_import_template.csv';
+    
+    $callback = function() use ($headers) {
+        $file = fopen('php://output', 'w');
+        fputcsv($file, $headers);
         
-        $callback = function() use ($headers) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, $headers);
-            
-            // Add sample rows with realistic data
-            fputcsv($file, [
-                'ACC-SUP-036',
-                'GIFT TAG',
-                '1234567890123',
-                'MERCHANDISE',
-                'NON PRODUCT',
-                'NEWCOM',
-                '5',
-                '2.00',
-                '15.00',
-                '16.00',
-                '17.00',
-                '18.00',
-                '19.00',
-                '20.00',
-                '21.00',
-                '0',
-                '0',
-                '0',
-                '1'
-            ]);
-            
-            fputcsv($file, [
-                'BEV-TRA-001',
-                'COKE 1.5 liters',
-                '0245698563542',
-                'BEVERAGES',
-                'NON PRODUCT',
-                'NEWCOM',
-                '10',
-                '85.00',
-                '99.00',
-                '0.00',
-                '0.00',
-                '0.00',
-                '0.00',
-                '0.00',
-                '0.00',
-                '0',
-                '0',
-                '0',
-                '1'
-            ]);
-            
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        // Add sample rows with realistic data - showing optional barcode
+        fputcsv($file, [
+            'ACC-SUP-036',
+            'GIFT TAG',
+            '1234567890123', // With barcode
+            'MERCHANDISE',
+            'REGULAR PRODUCT', // Fixed: was NON PRODUCT
+            'NEWCOM',
+            '5',
+            '2.00',
+            '15.00',
+            '16.00',
+            '17.00',
+            '18.00',
+            '19.00',
+            '20.00',
+            '21.00',
+            '0',
+            '0',
+            '0',
+            '1'
         ]);
-    }
+        
+        fputcsv($file, [
+            'BEV-TRA-001',
+            'COKE 1.5 liters',
+            '0245698563542', // With barcode
+            'BEVERAGES',
+            'REGULAR PRODUCT', // Fixed: was NON PRODUCT
+            'NEWCOM',
+            '10',
+            '85.00',
+            '99.00',
+            '0.00',
+            '0.00',
+            '0.00',
+            '0.00',
+            '0.00',
+            '0.00',
+            '0',
+            '0',
+            '0',
+            '1'
+        ]);
+        
+        // Example without barcode
+        fputcsv($file, [
+            'SER-REP-001',
+            'Repair Service',
+            '', // No barcode (empty)
+            'SERVICES',
+            'REGULAR PRODUCT', // Fixed: was NON PRODUCT
+            'NEWCOM',
+            '',
+            '100.00',
+            '150.00',
+            '0.00',
+            '0.00',
+            '0.00',
+            '0.00',
+            '0.00',
+            '0.00',
+            '0',
+            '0',
+            '0',
+            '1'
+        ]);
+        
+        fclose($file);
+    };
 
+    return response()->stream($callback, 200, [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+    ]);
+}
     /**
      * Import items from CSV - Updated to handle new format
      */
-    public function import(Request $request)
-    {
-        try {
-            $request->validate([
-                'file' => 'required|file|mimes:csv,txt'
+    
+public function import(Request $request)
+{
+    try {
+        // Log import start
+        \Log::info('===== IMPORT STARTED =====', [
+            'user' => Auth::user()->name ?? 'Unknown',
+            'timestamp' => now()->toDateTimeString()
+        ]);
+
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt'
+        ]);
+
+        $file = $request->file('file');
+        \Log::info('File received', [
+            'original_name' => $file->getClientOriginalName(),
+            'size' => $file->getSize(),
+            'mime_type' => $file->getMimeType()
+        ]);
+
+        // Read CSV file
+        $csvContent = file($file->getRealPath());
+        \Log::info('CSV file read', [
+            'total_lines' => count($csvContent),
+            'first_line' => isset($csvContent[0]) ? trim($csvContent[0]) : 'No content'
+        ]);
+
+        $csv = array_map('str_getcsv', $csvContent);
+        $header = array_shift($csv); // Remove header row
+
+        \Log::info('CSV parsed', [
+            'header' => $header,
+            'data_rows' => count($csv)
+        ]);
+
+        // Validate header format
+        $expectedHeaders = [
+            'itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 
+            'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice',
+            'grabfoodprice', 'foodpandaprice', 'foodpandamallprice', 
+            'grabfoodmallprice', 'default1', 'default2', 'default3', 'Activeondelivery'
+        ];
+
+        $missingHeaders = array_diff($expectedHeaders, $header);
+        if (count($missingHeaders) > 0) {
+            \Log::error('Header validation failed', [
+                'expected' => $expectedHeaders,
+                'received' => $header,
+                'missing' => $missingHeaders
+            ]);
+            
+            return back()->with('message', 'CSV header format is incorrect. Missing headers: ' . implode(', ', $missingHeaders) . '. Please use the provided template.')
+                          ->with('isSuccess', false);
+        }
+
+        \Log::info('Header validation passed');
+
+        DB::beginTransaction();
+        \Log::info('Database transaction started');
+
+        $successCount = 0;
+        $updateCount = 0;
+        $createCount = 0;
+        $errorCount = 0;
+        $errors = [];
+
+        foreach ($csv as $rowIndex => $row) {
+            $actualRowNumber = $rowIndex + 2; // +2 because we removed header and arrays are 0-indexed
+            
+            \Log::info("Processing row {$actualRowNumber}", [
+                'row_data' => $row,
+                'row_count' => count($row),
+                'header_count' => count($header)
             ]);
 
-            $file = $request->file('file');
-            $csv = array_map('str_getcsv', file($file->getRealPath()));
-            $header = array_shift($csv); // Remove header row
-
-            // Validate header format
-            $expectedHeaders = [
-                'itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 
-                'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice',
-                'grabfoodprice', 'foodpandaprice', 'foodpandamallprice', 
-                'grabfoodmallprice', 'default1', 'default2', 'default3', 'Activeondelivery'
-            ];
-
-            if (count(array_diff($expectedHeaders, $header)) > 0) {
-                return back()->with('message', 'CSV header format is incorrect. Please use the provided template.')
-                              ->with('isSuccess', false);
+            if (count($row) !== count($header)) {
+                $error = "Row {$actualRowNumber}: Column count mismatch. Expected " . count($header) . " columns, got " . count($row);
+                \Log::warning($error, [
+                    'row_data' => $row,
+                    'expected_columns' => count($header),
+                    'actual_columns' => count($row)
+                ]);
+                $errors[] = $error;
+                $errorCount++;
+                continue;
             }
-
-            DB::beginTransaction();
-            $successCount = 0;
-            $errorCount = 0;
-            $errors = [];
-
-            foreach ($csv as $rowIndex => $row) {
-                if (count($row) !== count($header)) continue; // Skip malformed rows
+            
+            $data = array_combine($header, $row);
+            \Log::info("Row {$actualRowNumber} data combined", ['data' => $data]);
+            
+            try {
+                $name = Auth::user()->name;
                 
-                $data = array_combine($header, $row);
+                // Validate required fields (barcode is now optional)
+                $requiredFields = ['itemid', 'itemname'];
+                foreach ($requiredFields as $field) {
+                    if (empty($data[$field])) {
+                        throw new \Exception("Required field '{$field}' is empty");
+                    }
+                }
+
+                // Clean and validate all fields with defaults
+                $barcode = !empty($data['barcode']) ? trim($data['barcode']) : null;
+                $itemgroup = !empty($data['itemgroup']) ? trim($data['itemgroup']) : 'GENERAL';
+                $specialgroup = !empty($data['specialgroup']) ? trim($data['specialgroup']) : 'REGULAR PRODUCT';
+                $production = !empty($data['production']) ? trim($data['production']) : 'NEWCOM';
                 
-                try {
-                    // Check if item already exists
-                    if (inventtables::where('itemid', $data['itemid'])->exists()) {
-                        $errors[] = "Row " . ($rowIndex + 2) . ": Item ID {$data['itemid']} already exists";
-                        $errorCount++;
-                        continue;
+                // Validate numeric fields
+                $cost = is_numeric($data['cost']) ? floatval($data['cost']) : 0;
+                $price = is_numeric($data['price']) ? floatval($data['price']) : 0;
+                $moq = !empty($data['moq']) && is_numeric($data['moq']) ? intval($data['moq']) : null;
+                
+                \Log::info("Row {$actualRowNumber}: Required field validation passed", [
+                    'barcode' => $barcode,
+                    'barcode_provided' => !is_null($barcode)
+                ]);
+
+                $itemExists = inventtables::where('itemid', $data['itemid'])->exists();
+                \Log::info("Row {$actualRowNumber}: Item existence check", [
+                    'itemid' => $data['itemid'],
+                    'exists' => $itemExists
+                ]);
+
+                if ($itemExists) {
+                    // UPDATE EXISTING ITEM
+                    \Log::info("Row {$actualRowNumber}: Starting UPDATE process for existing item");
+                    
+                    // Check if barcode exists for other items (only if barcode is provided)
+                    if (!is_null($barcode)) {
+                        $barcodeConflict = barcodes::where('barcode', $barcode)
+                            ->whereNotExists(function($query) use ($data) {
+                                $query->select(DB::raw(1))
+                                      ->from('rboinventtables')
+                                      ->whereRaw('rboinventtables.barcode = barcodes.barcode')
+                                      ->where('rboinventtables.itemid', $data['itemid']);
+                            })
+                            ->exists();
+
+                        if ($barcodeConflict) {
+                            throw new \Exception("Barcode {$barcode} already exists for another item");
+                        }
                     }
 
-                    // Check if barcode already exists
-                    if (barcodes::where('barcode', $data['barcode'])->exists()) {
-                        $errors[] = "Row " . ($rowIndex + 2) . ": Barcode {$data['barcode']} already exists";
-                        $errorCount++;
-                        continue;
+                    \Log::info("Row {$actualRowNumber}: Barcode conflict check passed");
+
+                    // Update inventtables
+                    $inventtablesUpdated = inventtables::where('itemid', $data['itemid'])
+                        ->update([
+                            'itemname' => $data['itemname'],
+                            'notes' => 'Updated via import',
+                            'updated_at' => now(),
+                        ]);
+                    
+                    \Log::info("Row {$actualRowNumber}: inventtables update", [
+                        'affected_rows' => $inventtablesUpdated
+                    ]);
+
+                    // Update inventtablemodules
+                    $inventmodulesUpdated = inventtablemodules::where('itemid', $data['itemid'])
+                        ->update([
+                            'price' => $cost,
+                            'priceincltax' => $price,
+                            'manilaprice' => floatval($data['manilaprice'] ?? 0),
+                            'grabfood' => floatval($data['grabfoodprice'] ?? 0),
+                            'foodpanda' => floatval($data['foodpandaprice'] ?? 0),
+                            'mallprice' => floatval($data['mallprice'] ?? 0),
+                            'foodpandamall' => floatval($data['foodpandamallprice'] ?? 0),
+                            'grabfoodmall' => floatval($data['grabfoodmallprice'] ?? 0),
+                            'pricedate' => Carbon::now(),
+                        ]);
+
+                    \Log::info("Row {$actualRowNumber}: inventtablemodules update", [
+                        'affected_rows' => $inventmodulesUpdated
+                    ]);
+
+                    // Update rboinventtables
+                    $rboinventUpdated = rboinventtables::where('itemid', $data['itemid'])
+                        ->update([
+                            'itemgroup' => $itemgroup,
+                            'itemdepartment' => $specialgroup,
+                            'barcode' => $barcode, // Can be null
+                            'activeondelivery' => $data['Activeondelivery'] == '1' ? 1 : 0,
+                            'production' => $production,
+                            'moq' => $moq,
+                            'default1' => $data['default1'] == '1' ? 1 : 0,
+                            'default2' => $data['default2'] == '1' ? 1 : 0,
+                            'default3' => $data['default3'] == '1' ? 1 : 0,
+                        ]);
+
+                    \Log::info("Row {$actualRowNumber}: rboinventtables update", [
+                        'affected_rows' => $rboinventUpdated
+                    ]);
+
+                    // Handle barcode-related tables only if barcode is provided
+                    if (!is_null($barcode)) {
+                        // Get the current barcode from rboinventtables
+                        $currentBarcode = rboinventtables::where('itemid', $data['itemid'])->value('barcode');
+                        \Log::info("Row {$actualRowNumber}: Current barcode retrieved", [
+                            'current_barcode' => $currentBarcode,
+                            'new_barcode' => $barcode
+                        ]);
+                        
+                        // Update or create barcodes table record
+                        if (!is_null($currentBarcode)) {
+                            $barcodesUpdated = barcodes::where('barcode', $currentBarcode)
+                                ->update([
+                                    'barcode' => $barcode,
+                                    'description' => $data['itemname'],
+                                    'modifiedby' => $name,
+                                    'updated_at' => Carbon::now(),
+                                ]);
+                        } else {
+                            // Create new barcode record
+                            barcodes::create([
+                                'barcode' => $barcode,
+                                'description' => $data['itemname'],
+                                'generateby' => $name,
+                                'generatedate' => Carbon::now(),
+                                'modifiedby' => $name,
+                                'IsUse' => 1,
+                            ]);
+                            $barcodesUpdated = 1;
+                        }
+
+                        \Log::info("Row {$actualRowNumber}: barcodes update/create", [
+                            'affected_rows' => $barcodesUpdated
+                        ]);
+
+                        // Update or create inventitembarcodes table
+                        $inventbarcodeUpdated = inventitembarcodes::where('itemid', $data['itemid'])
+                            ->update([
+                                'itembarcode' => $barcode,
+                                'description' => $data['itemname'],
+                                'modifiedby' => $name,
+                                'updated_at' => Carbon::now(),
+                            ]);
+
+                        // If no record was updated, create one
+                        if ($inventbarcodeUpdated === 0) {
+                            \Log::info("Row {$actualRowNumber}: Creating new inventitembarcodes record");
+                            inventitembarcodes::create([
+                                'itembarcode' => $barcode,
+                                'itemid' => $data['itemid'],
+                                'description' => $data['itemname'],
+                                'blocked' => '0',
+                                'modifiedby' => $name,
+                                'qty' => 0,
+                                'unitid' => '1',
+                                'rbovariantid' => '',
+                                'barcodesetupid' => '',
+                            ]);
+                            $inventbarcodeUpdated = 1;
+                        }
+
+                        \Log::info("Row {$actualRowNumber}: inventitembarcodes update/create", [
+                            'affected_rows' => $inventbarcodeUpdated
+                        ]);
                     }
 
-                    $name = Auth::user()->name;
+                    $updateCount++;
+                    \Log::info("Row {$actualRowNumber}: UPDATE completed successfully");
+
+                } else {
+                    // CREATE NEW ITEM
+                    \Log::info("Row {$actualRowNumber}: Starting CREATE process for new item");
+                    
+                    // Check if barcode already exists (only if barcode is provided)
+                    if (!is_null($barcode) && barcodes::where('barcode', $barcode)->exists()) {
+                        throw new \Exception("Barcode {$barcode} already exists");
+                    }
+
+                    \Log::info("Row {$actualRowNumber}: Barcode availability check passed");
 
                     // Create inventtablemodules record
-                    inventtablemodules::create([
+                    $inventModule = inventtablemodules::create([
                         'itemid' => $data['itemid'],
                         'moduletype' => '1',
                         'unitid' => '1', 
-                        'price' => floatval($data['cost']),
+                        'price' => $cost,
                         'priceunit' => '1',
-                        'priceincltax' => floatval($data['price']),
+                        'priceincltax' => $price,
                         'blocked' => '0',
                         'inventlocationid' => 'S0001',
                         'pricedate' => Carbon::now(),
@@ -490,8 +768,12 @@ class ItemsController extends Controller
                         'grabfoodmall' => floatval($data['grabfoodmallprice'] ?? 0),
                     ]);
 
+                    \Log::info("Row {$actualRowNumber}: inventtablemodules created", [
+                        'id' => $inventModule->id ?? 'No ID'
+                    ]);
+
                     // Create inventtables record
-                    inventtables::create([
+                    $inventTable = inventtables::create([
                         'itemgroupid' => '1',
                         'itemid' => $data['itemid'],
                         'itemname' => $data['itemname'],
@@ -499,12 +781,14 @@ class ItemsController extends Controller
                         'notes' => 'Imported',
                     ]);
 
+                    \Log::info("Row {$actualRowNumber}: inventtables created");
+
                     // Create rboinventtables record
-                    rboinventtables::create([
+                    $rboInventTable = rboinventtables::create([
                         'itemid' => $data['itemid'],
                         'itemgroup' => $data['itemgroup'],
                         'itemdepartment' => $data['specialgroup'],
-                        'barcode' => $data['barcode'],
+                        'barcode' => $barcode, // Can be null
                         'activeondelivery' => $data['Activeondelivery'] == '1' ? 1 : 0,
                         'production' => $data['production'],
                         'moq' => !empty($data['moq']) ? intval($data['moq']) : null,
@@ -513,59 +797,97 @@ class ItemsController extends Controller
                         'default3' => $data['default3'] == '1' ? 1 : 0,
                     ]);
 
-                    // Create barcodes record
-                    barcodes::create([
-                        'barcode' => $data['barcode'],
-                        'description' => $data['itemname'],
-                        'generateby' => $name,
-                        'generatedate' => Carbon::now(),
-                        'modifiedby' => $name,
-                        'IsUse' => 1,
-                    ]);
+                    \Log::info("Row {$actualRowNumber}: rboinventtables created");
 
-                    // Create inventitembarcodes record
-                    inventitembarcodes::create([
-                        'itembarcode' => $data['barcode'],
-                        'itemid' => $data['itemid'],
-                        'description' => $data['itemname'],
-                        'blocked' => '0',
-                        'modifiedby' => $name,
-                        'qty' => 0,
-                        'unitid' => '1',
-                        'rbovariantid' => '',
-                        'barcodesetupid' => '',
-                    ]);
+                    // Create barcode-related records only if barcode is provided
+                    if (!is_null($barcode)) {
+                        // Create barcodes record
+                        $barcodeRecord = barcodes::create([
+                            'barcode' => $barcode,
+                            'description' => $data['itemname'],
+                            'generateby' => $name,
+                            'generatedate' => Carbon::now(),
+                            'modifiedby' => $name,
+                            'IsUse' => 1,
+                        ]);
 
-                    $successCount++;
+                        \Log::info("Row {$actualRowNumber}: barcodes created");
 
-                } catch (\Exception $e) {
-                    $errors[] = "Row " . ($rowIndex + 2) . ": " . $e->getMessage();
-                    $errorCount++;
+                        // Create inventitembarcodes record
+                        $inventItemBarcode = inventitembarcodes::create([
+                            'itembarcode' => $barcode,
+                            'itemid' => $data['itemid'],
+                            'description' => $data['itemname'],
+                            'blocked' => '0',
+                            'modifiedby' => $name,
+                            'qty' => 0,
+                            'unitid' => '1',
+                            'rbovariantid' => '',
+                            'barcodesetupid' => '',
+                        ]);
+
+                        \Log::info("Row {$actualRowNumber}: inventitembarcodes created");
+                    } else {
+                        \Log::info("Row {$actualRowNumber}: Skipped barcode-related table creation (no barcode provided)");
+                    }
+
+                    $createCount++;
+                    \Log::info("Row {$actualRowNumber}: CREATE completed successfully");
                 }
+
+                $successCount++;
+
+            } catch (\Exception $e) {
+                $errorMsg = "Row {$actualRowNumber}: " . $e->getMessage();
+                $errors[] = $errorMsg;
+                $errorCount++;
+                
+                \Log::error("Row {$actualRowNumber} failed", [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'data' => $data ?? 'No data available'
+                ]);
             }
-
-            DB::commit();
-
-            $message = "Import completed. Success: {$successCount}, Errors: {$errorCount}";
-            if (!empty($errors)) {
-                $message .= "\n\nErrors:\n" . implode("\n", array_slice($errors, 0, 10));
-                if (count($errors) > 10) {
-                    $message .= "\n... and " . (count($errors) - 10) . " more errors.";
-                }
-            }
-
-            return redirect()->route('items.index')
-                ->with('message', $message)
-                ->with('isSuccess', $successCount > 0);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()
-                ->with('message', 'Import failed: ' . $e->getMessage())
-                ->with('isSuccess', false);
         }
-    }
 
+        DB::commit();
+        \Log::info('Database transaction committed successfully');
+
+        $message = "Import completed. Total processed: {$successCount} (Created: {$createCount}, Updated: {$updateCount}), Errors: {$errorCount}";
+        if (!empty($errors)) {
+            $message .= "\n\nErrors:\n" . implode("\n", array_slice($errors, 0, 10));
+            if (count($errors) > 10) {
+                $message .= "\n... and " . (count($errors) - 10) . " more errors.";
+            }
+        }
+
+        \Log::info('===== IMPORT COMPLETED =====', [
+            'total_processed' => $successCount,
+            'created' => $createCount,
+            'updated' => $updateCount,
+            'errors' => $errorCount,
+            'error_details' => array_slice($errors, 0, 5) // Log first 5 errors
+        ]);
+
+        return redirect()->route('items.index')
+            ->with('message', $message)
+            ->with('isSuccess', $successCount > 0);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        \Log::error('===== IMPORT FAILED =====', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
+        
+        return back()
+            ->with('message', 'Import failed: ' . $e->getMessage())
+            ->with('isSuccess', false);
+    }
+}
     /**
      * Bulk enable items for ordering
      */
