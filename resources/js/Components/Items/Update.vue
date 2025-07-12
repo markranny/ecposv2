@@ -42,6 +42,14 @@ const props = defineProps({
         type: [String, Number],
         required: true,
     },
+    foodpandamallprice: {
+        type: [String, Number],
+        default: 0,
+    },
+    grabfoodmallprice: {
+        type: [String, Number],
+        default: 0,
+    },
     production: {
         type: [String, Number],
         required: true,
@@ -82,6 +90,8 @@ const form = useForm({
     foodpandaprice: '',
     grabfoodprice: '',
     mallprice: '',
+    foodpandamallprice: '',
+    grabfoodmallprice: '',
     cost: '',
     production: '',
     moq: '',
@@ -121,6 +131,8 @@ onMounted(() => {
     form.foodpandaprice = props.foodpandaprice;
     form.grabfoodprice = props.grabfoodprice;
     form.mallprice = props.mallprice;
+    form.foodpandamallprice = props.foodpandamallprice;
+    form.grabfoodmallprice = props.grabfoodmallprice;
     form.cost = props.cost;
     form.production = props.production;
     form.moq = props.moq;
@@ -162,6 +174,14 @@ onMounted(() => {
         form.mallprice = newValue;
     });
 
+    watch(() => props.foodpandamallprice, (newValue) => {
+        form.foodpandamallprice = newValue;
+    });
+
+    watch(() => props.grabfoodmallprice, (newValue) => {
+        form.grabfoodmallprice = newValue;
+    });
+
     watch(() => props.cost, (newValue) => {
         form.cost = newValue;
     });
@@ -190,168 +210,235 @@ onMounted(() => {
 </script>
 
 <template>
-    <Modal title="Update Form" @toggle-active="toggleActive" :show-modal="showModal">
+    <Modal title="Update Item" @toggle-active="toggleActive" :show-modal="showModal">
         <template #content>
             <FormComponent @submit.prevent="submitForm">
-                <div class="col-span-6 sm:col-span-4">
-                    <InputLabel for="itemid" value="PRODUCTCODE" />
-                    <TextInput
-                        id="itemid"
-                        v-model="form.itemid"
-                        type="text"
-                        class="mt-1 block w-full bg-blue-50"
-                        :is-error="form.errors.itemid ? true : false"
-                        disabled
-                    />
-                    <InputError :message="form.errors.itemid" class="mt-2" />
-                </div>
+                <div class="space-y-4">
+                    <!-- Item ID (Read-only) -->
+                    <div>
+                        <InputLabel for="itemid" value="PRODUCT CODE" />
+                        <TextInput
+                            id="itemid"
+                            v-model="form.itemid"
+                            type="text"
+                            class="mt-1 block w-full bg-blue-50"
+                            :is-error="form.errors.itemid ? true : false"
+                            disabled
+                        />
+                        <InputError :message="form.errors.itemid" class="mt-2" />
+                    </div>
 
-                <div class="col-span-6 sm:col-span-4">
-                    <InputLabel for="itemname" value="DESCRIPTION" class="pt-4" />
-                    <TextInput
-                        id="itemname"
-                        v-model="form.itemname"
-                        :is-error="form.errors.itemname ? true : false"
-                        type="text"
-                        class="mt-1 block w-full bg-blue-50"
-                        disabled
-                    />
-                    <InputError :message="form.errors.itemname" class="mt-2" />
-                </div>
+                    <!-- Item Name -->
+                    <div>
+                        <InputLabel for="itemname" value="DESCRIPTION" />
+                        <TextInput
+                            id="itemname"
+                            v-model="form.itemname"
+                            :is-error="form.errors.itemname ? true : false"
+                            type="text"
+                            class="mt-1 block w-full"
+                        />
+                        <InputError :message="form.errors.itemname" class="mt-2" />
+                    </div>
 
-                <div class="col-span-6 sm:col-span-4">
-                    <InputLabel for="cost" value="COST" class="pt-4" />
-                    <TextInput
-                        id="cost"
-                        v-model="form.cost"
-                        :is-error="form.errors.cost ? true : false"
-                        type="text"
-                        class="mt-1 block w-full"
-                    />
-                    <InputError :message="form.errors.cost" class="mt-2" />
-                </div>
-
-                <div class="col-span-6 sm:col-span-4">
-                    <InputLabel for="price" value="SRP" class="pt-4" />
-                    <TextInput
-                        id="price"
-                        v-model="form.price"
-                        :is-error="form.errors.price ? true : false"
-                        type="text"
-                        class="mt-1 block w-full"
-                    />
-                    <InputError :message="form.errors.price" class="mt-2" />
-                </div>
-
-                <div class="col-span-6 sm:col-span-4">
-                    <InputLabel for="manilaprice" value="MANILA PRICE" class="pt-4" />
-                    <TextInput
-                        id="manilaprice"
-                        v-model="form.manilaprice"
-                        :is-error="form.errors.manilaprice ? true : false"
-                        type="text"
-                        class="mt-1 block w-full"
-                    />
-                    <InputError :message="form.errors.manilaprice" class="mt-2" />
-                </div>
-
-                <div class="col-span-6 sm:col-span-4">
-                    <InputLabel for="foodpandaprice" value="FOODPANDA PRICE" class="pt-4" />
-                    <TextInput
-                        id="foodpandaprice"
-                        v-model="form.foodpandaprice"
-                        :is-error="form.errors.foodpandaprice ? true : false"
-                        type="text"
-                        class="mt-1 block w-full"
-                    />
-                    <InputError :message="form.errors.foodpandaprice" class="mt-2" />
-                </div>
-
-                <div class="col-span-6 sm:col-span-4">
-                    <InputLabel for="grabfoodprice" value="GRABFOOD PRICE" class="pt-4" />
-                    <TextInput
-                        id="grabfoodprice"
-                        v-model="form.grabfoodprice"
-                        :is-error="form.errors.grabfoodprice ? true : false"
-                        type="text"
-                        class="mt-1 block w-full"
-                    />
-                    <InputError :message="form.errors.grabfoodprice" class="mt-2" />
-                </div>
-
-                <div class="col-span-6 sm:col-span-4">
-                    <InputLabel for="mallprice" value="MALL PRICE" class="pt-4" />
-                    <TextInput
-                        id="mallprice"
-                        v-model="form.mallprice"
-                        :is-error="form.errors.mallprice ? true : false"
-                        type="text"
-                        class="mt-1 block w-full"
-                    />
-                    <InputError :message="form.errors.mallprice" class="mt-2" />
-                </div>
-
-                <div class="col-span-6 sm:col-span-4 mt-2">
-                    <InputLabel for="DESIGNATE" value="DESIGNATE" />
-                    <SelectOption 
-                        id="production"
-                        v-model="form.production" 
-                        :is-error="form.errors.production ? true : false"
-                        class="mt-1 block w-full !bg-white"
-                    >
-                        <option disabled value="">Select an option</option>
-                        <option>BREADS&PASTRIES</option>
-                        <option>CAKELAB</option>
-                    </SelectOption>
-                    <InputError :message="form.errors.production" class="mt-2" />
-                </div>
-
-                <!-- Added Default Fields Section -->
-                <div class="col-span-6 sm:col-span-4 mt-6">
-                    <InputLabel value="DEFAULT SETTINGS" class="text-lg font-semibold mb-4" />
-                    
-                    <div class="space-y-3">
-                        <!-- Default 1 -->
-                        <div class="flex items-center">
-                            <input
-                                id="default1"
-                                type="checkbox"
-                                v-model="form.default1"
-                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    <!-- Cost and SRP on same row for desktop -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <InputLabel for="cost" value="COST" />
+                            <TextInput
+                                id="cost"
+                                v-model="form.cost"
+                                :is-error="form.errors.cost ? true : false"
+                                type="number"
+                                step="0.01"
+                                class="mt-1 block w-full"
                             />
-                            <label for="default1" class="ml-2 text-sm font-medium text-gray-900">
-                                Default 1
-                            </label>
+                            <InputError :message="form.errors.cost" class="mt-2" />
                         </div>
-                        <InputError :message="form.errors.default1" class="mt-1" />
 
-                        <!-- Default 2 -->
-                        <div class="flex items-center">
-                            <input
-                                id="default2"
-                                type="checkbox"
-                                v-model="form.default2"
-                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                        <div>
+                            <InputLabel for="price" value="SRP" />
+                            <TextInput
+                                id="price"
+                                v-model="form.price"
+                                :is-error="form.errors.price ? true : false"
+                                type="number"
+                                step="0.01"
+                                class="mt-1 block w-full"
                             />
-                            <label for="default2" class="ml-2 text-sm font-medium text-gray-900">
-                                Default 2
-                            </label>
+                            <InputError :message="form.errors.price" class="mt-2" />
                         </div>
-                        <InputError :message="form.errors.default2" class="mt-1" />
+                    </div>
 
-                        <!-- Default 3 -->
-                        <div class="flex items-center">
-                            <input
-                                id="default3"
-                                type="checkbox"
-                                v-model="form.default3"
-                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                            />
-                            <label for="default3" class="ml-2 text-sm font-medium text-gray-900">
-                                Default 3
-                            </label>
+                    <!-- Price Fields Section -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Price Settings</h3>
+                        
+                        <!-- Regular Prices -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <InputLabel for="manilaprice" value="MANILA PRICE" />
+                                <TextInput
+                                    id="manilaprice"
+                                    v-model="form.manilaprice"
+                                    :is-error="form.errors.manilaprice ? true : false"
+                                    type="number"
+                                    step="0.01"
+                                    class="mt-1 block w-full"
+                                />
+                                <InputError :message="form.errors.manilaprice" class="mt-2" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="mallprice" value="MALL PRICE" />
+                                <TextInput
+                                    id="mallprice"
+                                    v-model="form.mallprice"
+                                    :is-error="form.errors.mallprice ? true : false"
+                                    type="number"
+                                    step="0.01"
+                                    class="mt-1 block w-full"
+                                />
+                                <InputError :message="form.errors.mallprice" class="mt-2" />
+                            </div>
                         </div>
-                        <InputError :message="form.errors.default3" class="mt-1" />
+
+                        <!-- Delivery Platform Prices -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <InputLabel for="foodpandaprice" value="FOODPANDA PRICE" />
+                                <TextInput
+                                    id="foodpandaprice"
+                                    v-model="form.foodpandaprice"
+                                    :is-error="form.errors.foodpandaprice ? true : false"
+                                    type="number"
+                                    step="0.01"
+                                    class="mt-1 block w-full"
+                                />
+                                <InputError :message="form.errors.foodpandaprice" class="mt-2" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="grabfoodprice" value="GRABFOOD PRICE" />
+                                <TextInput
+                                    id="grabfoodprice"
+                                    v-model="form.grabfoodprice"
+                                    :is-error="form.errors.grabfoodprice ? true : false"
+                                    type="number"
+                                    step="0.01"
+                                    class="mt-1 block w-full"
+                                />
+                                <InputError :message="form.errors.grabfoodprice" class="mt-2" />
+                            </div>
+                        </div>
+
+                        <!-- Mall Platform Prices -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <InputLabel for="foodpandamallprice" value="FOODPANDA MALL PRICE" />
+                                <TextInput
+                                    id="foodpandamallprice"
+                                    v-model="form.foodpandamallprice"
+                                    :is-error="form.errors.foodpandamallprice ? true : false"
+                                    type="number"
+                                    step="0.01"
+                                    class="mt-1 block w-full"
+                                />
+                                <InputError :message="form.errors.foodpandamallprice" class="mt-2" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="grabfoodmallprice" value="GRABFOOD MALL PRICE" />
+                                <TextInput
+                                    id="grabfoodmallprice"
+                                    v-model="form.grabfoodmallprice"
+                                    :is-error="form.errors.grabfoodmallprice ? true : false"
+                                    type="number"
+                                    step="0.01"
+                                    class="mt-1 block w-full"
+                                />
+                                <InputError :message="form.errors.grabfoodmallprice" class="mt-2" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Production Designation -->
+                    <div>
+                        <InputLabel for="production" value="DESIGNATE" />
+                        <SelectOption 
+                            id="production"
+                            v-model="form.production" 
+                            :is-error="form.errors.production ? true : false"
+                            class="mt-1 block w-full !bg-white"
+                        >
+                            <option disabled value="">Select an option</option>
+                            <option>BREADS&PASTRIES</option>
+                            <option>CAKELAB</option>
+                        </SelectOption>
+                        <InputError :message="form.errors.production" class="mt-2" />
+                    </div>
+
+                    <!-- MOQ -->
+                    <div>
+                        <InputLabel for="moq" value="MOQ (Minimum Order Quantity)" />
+                        <TextInput
+                            id="moq"
+                            v-model="form.moq"
+                            :is-error="form.errors.moq ? true : false"
+                            type="number"
+                            step="1"
+                            class="mt-1 block w-full"
+                        />
+                        <InputError :message="form.errors.moq" class="mt-2" />
+                    </div>
+
+                    <!-- Default Settings Section -->
+                    <div class="space-y-4">
+                        <InputLabel value="DEFAULT SETTINGS" class="text-lg font-semibold border-b pb-2" />
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Default 1 -->
+                            <div class="flex items-center">
+                                <input
+                                    id="default1"
+                                    type="checkbox"
+                                    v-model="form.default1"
+                                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                />
+                                <label for="default1" class="ml-2 text-sm font-medium text-gray-900">
+                                    Default 1
+                                </label>
+                            </div>
+                            <InputError :message="form.errors.default1" class="col-span-3" />
+
+                            <!-- Default 2 -->
+                            <div class="flex items-center">
+                                <input
+                                    id="default2"
+                                    type="checkbox"
+                                    v-model="form.default2"
+                                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                />
+                                <label for="default2" class="ml-2 text-sm font-medium text-gray-900">
+                                    Default 2
+                                </label>
+                            </div>
+                            <InputError :message="form.errors.default2" class="col-span-3" />
+
+                            <!-- Default 3 -->
+                            <div class="flex items-center">
+                                <input
+                                    id="default3"
+                                    type="checkbox"
+                                    v-model="form.default3"
+                                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                />
+                                <label for="default3" class="ml-2 text-sm font-medium text-gray-900">
+                                    Default 3
+                                </label>
+                            </div>
+                            <InputError :message="form.errors.default3" class="col-span-3" />
+                        </div>
                     </div>
                 </div>
             </FormComponent>
@@ -363,7 +450,7 @@ onMounted(() => {
                 :disabled="form.processing" 
                 :class="{ 'opacity-25': form.processing }"
             >
-                UPDATE
+                {{ form.processing ? 'Updating...' : 'UPDATE' }}
             </PrimaryButton>
         </template>
     </Modal>

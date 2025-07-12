@@ -15,7 +15,7 @@ import Add from "@/Components/Svgs/Add.vue";
 import Enabled from "@/Components/Svgs/Enabled.vue";
 import Import from "@/Components/Svgs/Import.vue";
 
-import { ref, computed, toRefs, watch } from 'vue';
+import { ref, computed, toRefs, watch, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 
 // Reactive refs
@@ -30,10 +30,20 @@ const manilaprice = ref('');
 const foodpandaprice = ref('');
 const grabfoodprice = ref('');
 const mallprice = ref('');
+const foodpandamallprice = ref('');
+const grabfoodmallprice = ref('');
 const production = ref('');
 
 const selectedItems = ref([]);
 const showImportModal = ref(false);
+const showItemInfoModal = ref(false);
+const selectedItemInfo = ref(null);
+
+// Click tracking
+const clickTimeout = ref(null);
+const clickCount = ref(0);
+const longPressTimeout = ref(null);
+const isLongPress = ref(false);
 
 // Pagination and filtering state
 const currentPage = ref(1);
@@ -174,6 +184,64 @@ const allSelected = computed({
     }
 });
 
+// Click handling functions
+const handleItemClick = (item) => {
+    clearTimeout(clickTimeout.value);
+    clickCount.value++;
+
+    if (clickCount.value === 1) {
+        clickTimeout.value = setTimeout(() => {
+            // Single click - do nothing or select item
+            clickCount.value = 0;
+        }, 300);
+    } else if (clickCount.value === 2) {
+        // Double click - open update form
+        clearTimeout(clickTimeout.value);
+        toggleUpdateModal(item);
+        clickCount.value = 0;
+    } else if (clickCount.value === 3) {
+        // Triple click - show item links
+        clearTimeout(clickTimeout.value);
+        handleViewLinks(item);
+        clickCount.value = 0;
+    }
+};
+
+const handleTouchStart = (item, event) => {
+    isLongPress.value = false;
+    longPressTimeout.value = setTimeout(() => {
+        isLongPress.value = true;
+        showItemInfo(item);
+    }, 800); // 800ms for long press
+};
+
+const handleTouchEnd = (item, event) => {
+    clearTimeout(longPressTimeout.value);
+    if (!isLongPress.value) {
+        handleItemClick(item);
+    }
+};
+
+const handleMouseDown = (item, event) => {
+    isLongPress.value = false;
+    longPressTimeout.value = setTimeout(() => {
+        isLongPress.value = true;
+        showItemInfo(item);
+    }, 800);
+};
+
+const handleMouseUp = (item, event) => {
+    clearTimeout(longPressTimeout.value);
+    if (!isLongPress.value) {
+        handleItemClick(item);
+    }
+};
+
+const showItemInfo = (item) => {
+    selectedItemInfo.value = item;
+    showItemInfoModal.value = true;
+};
+
 // Modal handlers
 const toggleUpdateModal = (item) => {
     if (!item) return;
@@ -188,6 +256,8 @@ const toggleUpdateModal = (item) => {
     foodpandaprice.value = item.foodpandaprice || 0;
     grabfoodprice.value = item.grabfoodprice || 0;
     mallprice.value = item.mallprice || 0;
+    foodpandamallprice.value = item.foodpandamallprice || 0;
+    grabfoodmallprice.value = item.grabfoodmallprice || 0;
     production.value = item.production || '';
     showModalUpdate.value = true;
 };
@@ -322,6 +392,8 @@ const getExportData = () => {
         mallprice: item?.mallprice ? Number(item.mallprice).toFixed(2) : '0.00',
         grabfoodprice: item?.grabfoodprice ? Number(item.grabfoodprice).toFixed(2) : '0.00',
         foodpandaprice: item?.foodpandaprice ? Number(item.foodpandaprice).toFixed(2) : '0.00',
+        foodpandamallprice: item?.foodpandamallprice ? Number(item.foodpandamallprice).toFixed(2) : '0.00',
+        grabfoodmallprice: item?.grabfoodmallprice ? Number(item.grabfoodmallprice).toFixed(2) : '0.00',
         default1: item?.default1 ? 'Yes' : 'No',
         default2: item?.default2 ? 'Yes' : 'No',
         default3: item?.default3 ? 'Yes' : 'No',
@@ -365,6 +437,12 @@ const nonproducts = () => {
     window.location.href = '/warehouse';
 };
 
+// Cleanup timeouts
+onUnmounted(() => {
+    clearTimeout(clickTimeout.value);
+    clearTimeout(longPressTimeout.value);
+});
+
 // Reset to first page when filters change
 watch([searchQuery, selectedCategory, selectedStatus], () => {
     currentPage.value = 1;
@@ -401,6 +479,8 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
           :foodpandaprice="foodpandaprice"
           :grabfoodprice="grabfoodprice"
           :mallprice="mallprice"
+          :foodpandamallprice="foodpandamallprice"
+          :grabfoodmallprice="grabfoodmallprice"
           :production="production"
           @toggle-active="updateModalHandler"
         />
@@ -428,6 +508,85 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
           :itemids="selectedItems"
           @click="handleBulkEnable"
         />
+
+        <!-- Item Info Modal -->
+        <div v-if="showItemInfoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click="showItemInfoModal = false">
+          <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white" @click.stop>
+            <div class="mt-3">
+              <h3 class="text-lg font-medium text-gray-900 mb-4">Item Information</h3>
+              
+              <div v-if="selectedItemInfo" class="space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Item ID</label>
+                    <p class="text-sm text-gray-900">{{ selectedItemInfo.itemid }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Item Name</label>
+                    <p class="text-sm text-gray-900">{{ selectedItemInfo.itemname }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Category</label>
+                    <p class="text-sm text-gray-900">{{ selectedItemInfo.itemgroup }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Barcode</label>
+                    <p class="text-sm text-gray-900">{{ selectedItemInfo.barcode }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Cost</label>
+                    <p class="text-sm text-gray-900">₱{{ formatCurrency(selectedItemInfo.cost) }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">SRP</label>
+                    <p class="text-sm text-gray-900">₱{{ formatCurrency(selectedItemInfo.price) }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Manila Price</label>
+                    <p class="text-sm text-gray-900">₱{{ formatCurrency(selectedItemInfo.manilaprice) }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Mall Price</label>
+                    <p class="text-sm text-gray-900">₱{{ formatCurrency(selectedItemInfo.mallprice) }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Foodpanda Price</label>
+                    <p class="text-sm text-gray-900">₱{{ formatCurrency(selectedItemInfo.foodpandaprice) }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">GrabFood Price</label>
+                    <p class="text-sm text-gray-900">₱{{ formatCurrency(selectedItemInfo.grabfoodprice) }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Foodpanda Mall Price</label>
+                    <p class="text-sm text-gray-900">₱{{ formatCurrency(selectedItemInfo.foodpandamallprice) }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">GrabFood Mall Price</label>
+                    <p class="text-sm text-gray-900">₱{{ formatCurrency(selectedItemInfo.grabfoodmallprice) }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Production</label>
+                    <p class="text-sm text-gray-900">{{ selectedItemInfo.production }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">MOQ</label>
+                    <p class="text-sm text-gray-900">{{ selectedItemInfo.moq }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex justify-end mt-6">
+                <button
+                  @click="showItemInfoModal = false"
+                  class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Import Modal -->
         <div v-if="showImportModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -511,12 +670,14 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                   :headers="[
                     'ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 
                     'PRODUCTION', 'MOQ', 'COST', 'SRP', 'MANILA', 'MALL', 
-                    'GRABFOOD', 'FOODPANDA', 'DEFAULT1', 'DEFAULT2', 'DEFAULT3', 'ENABLEORDER'
+                    'GRABFOOD', 'FOODPANDA', 'FOODPANDA_MALL', 'GRABFOOD_MALL',
+                    'DEFAULT1', 'DEFAULT2', 'DEFAULT3', 'ENABLEORDER'
                   ]"
                   :row-name-props="[
                     'itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 
                     'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice', 
-                    'grabfoodprice', 'foodpandaprice', 'default1', 'default2', 'default3', 'Activeondelivery'
+                    'grabfoodprice', 'foodpandaprice', 'foodpandamallprice', 'grabfoodmallprice',
+                    'default1', 'default2', 'default3', 'Activeondelivery'
                   ]"
                   class="bg-green-500 hover:bg-green-600"
                   v-if="isAdmin || isOpic"
@@ -592,12 +753,91 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                   </select>
                 </div>
               </div>
+
+              <!-- Instructions for mobile -->
+              <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md md:hidden">
+                <p class="text-sm text-blue-800">
+                  <strong>Instructions:</strong><br>
+                  • Hold press: View item info<br>
+                  • Double tap: Edit item<br>
+                  • Triple tap: View links
+                </p>
+              </div>
             </div>
 
             <!-- Items Display -->
             <div class="overflow-x-auto">
               <div class="max-h-96 overflow-y-auto">
-                <table class="min-w-full divide-y divide-gray-200">
+                <!-- Mobile View -->
+                <div class="md:hidden">
+                  <div v-for="item in paginatedItems" :key="item?.itemid" 
+                       class="border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors"
+                       @touchstart="handleTouchStart(item, $event)"
+                       @touchend="handleTouchEnd(item, $event)"
+                       @mousedown="handleMouseDown(item, $event)"
+                       @mouseup="handleMouseUp(item, $event)">
+                    
+                    <div class="flex items-center justify-between mb-2">
+                      <div v-if="isAdmin || isOpic" class="flex items-center">
+                        <input
+                          type="checkbox"
+                          :value="item?.itemid"
+                          v-model="selectedItems"
+                          class="form-checkbox h-4 w-4 text-blue-600 mr-3"
+                        >
+                      </div>
+                      <span :class="[
+                        'px-2 py-1 text-xs rounded-full',
+                        item?.Activeondelivery ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      ]">
+                        {{ item?.Activeondelivery ? 'Active' : 'Inactive' }}
+                      </span>
+                    </div>
+                    
+                    <div class="space-y-2">
+                      <div>
+                        <div class="font-medium text-gray-900">{{ item?.itemname || '' }}</div>
+                        <div class="text-sm text-gray-500 font-mono">{{ item?.itemid || '' }}</div>
+                      </div>
+                      
+                      <div class="flex justify-between items-center">
+                        <div class="text-sm text-gray-600">{{ item?.itemgroup || '' }}</div>
+                        <div class="text-sm font-medium">₱{{ formatCurrency(item?.price) }}</div>
+                      </div>
+                      
+                      <div class="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                        <div>Manila: ₱{{ formatCurrency(item?.manilaprice) }}</div>
+                        <div>Mall: ₱{{ formatCurrency(item?.mallprice) }}</div>
+                        <div>Foodpanda: ₱{{ formatCurrency(item?.foodpandaprice) }}</div>
+                        <div>GrabFood: ₱{{ formatCurrency(item?.grabfoodprice) }}</div>
+                      </div>
+                      
+                      <div v-if="isAdmin || isOpic" class="flex justify-end space-x-2 mt-2">
+                        <button
+                          @click.stop="handleEditItem(item)"
+                          class="text-blue-600 hover:text-blue-900 text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          @click.stop="handleViewLinks(item)"
+                          class="text-green-600 hover:text-green-900 text-sm"
+                        >
+                          Links
+                        </button>
+                        <button
+                          @click.stop="handleMoreActions(item)"
+                          class="text-gray-600 hover:text-gray-900 text-sm"
+                        >
+                          More
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Desktop View -->
+                <table class="min-w-full divide-y divide-gray-200 hidden md:table">
                   <thead class="bg-gray-50 sticky top-0">
                     <tr>
                       <th v-if="isAdmin || isOpic" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -613,13 +853,23 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
-                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SRP</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manila</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mall</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Foodpanda</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GrabFood</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FP Mall</th>
+                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GF Mall</th>
                       <th v-if="isAdmin || isOpic" scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody class="bg-white divide-y divide-gray-200">
-                    <tr v-for="item in paginatedItems" :key="item?.itemid" class="hover:bg-gray-50">
-                      <td v-if="isAdmin || isOpic" class="px-6 py-4 whitespace-nowrap">
+                    <tr v-for="item in paginatedItems" :key="item?.itemid" 
+                        class="hover:bg-gray-50 cursor-pointer transition-colors"
+                        @click="handleItemClick(item)"
+                        @mousedown="handleMouseDown(item, $event)"
+                        @mouseup="handleMouseUp(item, $event)">
+                      <td v-if="isAdmin || isOpic" class="px-6 py-4 whitespace-nowrap" @click.stop>
                         <input
                           type="checkbox"
                           :value="item?.itemid"
@@ -642,7 +892,13 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item?.itemgroup || '' }}</td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">₱{{ formatCurrency(item?.cost) }}</td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono font-medium">₱{{ formatCurrency(item?.price) }}</td>
-                      <td v-if="isAdmin || isOpic" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">₱{{ formatCurrency(item?.manilaprice) }}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">₱{{ formatCurrency(item?.mallprice) }}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">₱{{ formatCurrency(item?.foodpandaprice) }}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">₱{{ formatCurrency(item?.grabfoodprice) }}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">₱{{ formatCurrency(item?.foodpandamallprice) }}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">₱{{ formatCurrency(item?.grabfoodmallprice) }}</td>
+                      <td v-if="isAdmin || isOpic" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" @click.stop>
                         <div class="flex justify-end space-x-2">
                           <button
                             @click="handleEditItem(item)"

@@ -41,6 +41,9 @@ class ItemsController extends Controller
             DB::raw('CAST(COALESCE(a.grabfood, 0) as float) as grabfoodprice'),
             DB::raw('CAST(COALESCE(a.foodpanda, 0) as float) as foodpandaprice'),
             DB::raw('CAST(COALESCE(a.mallprice, 0) as float) as mallprice'),
+            // Add new price fields
+            DB::raw('CAST(COALESCE(a.foodpandamall, 0) as float) as foodpandamallprice'),
+            DB::raw('CAST(COALESCE(a.grabfoodmall, 0) as float) as grabfoodmallprice'),
             DB::raw('CAST(a.price as float) as cost'),
             DB::raw("CASE WHEN d.ITEMBARCODE <> '' THEN d.itembarcode ELSE 'N/A' END as barcode")
         )
@@ -88,11 +91,13 @@ class ItemsController extends Controller
                 'inventlocationid'=> 'S0001',
                 'pricedate'=> Carbon::now(),
                 'taxitemgroupid'=> '1',
-                // Initialize other price fields to 0
+                // Initialize all price fields to 0
                 'manilaprice'=> 0,
                 'grabfood'=> 0,
                 'foodpanda'=> 0,
-                'mallprice'=> 0,                      
+                'mallprice'=> 0,
+                'foodpandamall'=> 0,
+                'grabfoodmall'=> 0,                      
             ]);
 
             inventtables::create([
@@ -173,7 +178,7 @@ class ItemsController extends Controller
     public function update(Request $request, string $itemid)
     {
         try {
-            // Enhanced validation with more comprehensive rules
+            // Enhanced validation with all price fields
             $request->validate([
                 'itemid' => 'required|string',
                 'itemname' => 'required|string|max:255',
@@ -183,6 +188,8 @@ class ItemsController extends Controller
                 'foodpandaprice' => 'required|numeric|min:0',
                 'grabfoodprice' => 'required|numeric|min:0',
                 'mallprice' => 'required|numeric|min:0',
+                'foodpandamall' => 'required|numeric|min:0',
+                'grabfoodmall' => 'required|numeric|min:0',
                 'production' => 'required|string',
                 'moq' => 'required|numeric|min:0',
                 // Added validation for default fields
@@ -206,7 +213,7 @@ class ItemsController extends Controller
                     'updated_at' => now(),
                 ]);
 
-            // Update prices in inventtablemodules
+            // Update all prices in inventtablemodules
             inventtablemodules::where('itemid', $itemid)
                 ->update([
                     'price' => $request->cost,
@@ -215,6 +222,8 @@ class ItemsController extends Controller
                     'foodpanda' => $request->foodpandaprice,
                     'grabfood' => $request->grabfoodprice,
                     'mallprice' => $request->mallprice,
+                    'foodpandamall' => $request->foodpandamallprice,
+                    'grabfoodmall' => $request->grabfoodmallprice,
                     'pricedate' => Carbon::now(),
                 ]);
 
@@ -300,6 +309,8 @@ class ItemsController extends Controller
             'a.grabfood as grabfoodprice',
             'a.foodpanda as foodpandaprice',
             'a.mallprice as mallprice',
+            'a.foodpandamall as foodpandamallprice',
+            'a.grabfoodmall as grabfoodmallprice',
             'c.default1 as default1',
             'c.default2 as default2',
             'c.default3 as default3',

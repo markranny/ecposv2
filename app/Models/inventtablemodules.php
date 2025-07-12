@@ -26,6 +26,28 @@ class inventtablemodules extends Model
         'blocked',
         'inventlocationid',
         'pricedate',
-        'taxitemgroupid'
+        'taxitemgroupid',
+        // Added new price fields
+        'manilaprice',
+        'grabfood',
+        'foodpanda',
+        'mallprice',
+        'foodpandamall',
+        'grabfoodmall'
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'priceincltax' => 'decimal:2',
+        'manilaprice' => 'decimal:2',
+        'grabfood' => 'decimal:2',
+        'foodpanda' => 'decimal:2',
+        'mallprice' => 'decimal:2',
+        'foodpandamall' => 'decimal:2',
+        'grabfoodmall' => 'decimal:2',
+        'quantity' => 'decimal:2',
+        'lowestqty' => 'decimal:2',
+        'highestqty' => 'decimal:2',
+        'pricedate' => 'datetime'
     ];
 }
