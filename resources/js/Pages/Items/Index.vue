@@ -14,6 +14,8 @@ import Excel from "@/Components/Exports/Excel.vue";
 import Add from "@/Components/Svgs/Add.vue";
 import Enabled from "@/Components/Svgs/Enabled.vue";
 import Import from "@/Components/Svgs/Import.vue";
+import MenuIcon from "@/Components/Svgs/Menu.vue";
+import CloseIcon from "@/Components/Svgs/Close.vue";
 
 import { ref, computed, toRefs, watch, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
@@ -38,6 +40,7 @@ const selectedItems = ref([]);
 const showImportModal = ref(false);
 const showItemInfoModal = ref(false);
 const selectedItemInfo = ref(null);
+const showFloatingMenu = ref(false);
 
 // Click tracking
 const clickTimeout = ref(null);
@@ -242,6 +245,15 @@ const showItemInfo = (item) => {
     showItemInfoModal.value = true;
 };
 
+// Floating Menu Functions
+const toggleFloatingMenu = () => {
+    showFloatingMenu.value = !showFloatingMenu.value;
+};
+
+const closeFloatingMenu = () => {
+    showFloatingMenu.value = false;
+};
+
 // Modal handlers
 const toggleUpdateModal = (item) => {
     if (!item) return;
@@ -260,12 +272,14 @@ const toggleUpdateModal = (item) => {
     grabfoodmallprice.value = item.grabfoodmallprice || 0;
     production.value = item.production || '';
     showModalUpdate.value = true;
+    closeFloatingMenu();
 };
 
 const toggleMoreModal = (item) => {
     if (!item) return;
     itemid.value = item.itemid || '';
     showModalMore.value = true;
+    closeFloatingMenu();
 };
 
 const toggleUpdateMOQModal = (item) => {
@@ -279,10 +293,12 @@ const toggleUpdateMOQModal = (item) => {
     moq.value = item.moq || '';
     production.value = item.production || '';
     showModalUpdateMOQ.value = true;
+    closeFloatingMenu();
 };
 
 const toggleCreateModal = () => {
     showCreateModal.value = true;
+    closeFloatingMenu();
 };
 
 const updateModalHandler = () => {
@@ -323,6 +339,7 @@ const submitImportForm = () => {
             const fileInput = document.getElementById('fileInput');
             if (fileInput) fileInput.value = '';
             showImportModal.value = false;
+            closeFloatingMenu();
             window.location.reload();
         },
         onError: (errors) => {
@@ -333,6 +350,7 @@ const submitImportForm = () => {
 
 const downloadTemplate = () => {
     window.location.href = '/download-import-template';
+    closeFloatingMenu();
 };
 
 // Table event handlers
@@ -343,6 +361,7 @@ const handleEditItem = (item) => {
 const handleViewLinks = (item) => {
     if (!item?.itemid) return;
     router.visit(route('item-links.index', item.itemid));
+    closeFloatingMenu();
 };
 
 const handleMoreActions = (item) => {
@@ -368,6 +387,8 @@ const handleBulkEnable = (itemIds) => {
         console.error('Error updating items:', error);
         alert('An error occurred while updating items.');
     });
+
+    closeFloatingMenu();
 };
 
 const handleSelectionChanged = (newSelection) => {
@@ -431,10 +452,12 @@ const goToPage = (page) => {
 
 const products = () => {
     window.location.href = '/items';
+    closeFloatingMenu();
 };
 
 const nonproducts = () => {
     window.location.href = '/warehouse';
+    closeFloatingMenu();
 };
 
 // Cleanup timeouts
@@ -571,7 +594,7 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700">MOQ</label>
-                    <p class="text-sm text-gray-900">{{ selectedItemInfo.moq }}</p>
+                    <p class="text-sm text-gray-900">{{ selectedItemInfo.moq || 'Not set' }}</p>
                   </div>
                 </div>
               </div>
@@ -638,8 +661,8 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
 
       <template v-slot:main>
         <TableContainer>
-          <!-- Header Controls -->
-          <div class="p-4 bg-gray-50 rounded-lg mb-4">
+          <!-- Desktop Header Controls -->
+          <div class="hidden lg:block p-4 bg-gray-50 rounded-lg mb-4">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <!-- Action Buttons -->
               <div class="flex flex-wrap gap-2">
@@ -755,7 +778,7 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
               </div>
 
               <!-- Instructions for mobile -->
-              <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md md:hidden">
+              <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md lg:hidden">
                 <p class="text-sm text-blue-800">
                   <strong>Instructions:</strong><br>
                   • Hold press: View item info<br>
@@ -769,7 +792,7 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
             <div class="overflow-x-auto">
               <div class="max-h-96 overflow-y-auto">
                 <!-- Mobile View -->
-                <div class="md:hidden">
+                <div class="lg:hidden">
                   <div v-for="item in paginatedItems" :key="item?.itemid" 
                        class="border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors"
                        @touchstart="handleTouchStart(item, $event)"
@@ -837,7 +860,7 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
                 </div>
 
                 <!-- Desktop View -->
-                <table class="min-w-full divide-y divide-gray-200 hidden md:table">
+                <table class="min-w-full divide-y divide-gray-200 hidden lg:table">
                   <thead class="bg-gray-50 sticky top-0">
                     <tr>
                       <th v-if="isAdmin || isOpic" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -988,6 +1011,115 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
             </div>
           </div>
         </TableContainer>
+
+        <!-- Mobile Floating Action Button and Menu -->
+        <div class="lg:hidden fixed bottom-6 right-6 z-40">
+          <!-- Floating Menu Options -->
+          <div v-if="showFloatingMenu" class="absolute bottom-16 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-56 transform transition-all duration-200 ease-out">
+            <!-- Add Item -->
+            <button
+              v-if="isOpic"
+              @click="toggleCreateModal"
+              class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+            >
+              <Add class="h-4 w-4 mr-3 text-gray-500" />
+              Add New Item
+            </button>
+
+            <!-- Enable Selected -->
+            <button
+              v-if="(isAdmin || isOpic) && selectedItems.length > 0"
+              @click="showEnableModal = true"
+              class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+            >
+              <Enabled class="h-4 w-4 mr-3 text-green-500" />
+              Enable Selected ({{ selectedItems.length }})
+            </button>
+
+            <!-- Export -->
+            <div v-if="isAdmin || isOpic" class="px-4 py-3">
+              <Excel
+                :data="getExportData()"
+                :headers="[
+                  'ITEMID', 'ITEMNAME', 'BARCODE', 'CATEGORY', 'RETAILGROUP', 
+                  'PRODUCTION', 'MOQ', 'COST', 'SRP', 'MANILA', 'MALL', 
+                  'GRABFOOD', 'FOODPANDA', 'FOODPANDA_MALL', 'GRABFOOD_MALL',
+                  'DEFAULT1', 'DEFAULT2', 'DEFAULT3', 'ENABLEORDER'
+                ]"
+                :row-name-props="[
+                  'itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 
+                  'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice', 
+                  'grabfoodprice', 'foodpandaprice', 'foodpandamallprice', 'grabfoodmallprice',
+                  'default1', 'default2', 'default3', 'Activeondelivery'
+                ]"
+                class="w-full text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center p-0 bg-transparent border-0 hover:text-gray-900"
+              >
+                <svg class="h-4 w-4 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export Excel
+              </Excel>
+            </div>
+
+            <!-- Import -->
+            <button
+              v-if="isOpic"
+              @click="showImportModal = true"
+              class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+            >
+              <Import class="h-4 w-4 mr-3 text-blue-500" />
+              Import CSV
+            </button>
+
+            <!-- Download Template -->
+            <button
+              v-if="isOpic"
+              @click="downloadTemplate"
+              class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+            >
+              <svg class="h-4 w-4 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download Template
+            </button>
+
+            <div class="border-t border-gray-200 my-2"></div>
+
+            <!-- Navigation -->
+            <button
+              @click="products"
+              class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+            >
+              <svg class="h-4 w-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              BW Products
+            </button>
+
+            <button
+              @click="nonproducts"
+              class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+            >
+              <svg class="h-4 w-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h1.586a1 1 0 01.707.293l1.414 1.414a1 1 0 00.707.293H19a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+              Warehouse
+            </button>
+          </div>
+
+          <!-- Main Floating Action Button -->
+          <button
+            @click="toggleFloatingMenu"
+            class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 ease-out transform hover:scale-105"
+            :class="{ 'rotate-45': showFloatingMenu }"
+          >
+            <MenuIcon v-if="!showFloatingMenu" class="h-6 w-6" />
+            <CloseIcon v-else class="h-6 w-6" />
+          </button>
+        </div>
+
+        <!-- Overlay to close floating menu -->
+        <div v-if="showFloatingMenu" @click="closeFloatingMenu" class="lg:hidden fixed inset-0 bg-black bg-opacity-25 z-30"></div>
       </template>
     </component>
   </template>

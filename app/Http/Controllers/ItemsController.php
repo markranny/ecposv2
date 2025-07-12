@@ -115,7 +115,7 @@ class ItemsController extends Controller
                 'barcode'=> $request->barcode,
                 'activeondelivery'=> '1',
                 'production'=> 'NEWCOM',
-                'moq'=> '0',
+                'moq'=> null, // Allow null MOQ
                 // Initialize default fields
                 'default1'=> 0,
                 'default2'=> 0,
@@ -178,24 +178,26 @@ class ItemsController extends Controller
     public function update(Request $request, string $itemid)
     {
         try {
-            // Enhanced validation with all price fields
+            // Enhanced validation with all price fields and nullable MOQ
             $request->validate([
                 'itemid' => 'required|string',
                 'itemname' => 'required|string|max:255',
+                'itemgroup' => 'required|string', // Added category validation
                 'cost' => 'required|numeric|min:0',
                 'price' => 'required|numeric|min:0',
                 'manilaprice' => 'required|numeric|min:0',
                 'foodpandaprice' => 'required|numeric|min:0',
                 'grabfoodprice' => 'required|numeric|min:0',
                 'mallprice' => 'required|numeric|min:0',
-                'foodpandamall' => 'required|numeric|min:0',
-                'grabfoodmall' => 'required|numeric|min:0',
+                'foodpandamallprice' => 'required|numeric|min:0',
+                'grabfoodmallprice' => 'required|numeric|min:0',
                 'production' => 'required|string',
-                'moq' => 'required|numeric|min:0',
+                'moq' => 'nullable|numeric|min:0', // Allow null MOQ
                 // Added validation for default fields
                 'default1' => 'boolean',
                 'default2' => 'boolean',
                 'default3' => 'boolean',
+                'confirm_defaults' => 'required|accepted', // Checkbox confirmation
             ]);
 
             DB::beginTransaction();
@@ -227,11 +229,12 @@ class ItemsController extends Controller
                     'pricedate' => Carbon::now(),
                 ]);
 
-            // Update production, moq, and default fields in rboinventtables
+            // Update production, moq, category and default fields in rboinventtables
             rboinventtables::where('itemid', $itemid)
                 ->update([
+                    'itemgroup' => $request->itemgroup, // Update category
                     'production' => $request->production,
-                    'moq' => $request->moq,
+                    'moq' => $request->moq, // Can be null
                     // Added default fields update with proper boolean conversion
                     'default1' => $request->default1 ? 1 : 0,
                     'default2' => $request->default2 ? 1 : 0,
@@ -324,5 +327,66 @@ class ItemsController extends Controller
         ->get();
 
         return response()->json($items);
+    }
+
+    /**
+     * Download import template
+     */
+    public function downloadTemplate()
+    {
+        $headers = [
+            'itemid',
+            'itemname',
+            'itemgroup',
+            'barcode',
+            'cost',
+            'price',
+            'manilaprice',
+            'foodpandaprice',
+            'grabfoodprice',
+            'mallprice',
+            'foodpandamallprice',
+            'grabfoodmallprice',
+            'production',
+            'moq',
+            'default1',
+            'default2',
+            'default3'
+        ];
+
+        $filename = 'items_import_template.csv';
+        
+        $callback = function() use ($headers) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $headers);
+            
+            // Add sample row
+            fputcsv($file, [
+                'SAMPLE001',
+                'Sample Item Name',
+                'SAMPLE CATEGORY',
+                '1234567890123',
+                '10.00',
+                '15.00',
+                '16.00',
+                '17.00',
+                '18.00',
+                '19.00',
+                '20.00',
+                '21.00',
+                'NEWCOM',
+                '5',
+                '0',
+                '0',
+                '0'
+            ]);
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }
