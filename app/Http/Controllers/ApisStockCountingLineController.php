@@ -121,62 +121,16 @@ class ApisStockCountingLineController extends Controller
     }
 
     public function show($storeids, $journalId)
-{
-    try {
-        $store = DB::table('rbostoretables')
-            ->where('name', $storeids)
-            ->value('name');
-        
-        $storeName = $store;
-        $currentDate = Carbon::now('Asia/Manila')->toDateString();
-        Log::info('User store', ['store' => $storeName]);
-
-        $stockcountingtrans = DB::table('stockcountingtrans AS a')
-            ->select(
-                'a.*', 
-                'b.*', 
-                'c.*', 
-                'st.posted',
-                DB::raw("DATE(a.TRANSDATE) as TRANSDATE")  
-            )
-            ->leftJoin('inventtables AS b', 'a.itemid', '=', 'b.itemid')
-            ->leftJoin('rboinventtables AS c', 'b.itemid', '=', 'c.itemid')
-            ->leftJoin('stockcountingtables as st', function($join) use ($storeName) {
-                $join->on('a.journalid', '=', 'st.journalid')
-                    ->where('st.storeid', '=', $storeName);
-            })
-            ->where('a.journalid', $journalId)
-            ->where('a.storename', $storeName)
-            ->OrderBy('a.ADJUSTMENT', 'DESC')
-            ->get();
-
-        // Always check for missing items and sync, regardless of whether stockcountingtrans is empty or not
-        Log::info('Checking for missing items to sync', [
-            'journalId' => $journalId,
-            'store' => $storeName,
-            'currentItemsCount' => $stockcountingtrans->count()
-        ]);
-        
-        // Create a new request instance with all required parameters
-        $request = new Request();
-        $request->merge([
-            'JOURNALID' => $journalId,
-            'storeids' => $storeids
-        ]);
-        
-        // Call getbwproducts method to sync any missing items
-        $syncResponse = $this->getbwproducts($request, $storeids, $journalId);
-        
-        // Check if sync was successful
-        $syncData = json_decode($syncResponse->getContent(), true);
-        if ($syncData['success']) {
-            Log::info('Sync completed', [
-                'journalId' => $journalId,
-                'syncMessage' => $syncData['message'],
-                'syncData' => $syncData['data'] ?? null
-            ]);
+    {
+        try {
+            $store = DB::table('rbostoretables')
+                ->where('name', $storeids)
+                ->value('name');
             
-            // Re-fetch the data after sync to get the complete updated list
+            $storeName = $store;
+            $currentDate = Carbon::now('Asia/Manila')->toDateString();
+            Log::info('User store', ['store' => $storeName]);
+
             $stockcountingtrans = DB::table('stockcountingtrans AS a')
                 ->select(
                     'a.*', 
@@ -195,47 +149,48 @@ class ApisStockCountingLineController extends Controller
                 ->where('a.storename', $storeName)
                 ->OrderBy('a.ADJUSTMENT', 'DESC')
                 ->get();
+
+            // Check if no data was found
+            if ($stockcountingtrans->isEmpty()) {
+                Log::info('No data found, redirecting to getbwproducts', [
+                    'journalId' => $journalId,
+                    'store' => $storeName
+                ]);
                 
-            Log::info('Data re-fetched after sync', [
-                'finalItemsCount' => $stockcountingtrans->count()
+                // Create a new request instance with all required parameters
+                $request = new Request();
+                $request->merge([
+                    'JOURNALID' => $journalId,
+                    'storeids' => $storeids
+                ]);
+                
+                // Call getbwproducts method with all required parameters
+                return $this->getbwproducts($request, $storeids, $journalId);
+            }
+
+            $isPosted = DB::table('stockcountingtables')
+                ->where('journalid', $journalId)
+                ->where('storeid', $storeName)
+                ->value('posted') ?? 0;
+                
+            return response()->json([
+                'journalid' => $journalId,
+                'stockcountingtrans' => $stockcountingtrans,
+                'isPosted' => $isPosted,
+                'currentDate' => $currentDate, 
             ]);
-        } else {
-            Log::warning('Sync failed', [
-                'journalId' => $journalId,
-                'syncMessage' => $syncData['message'] ?? 'Unknown error'
+
+        } catch (\Exception $e) {
+            Log::error('Error in show method', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving record: ' . $e->getMessage()
+            ], 500);
         }
-
-        $isPosted = DB::table('stockcountingtables')
-            ->where('journalid', $journalId)
-            ->where('storeid', $storeName)
-            ->value('posted') ?? 0;
-            
-        return response()->json([
-            'journalid' => $journalId,
-            'stockcountingtrans' => $stockcountingtrans,
-            'isPosted' => $isPosted,
-            'currentDate' => $currentDate,
-            'syncInfo' => [
-                'syncPerformed' => true,
-                'syncSuccess' => $syncData['success'] ?? false,
-                'syncMessage' => $syncData['message'] ?? null,
-                'newItemsAdded' => $syncData['data']['newly_added_count'] ?? 0,
-                'totalItems' => $syncData['data']['total_count'] ?? $stockcountingtrans->count()
-            ]
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Error in show method', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return response()->json([
-            'success' => false,
-            'message' => 'Error retrieving record: ' . $e->getMessage()
-        ], 500);
     }
-}
 
     public function getbwproducts(Request $request, $storeids, $journalId)
     {
@@ -539,9 +494,6 @@ class ApisStockCountingLineController extends Controller
                 ->whereDate(DB::raw('cast(posteddatetime as date)'), $currentDateTime)
                 ->update(['posted' => '1']);
 
-            // Execute the inventory summary updates using prepared statements
-            $this->updateInventorySummaries($storename, $currentDateTime, $yesterday);
-
             DB::commit();
             Log::info('Transaction committed', ['affected_rows' => $affected]);
 
@@ -565,9 +517,17 @@ class ApisStockCountingLineController extends Controller
     }
 
     private function updateInventorySummaries($storename, $currentDateTime, $yesterday)
-    {
+{
+    Log::info("Starting inventory summaries update", [
+        'storename' => $storename,
+        'current_date' => $currentDateTime,
+        'yesterday' => $yesterday
+    ]);
+
+    try {
         // Update item_count
-        DB::statement("
+        Log::info("Updating item_count for inventory summaries");
+        $affectedRows = DB::statement("
             UPDATE inventory_summaries 
             SET item_count = (
                 SELECT COUNTED 
@@ -588,9 +548,12 @@ class ApisStockCountingLineController extends Controller
                   AND COUNTED > 0
             )
         ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+        
+        Log::info("Item count update completed", ['affected_rows' => $affectedRows]);
 
         // Update throw_away
-        DB::statement("
+        Log::info("Updating throw_away for inventory summaries");
+        $affectedRows = DB::statement("
             UPDATE inventory_summaries 
             SET throw_away = (
                 SELECT SUM(WASTECOUNT) 
@@ -609,9 +572,12 @@ class ApisStockCountingLineController extends Controller
                   AND CAST(TRANSDATE AS DATE) = ?
             )
         ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+        
+        Log::info("Throw away update completed", ['affected_rows' => $affectedRows]);
 
         // Update received_delivery
-        DB::statement("
+        Log::info("Updating received_delivery for inventory summaries");
+        $affectedRows = DB::statement("
             UPDATE inventory_summaries 
             SET received_delivery = (
                 SELECT SUM(RECEIVEDCOUNT) 
@@ -630,9 +596,12 @@ class ApisStockCountingLineController extends Controller
                   AND CAST(TRANSDATE AS DATE) = ?
             )
         ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+        
+        Log::info("Received delivery update completed", ['affected_rows' => $affectedRows]);
 
         // Update sales
-        DB::statement("
+        Log::info("Updating sales for inventory summaries");
+        $affectedRows = DB::statement("
             UPDATE inventory_summaries 
             SET sales = (
                 SELECT COALESCE(SUM(b.qty), 0)
@@ -641,7 +610,7 @@ class ApisStockCountingLineController extends Controller
                 LEFT JOIN rboinventtables c ON b.itemid = c.itemid 
                 WHERE a.store = ?
                 AND CAST(a.createddate AS DATE) = ?
-                AND b.itemgroup not like '%PROMO%'
+                AND b.itemgroup NOT LIKE '%PROMO%'
                 AND c.itemid = inventory_summaries.itemid
             )
             WHERE CAST(report_date AS DATE) = ?
@@ -653,13 +622,16 @@ class ApisStockCountingLineController extends Controller
                 LEFT JOIN rboinventtables c ON b.itemid = c.itemid 
                 WHERE a.store = ?
                 AND CAST(a.createddate AS DATE) = ?
-                AND b.itemgroup not like '%PROMO%'
+                AND b.itemgroup NOT LIKE '%PROMO%'
                 AND c.itemid IS NOT NULL
             )
         ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+        
+        Log::info("Sales update completed", ['affected_rows' => $affectedRows]);
 
         // Update bundle_sales
-        DB::statement("
+        Log::info("Updating bundle_sales for inventory summaries");
+        $affectedRows = DB::statement("
             UPDATE inventory_summaries invs
             JOIN (
                 SELECT 
@@ -680,9 +652,12 @@ class ApisStockCountingLineController extends Controller
             SET invs.bundle_sales = bundle_data.result
             WHERE CAST(invs.report_date AS DATE) = ?
         ", [$currentDateTime, $storename, $storename, $currentDateTime]);
+        
+        Log::info("Bundle sales update completed", ['affected_rows' => $affectedRows]);
 
         // Update beginning
-        DB::statement("
+        Log::info("Updating beginning inventory for inventory summaries");
+        $affectedRows = DB::statement("
             UPDATE inventory_summaries 
             SET beginning = (
                 SELECT item_count 
@@ -701,9 +676,12 @@ class ApisStockCountingLineController extends Controller
                   AND CAST(prev.report_date AS DATE) = ?
             )
         ", [$storename, $yesterday, $currentDateTime, $storename, $storename, $yesterday]);
+        
+        Log::info("Beginning inventory update completed", ['affected_rows' => $affectedRows]);
 
-        // Update ending
-        DB::statement("
+        // Update ending inventory
+        Log::info("Updating ending inventory for inventory summaries");
+        $affectedRows = DB::statement("
             UPDATE inventory_summaries 
             SET ending = CASE 
                 WHEN beginning IS NOT NULL 
@@ -723,9 +701,12 @@ class ApisStockCountingLineController extends Controller
             WHERE CAST(report_date AS DATE) = ?
               AND storename = ?
         ", [$currentDateTime, $storename]);
+        
+        Log::info("Ending inventory update completed", ['affected_rows' => $affectedRows]);
 
-        // Update ending
-        DB::statement("
+        // Update item_count with calculated ending inventory
+        Log::info("Updating item_count with calculated ending inventory");
+        $affectedRows = DB::statement("
             UPDATE inventory_summaries 
             SET item_count = CASE 
                 WHEN beginning IS NOT NULL 
@@ -745,79 +726,223 @@ class ApisStockCountingLineController extends Controller
             WHERE CAST(report_date AS DATE) = ?
               AND storename = ?
         ", [$currentDateTime, $storename]);
+        
+        Log::info("Item count recalculation completed", ['affected_rows' => $affectedRows]);
 
-        // Update item_count (second update)
-        DB::statement("
+        // Final item_count update with null safety
+        Log::info("Performing final item_count update with null safety");
+        $affectedRows = DB::statement("
             UPDATE inventory_summaries 
             SET item_count = CASE 
                 WHEN beginning IS NOT NULL 
                      AND beginning != 0
-                     AND received_delivery = 0
-                     AND stock_transfer = 0
-                     AND sales = 0
-                     AND bundle_sales = 0
-                     AND throw_away = 0
-                     AND early_molds = 0
-                     AND pull_out = 0
-                     AND rat_bites = 0
-                     AND ant_bites = 0
+                     AND COALESCE(received_delivery, 0) = 0
+                     AND COALESCE(stock_transfer, 0) = 0
+                     AND COALESCE(sales, 0) = 0
+                     AND COALESCE(bundle_sales, 0) = 0
+                     AND COALESCE(throw_away, 0) = 0
+                     AND COALESCE(early_molds, 0) = 0
+                     AND COALESCE(pull_out, 0) = 0
+                     AND COALESCE(rat_bites, 0) = 0
+                     AND COALESCE(ant_bites, 0) = 0
                 THEN beginning 
                 ELSE item_count 
             END
             WHERE CAST(report_date AS DATE) = ?
             AND storename = ?
         ", [$currentDateTime, $storename]);
+        
+        Log::info("Final item count update completed", ['affected_rows' => $affectedRows]);
 
         // Update variance
-        DB::statement("
+        Log::info("Updating variance for inventory summaries");
+        $affectedRows = DB::statement("
             UPDATE inventory_summaries 
             SET variance = COALESCE(ending, 0) - COALESCE(item_count, 0)
             WHERE CAST(report_date AS DATE) = ?
               AND storename = ?
         ", [$currentDateTime, $storename]);
+        
+        Log::info("Variance update completed", ['affected_rows' => $affectedRows]);
+
+        // Log summary of what was updated
+        $summaryData = DB::select("
+            SELECT 
+                COUNT(*) as total_records,
+                SUM(CASE WHEN item_count IS NOT NULL THEN 1 ELSE 0 END) as records_with_count,
+                SUM(CASE WHEN variance != 0 THEN 1 ELSE 0 END) as records_with_variance,
+                SUM(CASE WHEN ending IS NOT NULL THEN 1 ELSE 0 END) as records_with_ending
+            FROM inventory_summaries 
+            WHERE CAST(report_date AS DATE) = ? AND storename = ?
+        ", [$currentDateTime, $storename]);
+
+        Log::info("Inventory summaries update completed successfully", [
+            'summary' => $summaryData[0] ?? null,
+            'storename' => $storename,
+            'date' => $currentDateTime
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error("Error updating inventory summaries", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'storename' => $storename,
+            'current_date' => $currentDateTime,
+            'yesterday' => $yesterday
+        ]);
+        throw $e;
     }
+}
 
-    public function postbatchline($itemid, $storeid, $journalid, $adjustment, $receivedcount, $transfercount, $wastecount, $wastetype, $counted)
-    {
-        try {
-            $updated = stockcountingtrans::where([
-                'ITEMID' => $itemid,
-                'STORENAME' => $storeid,
-                'JOURNALID' => $journalid
-            ])
-            ->whereDate('TRANSDATE', Carbon::today())
-            ->update([
-                'ADJUSTMENT' => $adjustment,
-                'COUNTED' => $counted, 
-                'TRANSFERCOUNT' => $transfercount,
-                'RECEIVEDCOUNT' => $receivedcount,
-                'WASTECOUNT' => $wastecount,
-                'WASTETYPE' => $wastetype,
-                'updated_at' => Carbon::now()
+public function postbatchline($itemid, $storeid, $journalid, $adjustment, $receivedcount, $transfercount, $wastecount, $wastetype, $counted)
+{
+    Log::info("Starting postbatchline operation", [
+        'itemid' => $itemid,
+        'storeid' => $storeid,
+        'journalid' => $journalid,
+        'adjustment' => $adjustment,
+        'receivedcount' => $receivedcount,
+        'transfercount' => $transfercount,
+        'wastecount' => $wastecount,
+        'wastetype' => $wastetype,
+        'counted' => $counted
+    ]);
+
+    try {
+        // Validate inputs
+        if (empty($itemid) || empty($storeid) || empty($journalid)) {
+            Log::error("Missing required parameters", [
+                'itemid' => $itemid,
+                'storeid' => $storeid,
+                'journalid' => $journalid
             ]);
-
-            // Fetch the updated record to return in response
-            $stockCount = stockcountingtrans::where([
-                'ITEMID' => $itemid,
-                'STORENAME' => $storeid,
-                'JOURNALID' => $journalid
-            ])
-            ->whereDate('TRANSDATE', Carbon::today())
-            ->first();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Stock counting records updated successfully',
-                'data' => $stockCount
-            ], 200);
-        } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to update stock counting records',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Missing required parameters: itemid, storeid, or journalid'
+            ], 400);
         }
+
+        // Check if record exists before updating
+        $existingRecord = stockcountingtrans::where([
+            'ITEMID' => $itemid,
+            'STORENAME' => $storeid,
+            'JOURNALID' => $journalid
+        ])
+        ->whereDate('TRANSDATE', Carbon::today())
+        ->first();
+
+        if (!$existingRecord) {
+            Log::warning("No existing record found for update", [
+                'itemid' => $itemid,
+                'storeid' => $storeid,
+                'journalid' => $journalid,
+                'date' => Carbon::today()->toDateString()
+            ]);
+        }
+
+        Log::info("Updating stock counting transaction record");
+        $updated = stockcountingtrans::where([
+            'ITEMID' => $itemid,
+            'STORENAME' => $storeid,
+            'JOURNALID' => $journalid
+        ])
+        ->whereDate('TRANSDATE', Carbon::today())
+        ->update([
+            'ADJUSTMENT' => $adjustment,
+            'COUNTED' => $counted, 
+            'TRANSFERCOUNT' => $transfercount,
+            'RECEIVEDCOUNT' => $receivedcount,
+            'WASTECOUNT' => $wastecount,
+            'WASTETYPE' => $wastetype,
+            'updated_at' => Carbon::now()
+        ]);
+
+        Log::info("Stock counting transaction updated", [
+            'records_updated' => $updated,
+            'itemid' => $itemid
+        ]);
+
+        if ($updated === 0) {
+            Log::warning("No records were updated", [
+                'itemid' => $itemid,
+                'storeid' => $storeid,
+                'journalid' => $journalid
+            ]);
+        }
+
+        // Fetch the updated record to return in response
+        Log::info("Fetching updated stock counting record");
+        $stockCount = stockcountingtrans::where([
+            'ITEMID' => $itemid,
+            'STORENAME' => $storeid,
+            'JOURNALID' => $journalid
+        ])
+        ->whereDate('TRANSDATE', Carbon::today())
+        ->first();
+
+        if (!$stockCount) {
+            Log::error("Updated record not found after update", [
+                'itemid' => $itemid,
+                'storeid' => $storeid,
+                'journalid' => $journalid
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Record not found after update'
+            ], 404);
+        }
+
+        Log::info("Successfully retrieved updated stock counting record", [
+            'record_id' => $stockCount->id ?? null,
+            'itemid' => $stockCount->ITEMID ?? null
+        ]);
+
+        // Prepare dates and store information
+        $currentDateTime = Carbon::now('Asia/Manila')->toDateString();
+        $yesterday = Carbon::yesterday('Asia/Manila')->toDateString();
+        $storename = Auth::user()->storeid ?? $storeid;
+
+        Log::info("Preparing to update inventory summaries", [
+            'storename' => $storename,
+            'current_date' => $currentDateTime,
+            'yesterday' => $yesterday,
+            'authenticated_user' => Auth::user()->id ?? 'N/A'
+        ]);
+
+        // Update inventory summaries
+        $this->updateInventorySummaries($storename, $currentDateTime, $yesterday);
+
+        Log::info("Postbatchline operation completed successfully", [
+            'itemid' => $itemid,
+            'storeid' => $storeid,
+            'records_updated' => $updated
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Stock counting records updated successfully',
+            'data' => $stockCount,
+            'records_updated' => $updated
+        ], 200);
+
+    } catch (\Exception $e) {
+        Log::error("Failed to update stock counting records", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'itemid' => $itemid,
+            'storeid' => $storeid,
+            'journalid' => $journalid,
+            'line' => $e->getLine(),
+            'file' => $e->getFile()
+        ]);
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to update stock counting records',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
     
     public function getstocktransfer(Request $request, $journalid)
     {
