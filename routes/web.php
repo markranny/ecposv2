@@ -66,7 +66,8 @@ use App\Http\Controllers\{
     ItemLinkController,
     StockTransferController,
     AttendanceController,
-    ImportProductsController
+    ImportProductsController,
+    Discountv2Controller
 };
 
 Route::get('/', function () {
@@ -194,6 +195,11 @@ Route::middleware(['auth', 'role:ADMIN,SUPERADMIN'])->group(function () {
         
     Route::post('/inventory/adjustment-history', [ECReportController::class, 'getAdjustmentHistory'])
         ->name('inventory.adjustment-history');
+
+    Route::resource('discountsv2', Discountv2Controller::class);
+    Route::get('/api/discountsv2', [Discountv2Controller::class, 'getDiscounts'])->name('discounts.api');
+    Route::post('/api/discountsv2/calculate', [Discountv2Controller::class, 'calculateDiscount'])->name('discounts.calculate');
+    Route::get('/api/discountsv2/export', [Discountv2Controller::class, 'export'])->name('discounts.export');
 
 });
 

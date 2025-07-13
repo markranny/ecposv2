@@ -62,7 +62,7 @@ const rbospecialgroups = () => {
 
 const posperiodicdiscounts = () => {
   /* window.alert('You are Redirecting to Discount Entries'); */
-  window.location.href = '/posperiodicdiscounts';
+  window.location.href = '/discountsv2';
 };
 
 const BODeclaration = () => {
@@ -104,8 +104,12 @@ const BODeclaration = () => {
                     <Transactions class="h-5"></Transactions>
                 </div>
 
-                <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Discount Bundle">
+                <!-- <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Discount Bundle">
                     <Discount class="h-5" @click="posperiodicdiscounts('/posperiodicdiscounts')"></Discount>
+                </div> -->
+
+                <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Manage Discount">
+                    <Discount class="h-5" @click="posperiodicdiscounts('/discountsv2')"></Discount>
                 </div>
 
                 <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Barcode">
