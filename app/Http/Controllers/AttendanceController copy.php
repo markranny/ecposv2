@@ -19,11 +19,10 @@ class AttendanceController extends Controller
             ->map(function ($attendance) {
                 return [
                     ...$attendance->toArray(),
-                    // Generate full URLs for images
-                    'timeInPhoto' => $attendance->timeInPhoto ? asset('storage/' . $attendance->timeInPhoto) : null,
-                    'breakInPhoto' => $attendance->breakInPhoto ? asset('storage/' . $attendance->breakInPhoto) : null,
-                    'breakOutPhoto' => $attendance->breakOutPhoto ? asset('storage/' . $attendance->breakOutPhoto) : null,
-                    'timeOutPhoto' => $attendance->timeOutPhoto ? asset('storage/' . $attendance->timeOutPhoto) : null,
+                    'timeInPhoto' => $attendance->timeInPhoto ? Storage::url($attendance->timeInPhoto) : null,
+                    'breakInPhoto' => $attendance->breakInPhoto ? Storage::url($attendance->breakInPhoto) : null,
+                    'breakOutPhoto' => $attendance->breakOutPhoto ? Storage::url($attendance->breakOutPhoto) : null,
+                    'timeOutPhoto' => $attendance->timeOutPhoto ? Storage::url($attendance->timeOutPhoto) : null,
                 ];
             });
 
@@ -55,11 +54,11 @@ class AttendanceController extends Controller
             'status' => 'required|string|max:255'
         ]);
 
-        // Handle file uploads - store in attendance_photos directory
+        // Handle file uploads
         $photoFields = ['timeInPhoto', 'breakInPhoto', 'breakOutPhoto', 'timeOutPhoto'];
         foreach ($photoFields as $field) {
             if ($request->hasFile($field)) {
-                $validated[$field] = $request->file($field)->store('attendance_photos', 'public');
+                $validated[$field] = $request->file($field)->store('attendance-photos', 'public');
             }
         }
 
@@ -88,6 +87,23 @@ class AttendanceController extends Controller
             'request_size' => $request->header('Content-Length')
         ]);
 
+        // Log current DB info
+        Log::info('🧩 Connected DB info', [
+            'connection' => \DB::connection()->getName(),
+            'database' => \DB::connection()->getDatabaseName(),
+        ]);
+
+        // OPTIONAL: Enable SQL logging
+        \DB::listen(function ($query) {
+            Log::debug('📄 SQL Query Executed', [
+                'sql' => $query->sql,
+                'bindings' => $query->bindings,
+                'time_ms' => $query->time
+            ]);
+        });
+
+        Log::info('✅ Validation starting...');
+
         $validated = $request->validate([
             'staffId' => 'required|string|max:255',
             'storeId' => 'required|string|max:255',
@@ -99,7 +115,7 @@ class AttendanceController extends Controller
 
         Log::info('✅ Validation passed', ['validated' => $validated]);
 
-        // Handle photo upload with consistent naming
+        // Handle photo upload
         $photoPath = null;
         if ($request->hasFile('photo')) {
             $photoFile = $request->file('photo');
@@ -109,7 +125,6 @@ class AttendanceController extends Controller
                 'size_kb' => round($photoFile->getSize() / 1024, 2)
             ]);
 
-            // Store in attendance_photos directory for consistency
             $photoPath = $photoFile->store('attendance_photos', 'public');
             Log::info('📂 Photo stored at', [
                 'path' => $photoPath,
@@ -126,6 +141,18 @@ class AttendanceController extends Controller
             $attendanceRecord = null;
 
             if ($validated['type'] === 'TIME_IN') {
+                // Add comprehensive debugging before creation
+                Log::info('🔍 Pre-creation debugging', [
+                    'database_connection' => \DB::connection()->getName(),
+                    'database_name' => \DB::connection()->getDatabaseName(),
+                    'table_exists' => \Schema::hasTable('attendance_records'),
+                    'table_columns' => \Schema::getColumnListing('attendance_records'),
+                    'current_record_count' => AttendanceRecord::count(),
+                ]);
+
+                // Enable query logging
+                \DB::enableQueryLog();
+
                 if ($existingRecord) {
                     Log::info('📝 Updating existing record', ['existing_id' => $existingRecord->id]);
                     
@@ -139,9 +166,7 @@ class AttendanceController extends Controller
                     Log::info('✅ Existing record updated', ['id' => $attendanceRecord->id]);
                     
                 } else {
-                    Log::info('🆕 Creating new record');
-
-                    $attendanceRecord = AttendanceRecord::create([
+                    Log::info('🆕 Creating new record with data:', [
                         'staffId' => $validated['staffId'],
                         'storeId' => $validated['storeId'],
                         'date' => $validated['date'],
@@ -150,8 +175,87 @@ class AttendanceController extends Controller
                         'status' => 'ACTIVE'
                     ]);
 
-                    Log::info('✅ New record created', ['id' => $attendanceRecord->id]);
+                    // Try explicit transaction
+                    try {
+                        \DB::beginTransaction();
+                        
+                        // Method 1: Using create()
+                        $attendanceRecord = AttendanceRecord::create([
+                            'staffId' => $validated['staffId'],
+                            'storeId' => $validated['storeId'],
+                            'date' => $validated['date'],
+                            'timeIn' => $validated['time'],
+                            'timeInPhoto' => $photoPath,
+                            'status' => 'ACTIVE'
+                        ]);
+
+                        Log::info('🔍 After create() attempt', [
+                            'record_object' => $attendanceRecord ? 'exists' : 'null',
+                            'record_id' => $attendanceRecord->id ?? 'no id',
+                            'record_exists' => $attendanceRecord->exists ?? 'no exists property',
+                            'record_attributes' => $attendanceRecord->getAttributes() ?? 'no attributes'
+                        ]);
+
+                        // Double-check by querying
+                        $verifyRecord = AttendanceRecord::where('staffId', $validated['staffId'])
+                            ->where('date', $validated['date'])
+                            ->first();
+                        
+                        Log::info('🔍 Verification query result', [
+                            'found_record' => $verifyRecord ? 'yes' : 'no',
+                            'found_id' => $verifyRecord->id ?? 'no id',
+                            'total_records_now' => AttendanceRecord::count()
+                        ]);
+
+                        \DB::commit();
+                        Log::info('✅ Transaction committed');
+
+                        // If create() failed, try alternative method
+                        if (!$attendanceRecord || !$attendanceRecord->exists) {
+                            Log::warning('⚠️ create() failed, trying alternative method');
+                            
+                            $attendanceRecord = new AttendanceRecord();
+                            $attendanceRecord->staffId = $validated['staffId'];
+                            $attendanceRecord->storeId = $validated['storeId'];
+                            $attendanceRecord->date = $validated['date'];
+                            $attendanceRecord->timeIn = $validated['time'];
+                            $attendanceRecord->timeInPhoto = $photoPath;
+                            $attendanceRecord->status = 'ACTIVE';
+                            
+                            $saved = $attendanceRecord->save();
+                            
+                            Log::info('🔍 Alternative save() result', [
+                                'save_result' => $saved,
+                                'record_id' => $attendanceRecord->id,
+                                'record_exists' => $attendanceRecord->exists
+                            ]);
+                        }
+
+                    } catch (\Exception $e) {
+                        \DB::rollback();
+                        Log::error('❌ Transaction failed', [
+                            'error' => $e->getMessage(),
+                            'line' => $e->getLine(),
+                            'file' => $e->getFile()
+                        ]);
+                        throw $e;
+                    }
                 }
+
+                // Log all executed queries
+                $queries = \DB::getQueryLog();
+                Log::info('📋 SQL Queries executed', $queries);
+
+                // Final verification
+                $finalCount = AttendanceRecord::count();
+                $todayCount = AttendanceRecord::whereDate('date', $validated['date'])->count();
+                
+                Log::info('📊 Final database state', [
+                    'total_records' => $finalCount,
+                    'today_records' => $todayCount,
+                    'staff_today_records' => AttendanceRecord::where('staffId', $validated['staffId'])
+                        ->whereDate('date', $validated['date'])->count()
+                ]);
 
             } else {
                 // Handle other attendance types (BREAK_IN, BREAK_OUT, TIME_OUT)
@@ -199,7 +303,7 @@ class AttendanceController extends Controller
                 ]);
             }
 
-            // Prepare response data with full URLs
+            // Prepare response data
             $responseData = [
                 'id' => $attendanceRecord->id ?? null,
                 'staffId' => $attendanceRecord->staffId ?? null,
@@ -211,12 +315,7 @@ class AttendanceController extends Controller
                 'timeOut' => $attendanceRecord->timeOut ?? null,
                 'status' => $attendanceRecord->status ?? null,
                 'type' => $validated['type'],
-                'recorded_time' => $validated['time'],
-                // Include full image URLs in API response
-                'timeInPhoto' => $attendanceRecord->timeInPhoto ? asset('storage/' . $attendanceRecord->timeInPhoto) : null,
-                'breakInPhoto' => $attendanceRecord->breakInPhoto ? asset('storage/' . $attendanceRecord->breakInPhoto) : null,
-                'breakOutPhoto' => $attendanceRecord->breakOutPhoto ? asset('storage/' . $attendanceRecord->breakOutPhoto) : null,
-                'timeOutPhoto' => $attendanceRecord->timeOutPhoto ? asset('storage/' . $attendanceRecord->timeOutPhoto) : null,
+                'recorded_time' => $validated['time']
             ];
 
             Log::info('🎉 Attendance process completed successfully', [
@@ -245,14 +344,81 @@ class AttendanceController extends Controller
         }
     }
 
+    public function update(Request $request, AttendanceRecord $attendance)
+    {
+        $validated = $request->validate([
+            'staffId' => 'required|string|max:255',
+            'storeId' => 'required|string|max:255',
+            'date' => 'required|date',
+            'timeIn' => 'required|string|max:255',
+            'timeInPhoto' => 'sometimes|image|max:2048',
+            'breakIn' => 'nullable|string|max:255',
+            'breakInPhoto' => 'nullable|image|max:2048',
+            'breakOut' => 'nullable|string|max:255',
+            'breakOutPhoto' => 'nullable|image|max:2048',
+            'timeOut' => 'nullable|string|max:255',
+            'timeOutPhoto' => 'nullable|image|max:2048',
+            'status' => 'required|string|max:255'
+        ]);
+
+        // Handle file uploads
+        $photoFields = ['timeInPhoto', 'breakInPhoto', 'breakOutPhoto', 'timeOutPhoto'];
+        foreach ($photoFields as $field) {
+            if ($request->hasFile($field)) {
+                // Delete old photo if exists
+                if ($attendance->$field) {
+                    Storage::disk('public')->delete($attendance->$field);
+                }
+                $validated[$field] = $request->file($field)->store('attendance-photos', 'public');
+            } else {
+                // Keep existing photo if no new one uploaded
+                unset($validated[$field]);
+            }
+        }
+
+        $attendance->update($validated);
+
+        Log::info('Attendance record updated', [
+            'id' => $attendance->id,
+            'staff' => $attendance->staffId,
+            'date' => $attendance->date
+        ]);
+
+        return redirect()->back()->with('success', 'Attendance record updated successfully.');
+    }
+
+    public function destroy(AttendanceRecord $attendance)
+    {
+        Log::info('Deleting attendance record', [
+            'id' => $attendance->id,
+            'staff' => $attendance->staffId,
+            'date' => $attendance->date
+        ]);
+
+        // Delete associated photos
+        $photoFields = ['timeInPhoto', 'breakInPhoto', 'breakOutPhoto', 'timeOutPhoto'];
+        foreach ($photoFields as $field) {
+            if ($attendance->$field) {
+                Storage::disk('public')->delete($attendance->$field);
+                Log::info('Deleted photo', ['field' => $field, 'path' => $attendance->$field]);
+            }
+        }
+
+        $attendance->delete();
+
+        Log::info('Attendance record deleted successfully', ['id' => $attendance->id]);
+
+        return redirect()->back()->with('success', 'Attendance record deleted successfully.');
+    }
+
     public function show(AttendanceRecord $attendance)
     {
         $attendanceData = [
             ...$attendance->toArray(),
-            'timeInPhoto' => $attendance->timeInPhoto ? asset('storage/' . $attendance->timeInPhoto) : null,
-            'breakInPhoto' => $attendance->breakInPhoto ? asset('storage/' . $attendance->breakInPhoto) : null,
-            'breakOutPhoto' => $attendance->breakOutPhoto ? asset('storage/' . $attendance->breakOutPhoto) : null,
-            'timeOutPhoto' => $attendance->timeOutPhoto ? asset('storage/' . $attendance->timeOutPhoto) : null,
+            'timeInPhoto' => $attendance->timeInPhoto ? Storage::url($attendance->timeInPhoto) : null,
+            'breakInPhoto' => $attendance->breakInPhoto ? Storage::url($attendance->breakInPhoto) : null,
+            'breakOutPhoto' => $attendance->breakOutPhoto ? Storage::url($attendance->breakOutPhoto) : null,
+            'timeOutPhoto' => $attendance->timeOutPhoto ? Storage::url($attendance->timeOutPhoto) : null,
         ];
 
         return Inertia::render('Attendance/Show', [
@@ -264,10 +430,10 @@ class AttendanceController extends Controller
     {
         $attendanceData = [
             ...$attendance->toArray(),
-            'timeInPhoto' => $attendance->timeInPhoto ? asset('storage/' . $attendance->timeInPhoto) : null,
-            'breakInPhoto' => $attendance->breakInPhoto ? asset('storage/' . $attendance->breakInPhoto) : null,
-            'breakOutPhoto' => $attendance->breakOutPhoto ? asset('storage/' . $attendance->breakOutPhoto) : null,
-            'timeOutPhoto' => $attendance->timeOutPhoto ? asset('storage/' . $attendance->timeOutPhoto) : null,
+            'timeInPhoto' => $attendance->timeInPhoto ? Storage::url($attendance->timeInPhoto) : null,
+            'breakInPhoto' => $attendance->breakInPhoto ? Storage::url($attendance->breakInPhoto) : null,
+            'breakOutPhoto' => $attendance->breakOutPhoto ? Storage::url($attendance->breakOutPhoto) : null,
+            'timeOutPhoto' => $attendance->timeOutPhoto ? Storage::url($attendance->timeOutPhoto) : null,
         ];
 
         return Inertia::render('Attendance/Edit', [
@@ -294,10 +460,10 @@ class AttendanceController extends Controller
 
         $attendanceData = [
             ...$attendance->toArray(),
-            'timeInPhoto' => $attendance->timeInPhoto ? asset('storage/' . $attendance->timeInPhoto) : null,
-            'breakInPhoto' => $attendance->breakInPhoto ? asset('storage/' . $attendance->breakInPhoto) : null,
-            'breakOutPhoto' => $attendance->breakOutPhoto ? asset('storage/' . $attendance->breakOutPhoto) : null,
-            'timeOutPhoto' => $attendance->timeOutPhoto ? asset('storage/' . $attendance->timeOutPhoto) : null,
+            'timeInPhoto' => $attendance->timeInPhoto ? Storage::url($attendance->timeInPhoto) : null,
+            'breakInPhoto' => $attendance->breakInPhoto ? Storage::url($attendance->breakInPhoto) : null,
+            'breakOutPhoto' => $attendance->breakOutPhoto ? Storage::url($attendance->breakOutPhoto) : null,
+            'timeOutPhoto' => $attendance->timeOutPhoto ? Storage::url($attendance->timeOutPhoto) : null,
         ];
 
         return response()->json([
