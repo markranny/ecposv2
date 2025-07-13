@@ -90,24 +90,27 @@ const footerTotals = computed(() => {
         acc.total_costamount += (parseFloat(row.total_costamount) || 0);
         acc.total_qty += Math.round(row.qty || 0);
 
-        // New totals
+        // Payment method totals
         acc.cash += (parseFloat(row.cash) || 0);
         acc.charge += (parseFloat(row.charge) || 0);
         acc.representation += (parseFloat(row.representation) || 0);
         acc.gcash += (parseFloat(row.gcash) || 0);
+        acc.paymaya += (parseFloat(row.paymaya) || 0);
+        acc.card += (parseFloat(row.card) || 0);
+        acc.loyaltycard += (parseFloat(row.loyaltycard) || 0);
         acc.foodpanda += (parseFloat(row.foodpanda) || 0);
         acc.grabfood += (parseFloat(row.grabfood) || 0);
         acc.mrktgdisc += (parseFloat(row.mrktgdisc) || 0);
         acc.rddisc += (parseFloat(row.rddisc) || 0);
-        acc.discofferid += (parseFloat(row.discofferid) || 0);
 
         acc.bw_products += (parseFloat(row.bw_products) || 0);
         acc.merchandise += (parseFloat(row.merchandise) || 0);
         acc.partycakes += (parseFloat(row.partycakes) || 0);
+        acc.commission += (parseFloat(row.commission) || 0);
 
         return acc;
     }, {
-        // Initialize all new totals
+        // Initialize all totals
         total_qty: 0,
         total_discamount: 0,
         total_costprice: 0,
@@ -117,20 +120,23 @@ const footerTotals = computed(() => {
         total_grossamount: 0,
         total_costamount: 0,
         
-        // New totals
+        // Payment method totals
         cash: 0,
         charge: 0,
         representation: 0,
         gcash: 0,
+        paymaya: 0,
+        card: 0,
+        loyaltycard: 0,
         foodpanda: 0,
         grabfood: 0,
         mrktgdisc: 0,
         rddisc: 0,
-        discofferid: 0,
 
         bw_products: 0,
         merchandise: 0,
-        partycakes: 0
+        partycakes: 0,
+        commission: 0
     });
 });
 
@@ -141,13 +147,12 @@ const columns = [
     { data: 'timeonly', title: 'Time', footer: '' },
     { data: 'transactionid', title: 'Transaction ID', footer: '' },
     { data: 'receiptid', title: 'Receipt ID', footer: '' },
-    { data: 'paymentmethod', title: 'Payment Method', footer: '' },
     { data: 'custaccount', title: 'Customer', footer: '' },
     { data: 'itemname', title: 'Item Name', footer: '' },
     { data: 'itemgroup', title: 'Item Group', footer: '' },
     { data: 'discofferid', title: 'PROMO', footer: '' },
     
-    // Columns with footer calculations (indices 11-29)
+    // Columns with footer calculations (indices 10-30)
     { 
         data: 'qty', 
         title: 'Qty',
@@ -223,6 +228,24 @@ const columns = [
         footer: ''
     },
     { 
+        data: 'paymaya', 
+        title: 'PayMaya',
+        render: (data) => (parseFloat(data) || 0).toFixed(2),
+        footer: ''
+    },
+    { 
+        data: 'card', 
+        title: 'Card',
+        render: (data) => (parseFloat(data) || 0).toFixed(2),
+        footer: ''
+    },
+    { 
+        data: 'loyaltycard', 
+        title: 'Loyalty Card',
+        render: (data) => (parseFloat(data) || 0).toFixed(2),
+        footer: ''
+    },
+    { 
         data: 'foodpanda', 
         title: 'FoodPanda',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
@@ -264,6 +287,12 @@ const columns = [
         render: (data) => (parseFloat(data) || 0).toFixed(2),
         footer: ''
     },
+    { 
+        data: 'commission', 
+        title: 'Commission',
+        render: (data) => (parseFloat(data) || 0).toFixed(2),
+        footer: ''
+    },
     { data: 'remarks', title: 'NOTE', footer: '' }
 ];
 
@@ -302,13 +331,17 @@ const options = {
             charge: 0,
             representation: 0,
             gcash: 0,
+            paymaya: 0,
+            card: 0,
+            loyaltycard: 0,
             foodpanda: 0,
             grabfood: 0,
             mrktgdisc: 0,
             rddisc: 0,
             bw_products: 0,
             merchandise: 0,
-            partycakes: 0
+            partycakes: 0,
+            commission: 0
         };
 
         // Calculate totals only for filtered/searched rows
@@ -331,25 +364,29 @@ const options = {
             
             // Map of column indices to their corresponding total keys
             const columnMappings = [
-                { index: 11, key: 'total_qty', round: true },
-                { index: 12, key: 'total_costprice' },
-                { index: 13, key: 'total_grossamount' },
-                { index: 14, key: 'total_costamount' },
-                { index: 15, key: 'total_discamount' },
-                { index: 16, key: 'total_netamount' },
-                { index: 17, key: 'vatablesales' },
-                { index: 18, key: 'vat' },
-                { index: 19, key: 'cash' },
-                { index: 20, key: 'charge' },
-                { index: 21, key: 'representation' },
-                { index: 22, key: 'gcash' },
-                { index: 23, key: 'foodpanda' },
-                { index: 24, key: 'grabfood' },
-                { index: 25, key: 'mrktgdisc' },
-                { index: 26, key: 'rddisc' },
-                { index: 27, key: 'bw_products' },
-                { index: 28, key: 'merchandise' },
-                { index: 29, key: 'partycakes' }
+                { index: 10, key: 'total_qty', round: true },
+                { index: 11, key: 'total_costprice' },
+                { index: 12, key: 'total_grossamount' },
+                { index: 13, key: 'total_costamount' },
+                { index: 14, key: 'total_discamount' },
+                { index: 15, key: 'total_netamount' },
+                { index: 16, key: 'vatablesales' },
+                { index: 17, key: 'vat' },
+                { index: 18, key: 'cash' },
+                { index: 19, key: 'charge' },
+                { index: 20, key: 'representation' },
+                { index: 21, key: 'gcash' },
+                { index: 22, key: 'paymaya' },
+                { index: 23, key: 'card' },
+                { index: 24, key: 'loyaltycard' },
+                { index: 25, key: 'foodpanda' },
+                { index: 26, key: 'grabfood' },
+                { index: 27, key: 'mrktgdisc' },
+                { index: 28, key: 'rddisc' },
+                { index: 29, key: 'bw_products' },
+                { index: 30, key: 'merchandise' },
+                { index: 31, key: 'partycakes' },
+                { index: 32, key: 'commission' }
             ];
 
             // Update footer cells with filtered totals
@@ -377,7 +414,6 @@ const exportToExcel = (dt) => {
         { header: 'TIME', key: 'timeonly', width: 10 },
         { header: 'TRANSACTION ID', key: 'transactionid', width: 15 },
         { header: 'RECEIPT ID', key: 'receiptid', width: 15 },
-        { header: 'PAYMENT METHOD', key: 'paymentmethod', width: 15 },
         { header: 'CUSTOMER', key: 'custaccount', width: 20 },
         { header: 'ITEM NAME', key: 'itemname', width: 25 },
         { header: 'ITEM GROUP', key: 'itemgroup', width: 15 },
@@ -394,6 +430,9 @@ const exportToExcel = (dt) => {
         { header: 'CHARGE', key: 'charge', width: 12, style: { numFmt: '#,##0.00' } },
         { header: 'REPRESENTATION', key: 'representation', width: 15, style: { numFmt: '#,##0.00' } },
         { header: 'GCASH', key: 'gcash', width: 12, style: { numFmt: '#,##0.00' } },
+        { header: 'PAYMAYA', key: 'paymaya', width: 12, style: { numFmt: '#,##0.00' } },
+        { header: 'CARD', key: 'card', width: 12, style: { numFmt: '#,##0.00' } },
+        { header: 'LOYALTY CARD', key: 'loyaltycard', width: 15, style: { numFmt: '#,##0.00' } },
         { header: 'FOODPANDA', key: 'foodpanda', width: 12, style: { numFmt: '#,##0.00' } },
         { header: 'GRABFOOD', key: 'grabfood', width: 12, style: { numFmt: '#,##0.00' } },
         { header: 'MKTG DISC', key: 'mrktgdisc', width: 12, style: { numFmt: '#,##0.00' } },
@@ -401,6 +440,7 @@ const exportToExcel = (dt) => {
         { header: 'BW PRODUCTS', key: 'bw_products', width: 15, style: { numFmt: '#,##0.00' } },
         { header: 'MERCHANDISE', key: 'merchandise', width: 15, style: { numFmt: '#,##0.00' } },
         { header: 'PARTY CAKES', key: 'partycakes', width: 15, style: { numFmt: '#,##0.00' } },
+        { header: 'COMMISSION', key: 'commission', width: 12, style: { numFmt: '#,##0.00' } },
         { header: 'NOTE', key: 'remarks', width: 20 }
     ];
 
@@ -428,7 +468,6 @@ const exportToExcel = (dt) => {
             timeonly: row.timeonly || '',
             transactionid: row.transactionid || '',
             receiptid: row.receiptid || '',
-            paymentmethod: row.paymentmethod || '',
             custaccount: row.custaccount || '',
             itemname: row.itemname || '',
             itemgroup: row.itemgroup || '',
@@ -445,6 +484,9 @@ const exportToExcel = (dt) => {
             charge: Number(row.charge) || 0,
             representation: Number(row.representation) || 0,
             gcash: Number(row.gcash) || 0,
+            paymaya: Number(row.paymaya) || 0,
+            card: Number(row.card) || 0,
+            loyaltycard: Number(row.loyaltycard) || 0,
             foodpanda: Number(row.foodpanda) || 0,
             grabfood: Number(row.grabfood) || 0,
             mrktgdisc: Number(row.mrktgdisc) || 0,
@@ -452,6 +494,7 @@ const exportToExcel = (dt) => {
             bw_products: Number(row.bw_products) || 0,
             merchandise: Number(row.merchandise) || 0,
             partycakes: Number(row.partycakes) || 0,
+            commission: Number(row.commission) || 0,
             remarks: row.remarks || ''
         });
     });
@@ -470,13 +513,17 @@ const exportToExcel = (dt) => {
         charge: acc.charge + Number(row.charge || 0),
         representation: acc.representation + Number(row.representation || 0),
         gcash: acc.gcash + Number(row.gcash || 0),
+        paymaya: acc.paymaya + Number(row.paymaya || 0),
+        card: acc.card + Number(row.card || 0),
+        loyaltycard: acc.loyaltycard + Number(row.loyaltycard || 0),
         foodpanda: acc.foodpanda + Number(row.foodpanda || 0),
         grabfood: acc.grabfood + Number(row.grabfood || 0),
         mrktgdisc: acc.mrktgdisc + Number(row.mrktgdisc || 0),
         rddisc: acc.rddisc + Number(row.rddisc || 0),
         bw_products: acc.bw_products + Number(row.bw_products || 0),
         merchandise: acc.merchandise + Number(row.merchandise || 0),
-        partycakes: acc.partycakes + Number(row.partycakes || 0)
+        partycakes: acc.partycakes + Number(row.partycakes || 0),
+        commission: acc.commission + Number(row.commission || 0)
     }), {
         total_qty: 0,
         total_costprice: 0,
@@ -490,13 +537,17 @@ const exportToExcel = (dt) => {
         charge: 0,
         representation: 0,
         gcash: 0,
+        paymaya: 0,
+        card: 0,
+        loyaltycard: 0,
         foodpanda: 0,
         grabfood: 0,
         mrktgdisc: 0,
         rddisc: 0,
         bw_products: 0,
         merchandise: 0,
-        partycakes: 0
+        partycakes: 0,
+        commission: 0
     });
 
     // Add totals row
@@ -507,7 +558,6 @@ const exportToExcel = (dt) => {
         timeonly: '',
         transactionid: '',
         receiptid: '',
-        paymentmethod: '',
         custaccount: '',
         itemname: '',
         itemgroup: '',
@@ -524,6 +574,9 @@ const exportToExcel = (dt) => {
         charge: filteredTotals.charge,
         representation: filteredTotals.representation,
         gcash: filteredTotals.gcash,
+        paymaya: filteredTotals.paymaya,
+        card: filteredTotals.card,
+        loyaltycard: filteredTotals.loyaltycard,
         foodpanda: filteredTotals.foodpanda,
         grabfood: filteredTotals.grabfood,
         mrktgdisc: filteredTotals.mrktgdisc,
@@ -531,6 +584,7 @@ const exportToExcel = (dt) => {
         bw_products: filteredTotals.bw_products,
         merchandise: filteredTotals.merchandise,
         partycakes: filteredTotals.partycakes,
+        commission: filteredTotals.commission,
         remarks: ''
     });
 
@@ -606,90 +660,22 @@ const formatCurrency = (value) => {
     return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 };
 
-const populatePaymentMethodColumns = (data) => {
-    return data.map(row => {
-        const updatedRow = {
-            ...row,
-            cash: 0,
-            charge: 0,
-            representation: 0,
-            gcash: 0,
-            foodpanda: 0,
-            grabfood: 0,
-            mrktgdisc: 0,
-            rddisc: 0,
-            bw_products: 0,
-            merchandise: 0,
-            partycakes: 0
-        };
-
-        const paymentMethod = row.paymentmethod ? row.paymentmethod.toLowerCase() : '';
-        const grossAmount = parseFloat(row.total_grossamount) || 0;
-        const discAmount = parseFloat(row.total_discamount) || 0;
-        const netAmount = parseFloat(row.total_netamount) || 0;
-        const promoType = row.discofferid ? row.discofferid.toUpperCase() : '';
-        const itemGroupValue = row.itemgroup ? row.itemgroup.toUpperCase() : '';
-        const itemName = row.itemname ? row.itemname.toUpperCase() : '';
-
-        // Handle payment methods - use netAmount for all payment methods
-        const paymentAmount = netAmount;
-
-        switch(paymentMethod) {
-            case 'cash':
-                updatedRow.cash = paymentAmount;
-                break;
-            case 'charge':
-                updatedRow.charge = paymentAmount;
-                break;
-            case 'representation':
-                updatedRow.representation = paymentAmount;
-                break;
-            case 'gcash':
-                updatedRow.gcash = paymentAmount;
-                break;
-            case 'foodpanda':
-                updatedRow.foodpanda = paymentAmount;
-                break;
-            case 'grabfood':
-                updatedRow.grabfood = paymentAmount;
-                break;
-            default:
-                console.warn(`Unhandled payment method: ${paymentMethod}`);
-        }
-
-        // Handle PROMO discounts
-        if (promoType === 'SENIOR DISCOUNT' || promoType === 'PWD DISCOUNT') {
-            updatedRow.rddisc = discAmount;
-        } else if (promoType && discAmount > 0) {
-            updatedRow.mrktgdisc = discAmount;
-        }
-
-        // Handle product classifications
-        if (itemName === 'PARTY CAKES') {
-            updatedRow.partycakes = grossAmount;
-        } else if (itemGroupValue.includes('BW') || itemGroupValue.includes('CEBU') || itemGroupValue.includes('SVN')) {
-            updatedRow.bw_products = grossAmount;
-        } else if (itemGroupValue) {
-            updatedRow.merchandise = grossAmount;
-        }
-
-        return updatedRow;
-    });
-};
+// Removed the old populatePaymentMethodColumns function since payment methods are now 
+// populated directly from the database in the backend
 
 const syncPaymentMethods = async () => {
     isLoading.value = true;
     try {
         const loadingAlert = Swal.fire({
-            title: 'Syncing Payment Methods',
-            text: 'Please wait while we synchronize the payment methods...',
+            title: 'Refreshing Data',
+            text: 'Please wait while we refresh the transaction data...',
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
             }
         });
 
-        props.ec.splice(0, props.ec.length, ...populatePaymentMethodColumns(props.ec));
+        window.location.reload();
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -698,7 +684,7 @@ const syncPaymentMethods = async () => {
         Swal.fire({
             icon: 'success',
             title: 'Sync Successful!',
-            text: 'Payment methods have been synchronized and exported to Excel.',
+            text: 'Transaction data has been refreshed successfully.',
             timer: 3000,
             timerProgressBar: true,
             showConfirmButton: false
@@ -765,7 +751,7 @@ const syncPaymentMethods = async () => {
                 <button 
                         @click="syncPaymentMethods"
                         :disabled="isLoading"
-                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center"
+                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center hidden"
                     >
                         <span v-if="!isLoading">Sync</span>
                         <span v-else>Syncing...</span>
