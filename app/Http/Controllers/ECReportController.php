@@ -638,6 +638,7 @@ public function inventory(Request $request)
                 'variance',
                 'report_date'
             ])
+            ->whereNotLike('itemid', '%PRM-PRO%')
             ->orderBy('itemname')
             ->orderBy('storename')
             ->orderBy('report_date')

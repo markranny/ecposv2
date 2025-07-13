@@ -3,7 +3,6 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { router } from '@inertiajs/vue3';
 import Main from "@/Layouts/AdminPanel.vue";
 import StorePanel from "@/Layouts/Main.vue";
-import MultiSelectDropdown from "@/Components/MultiSelect/MultiSelectDropdown.vue";
 import TableContainer from "@/Components/Tables/TableContainer.vue";
 import DataTable from 'datatables.net-vue3';
 import DataTablesCore from 'datatables.net';
@@ -11,6 +10,11 @@ import 'datatables.net-buttons';
 import 'datatables.net-buttons/js/buttons.html5.mjs';
 import 'datatables.net-buttons/js/buttons.print.mjs';
 import ExcelJS from 'exceljs';
+
+// Import icons for mobile menu
+import MenuIcon from "@/Components/Svgs/Menu.vue";
+import CloseIcon from "@/Components/Svgs/Close.vue";
+
 DataTable.use(DataTablesCore);
 
 const props = defineProps({
@@ -52,6 +56,65 @@ const startDate = ref(props.filters.startDate || '');
 const endDate = ref(props.filters.endDate || '');
 const isTableLoading = ref(true);
 
+// Mobile responsive state
+const showFloatingMenu = ref(false);
+const isMobile = ref(false);
+
+// Click tracking for mobile interactions
+const clickTimeout = ref(null);
+const clickCount = ref(0);
+const longPressTimeout = ref(null);
+const isLongPress = ref(false);
+
+// Store search functionality
+const storeSearchQuery = ref('');
+const showStoreDropdown = ref(false);
+
+// Filtered stores based on search - handle both string and object formats
+const filteredStores = computed(() => {
+    let stores = [];
+    
+    // Handle different store data formats
+    if (Array.isArray(props.stores)) {
+        stores = props.stores.map(store => {
+            // Handle if store is an object with name property
+            if (typeof store === 'object' && store !== null) {
+                // Handle specific format like {"STOREID": "BW0011", "NAME": "ANCHETA"}
+                if (store.NAME) {
+                    return store.NAME;
+                }
+                // Handle other common name properties
+                if (store.name) {
+                    return store.name;
+                }
+                if (store.storename) {
+                    return store.storename;
+                }
+                if (store.store_name) {
+                    return store.store_name;
+                }
+                
+                // Try to extract NAME from string representation
+                const storeStr = JSON.stringify(store);
+                const nameMatch = storeStr.match(/"NAME"\s*:\s*"([^"]+)"/);
+                if (nameMatch) {
+                    return nameMatch[1];
+                }
+                
+                // Last resort - clean up the object string
+                return storeStr.replace(/[{}":]/g, '').replace(/STOREID[^,]*,?\s*/g, '').replace(/NAME/g, '').trim() || 'Unknown Store';
+            }
+            // Handle if store is already a string
+            return String(store);
+        });
+    }
+    
+    if (!storeSearchQuery.value) return stores;
+    return stores.filter(store => 
+        store.toLowerCase().includes(storeSearchQuery.value.toLowerCase())
+    );
+});
+
 // Adjustment modal state
 const showAdjustmentModal = ref(false);
 const selectedItem = ref(null);
@@ -66,6 +129,132 @@ const adjustmentLoading = ref(false);
 const showHistoryModal = ref(false);
 const adjustmentHistory = ref([]);
 const historyLoading = ref(false);
+
+// Mobile interaction handlers - Fixed to work on ALL screen sizes
+const handleItemClick = (item) => {
+    clearTimeout(clickTimeout.value);
+    clickCount.value++;
+
+    if (clickCount.value === 1) {
+        clickTimeout.value = setTimeout(() => {
+            clickCount.value = 0;
+        }, 300);
+    } else if (clickCount.value === 2) {
+        // Double click - open adjustment modal
+        clearTimeout(clickTimeout.value);
+        openAdjustmentModal(item);
+        clickCount.value = 0;
+    }
+};
+
+const handleTouchStart = (item, event) => {
+    isLongPress.value = false;
+    longPressTimeout.value = setTimeout(() => {
+        isLongPress.value = true;
+        openHistoryModal(item);
+        // Add haptic feedback if available
+        if (navigator.vibrate) {
+            navigator.vibrate(50);
+        }
+    }, 1000); // 1 second for long press
+};
+
+const handleTouchEnd = (item, event) => {
+    clearTimeout(longPressTimeout.value);
+    if (!isLongPress.value) {
+        handleItemClick(item);
+    }
+};
+
+const handleMouseDown = (item, event) => {
+    // Prevent text selection during long press
+    event.preventDefault();
+    isLongPress.value = false;
+    longPressTimeout.value = setTimeout(() => {
+        isLongPress.value = true;
+        openHistoryModal(item);
+    }, 1000);
+};
+
+const handleMouseUp = (item, event) => {
+    clearTimeout(longPressTimeout.value);
+    if (!isLongPress.value) {
+        handleItemClick(item);
+    }
+};
+
+const clearTimeouts = () => {
+    clearTimeout(longPressTimeout.value);
+    clearTimeout(clickTimeout.value);
+};
+
+// Mobile menu functions
+const toggleFloatingMenu = () => {
+    showFloatingMenu.value = !showFloatingMenu.value;
+};
+
+const closeFloatingMenu = () => {
+    showFloatingMenu.value = false;
+};
+
+// Store selection functions
+const toggleStoreSelection = (store) => {
+    const index = selectedStores.value.indexOf(store);
+    if (index > -1) {
+        selectedStores.value.splice(index, 1);
+    } else {
+        selectedStores.value.push(store);
+    }
+};
+
+const isStoreSelected = (store) => {
+    return selectedStores.value.includes(store);
+};
+
+const clearStoreSelection = () => {
+    selectedStores.value = [];
+    showStoreDropdown.value = false;
+};
+
+const selectAllStores = () => {
+    // Handle both string and object formats
+    const allStores = props.stores.map(store => {
+        if (typeof store === 'object' && store !== null) {
+            // Handle specific format like {"STOREID": "BW0011", "NAME": "ANCHETA"}
+            if (store.NAME) {
+                return store.NAME;
+            }
+            // Handle other common name properties
+            if (store.name) {
+                return store.name;
+            }
+            if (store.storename) {
+                return store.storename;
+            }
+            if (store.store_name) {
+                return store.store_name;
+            }
+            
+            // Try to extract NAME from string representation
+            const storeStr = JSON.stringify(store);
+            const nameMatch = storeStr.match(/"NAME"\s*:\s*"([^"]+)"/);
+            if (nameMatch) {
+                return nameMatch[1];
+            }
+            
+            // Last resort - clean up the object string
+            return storeStr.replace(/[{}":]/g, '').replace(/STOREID[^,]*,?\s*/g, '').replace(/NAME/g, '').trim() || 'Unknown Store';
+        }
+        return String(store);
+    });
+    selectedStores.value = allStores;
+    showStoreDropdown.value = false;
+};
+
+// Detect mobile screen size
+const checkScreenSize = () => {
+    isMobile.value = window.innerWidth < 768;
+};
 
 // Compute totals efficiently with memoization
 const totals = computed(() => {
@@ -150,6 +339,7 @@ const openAdjustmentModal = (item) => {
         remarks: ''
     };
     showAdjustmentModal.value = true;
+    closeFloatingMenu();
 };
 
 // Close adjustment modal
@@ -165,19 +355,12 @@ const closeAdjustmentModal = () => {
 
 // Submit adjustment
 const submitAdjustment = async () => {
-    // Validate form data
     if (!adjustmentForm.value.adjustment_value || !adjustmentForm.value.remarks.trim()) {
         alert('Please fill in all required fields');
         return;
     }
 
-    // Check if selectedItem and its ID exist
-    if (!selectedItem.value) {
-        alert('No item selected. Please try again.');
-        return;
-    }
-
-    if (!selectedItem.value.id) {
+    if (!selectedItem.value || !selectedItem.value.id) {
         alert('Item ID is missing. This might be an aggregated record. Please contact support if this persists.');
         console.error('Missing ID for item:', selectedItem.value);
         return;
@@ -223,7 +406,6 @@ const submitAdjustment = async () => {
         if (data.success) {
             alert('Item count adjusted successfully');
             closeAdjustmentModal();
-            // Refresh the page to show updated data
             window.location.reload();
         } else {
             alert(data.message || 'Failed to adjust item count');
@@ -242,55 +424,12 @@ const submitAdjustment = async () => {
     }
 };
 
-const itemCountColumn = {
-    data: 'item_count',
-    title: 'Item Count',
-    className: 'text-right',
-    render: (data, type, row) => {
-        const value = Number(data || 0).toFixed(2);
-        
-        // Check if row has valid ID
-        if (!row.id) {
-            return `<span>${value}</span><br><small class="text-gray-500">No adjustment available</small>`;
-        }
-        
-        const rowId = `adjust-${row.id}`;
-        const historyId = `history-${row.id}`;
-        
-        // Escape the JSON to prevent issues with quotes
-        const escapedRow = JSON.stringify(row).replace(/"/g, '&quot;');
-        
-        return `
-            <div class="flex items-center justify-between">
-                <span>${value}</span>
-                <div class="flex gap-1 ml-2">
-                    <button 
-                        id="${rowId}"
-                        class="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 border border-blue-300 rounded adjust-btn"
-                        title="Adjust Item Count"
-                        data-item="${escapedRow}"
-                    >
-                        Adjust
-                    </button>
-                    <button 
-                        id="${historyId}"
-                        class="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-300 rounded history-btn"
-                        title="View History"
-                        data-item="${escapedRow}"
-                    >
-                        History
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-};
-
 // Open history modal
 const openHistoryModal = async (item) => {
     selectedItem.value = item;
     showHistoryModal.value = true;
     historyLoading.value = true;
+    closeFloatingMenu();
 
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -329,11 +468,17 @@ const closeHistoryModal = () => {
     adjustmentHistory.value = [];
 };
 
+// DataTable columns for desktop - with enhanced interactions
 const columns = [
     { 
         data: 'itemname',
         title: 'Item Name',
         className: 'min-w-[200px]'
+    },
+    {
+        data: 'storename',
+        title: 'Store',
+        className: 'min-w-[120px]'
     },
     {
         data: 'beginning',
@@ -448,10 +593,7 @@ const columns = [
 
 // Setup event listeners for dynamically created buttons
 const setupButtonEventListeners = () => {
-    // Remove existing listeners to prevent duplicates
     document.removeEventListener('click', handleButtonClick);
-    
-    // Add new listener
     document.addEventListener('click', handleButtonClick);
 };
 
@@ -465,7 +607,7 @@ const handleButtonClick = (event) => {
     }
 };
 
-// DataTable options
+// DataTable options - with enhanced row interactions using vanilla JS
 const options = {
     responsive: true,
     order: [[0, 'asc']],
@@ -488,9 +630,67 @@ const options = {
         },
         'print'
     ],
+    createdRow: function(row, data, dataIndex) {
+        // Add event listeners for long press and double click on desktop table rows
+        let longPressTimer;
+        let clickCount = 0;
+        let clickTimer;
+        
+        // Add classes for styling
+        row.classList.add('cursor-pointer', 'hover:bg-gray-50', 'select-none');
+        
+        const handleMouseDown = (e) => {
+            e.preventDefault();
+            longPressTimer = setTimeout(() => {
+                openHistoryModal(data);
+            }, 1000);
+        };
+        
+        const handleMouseUp = () => {
+            clearTimeout(longPressTimer);
+        };
+        
+        const handleClick = (e) => {
+            // Don't trigger on button clicks
+            if (e.target.classList.contains('adjust-btn') || 
+                e.target.classList.contains('history-btn') ||
+                e.target.closest('.adjust-btn') || 
+                e.target.closest('.history-btn')) {
+                return;
+            }
+            
+            clearTimeout(clickTimer);
+            clickCount++;
+            
+            if (clickCount === 1) {
+                clickTimer = setTimeout(() => {
+                    clickCount = 0;
+                }, 300);
+            } else if (clickCount === 2) {
+                clearTimeout(clickTimer);
+                openAdjustmentModal(data);
+                clickCount = 0;
+            }
+        };
+        
+        // Add event listeners
+        row.addEventListener('mousedown', handleMouseDown);
+        row.addEventListener('mouseup', handleMouseUp);
+        row.addEventListener('mouseleave', handleMouseUp);
+        row.addEventListener('click', handleClick);
+        
+        // Store cleanup function for later use if needed
+        row._cleanupEvents = () => {
+            row.removeEventListener('mousedown', handleMouseDown);
+            row.removeEventListener('mouseup', handleMouseUp);
+            row.removeEventListener('mouseleave', handleMouseUp);
+            row.removeEventListener('click', handleClick);
+            clearTimeout(longPressTimer);
+            clearTimeout(clickTimer);
+        };
+    },
     drawCallback: function() {
         isTableLoading.value = false;
-        // Setup event listeners after table is drawn
         setTimeout(setupButtonEventListeners, 100);
     }
 };
@@ -536,6 +736,55 @@ const clearFilters = () => {
     startDate.value = '';
     endDate.value = '';
     handleFilterChange();
+    closeFloatingMenu();
+};
+
+// Export functions for mobile menu
+const exportToCsv = () => {
+    if (window.DataTable) {
+        const table = window.DataTable.tables()[0];
+        if (table) {
+            table.button('.buttons-csv').trigger();
+        }
+    }
+    closeFloatingMenu();
+};
+
+const exportToExcel = () => {
+    if (window.DataTable) {
+        const table = window.DataTable.tables()[0];
+        if (table) {
+            table.button('.buttons-excel').trigger();
+        }
+    }
+    closeFloatingMenu();
+};
+
+const exportToPdf = () => {
+    if (window.DataTable) {
+        const table = window.DataTable.tables()[0];
+        if (table) {
+            table.button('.buttons-pdf').trigger();
+        }
+    }
+    closeFloatingMenu();
+};
+
+const printReport = () => {
+    if (window.DataTable) {
+        const table = window.DataTable.tables()[0];
+        if (table) {
+            table.button('.buttons-print').trigger();
+        }
+    }
+    closeFloatingMenu();
+};
+
+// Click outside handlers
+const handleClickOutside = (event) => {
+    if (showStoreDropdown.value && !event.target.closest('.store-dropdown-container')) {
+        showStoreDropdown.value = false;
+    }
 };
 
 // Debounced filter handling
@@ -548,7 +797,10 @@ watch([selectedStores, startDate, endDate], () => {
 // Cleanup
 onUnmounted(() => {
     clearTimeout(filterTimeout);
+    clearTimeouts();
     document.removeEventListener('click', handleButtonClick);
+    document.removeEventListener('click', handleClickOutside);
+    window.removeEventListener('resize', checkScreenSize);
 });
 
 // Initialize component
@@ -557,13 +809,14 @@ onMounted(() => {
     startDate.value = props.filters.startDate || '';
     endDate.value = props.filters.endDate || '';
     
-    // Log inventory data for debugging
     console.log("Inventory data:", props.inventory);
     
     // Setup event listeners
     setupButtonEventListeners();
+    document.addEventListener('click', handleClickOutside);
+    window.addEventListener('resize', checkScreenSize);
+    checkScreenSize();
     
-    // Set loading to false after initialization
     setTimeout(() => {
         isTableLoading.value = false;
     }, 500);
@@ -575,15 +828,76 @@ onMounted(() => {
         <template v-slot:main>
             <!-- Filters Section -->
             <div class="mb-4 flex flex-wrap gap-4 p-4 bg-white rounded-lg shadow z-[999]">
+                <!-- Store Selection with Search -->
                 <div 
                     v-if="userRole.toUpperCase() === 'ADMIN' || userRole.toUpperCase() === 'SUPERADMIN'" 
-                    class="flex-1 min-w-[200px]"
+                    class="flex-1 min-w-[200px] store-dropdown-container relative"
                 >
-                    <MultiSelectDropdown
-                        v-model="selectedStores"
-                        :options="stores"
-                        label="Stores"
-                    />
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Stores</label>
+                    <div class="relative">
+                        <button
+                            @click="showStoreDropdown = !showStoreDropdown"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-left bg-white"
+                        >
+                            <span v-if="selectedStores.length === 0" class="text-gray-500">Select stores...</span>
+                            <span v-else-if="selectedStores.length === 1">{{ selectedStores[0] }}</span>
+                            <span v-else>{{ selectedStores.length }} stores selected</span>
+                            <svg class="float-right mt-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Dropdown -->
+                        <div v-if="showStoreDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                            <!-- Search input -->
+                            <div class="p-2 border-b border-gray-200">
+                                <input
+                                    v-model="storeSearchQuery"
+                                    type="text"
+                                    placeholder="Search stores..."
+                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    @click.stop
+                                >
+                            </div>
+
+                            <!-- Action buttons -->
+                            <div class="p-2 border-b border-gray-200 flex gap-2">
+                                <button
+                                    @click="selectAllStores"
+                                    class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                                >
+                                    Select All
+                                </button>
+                                <button
+                                    @click="clearStoreSelection"
+                                    class="px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+
+                            <!-- Store options -->
+                            <div class="max-h-40 overflow-auto">
+                                <label 
+                                    v-for="store in filteredStores" 
+                                    :key="store"
+                                    class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        :checked="isStoreSelected(store)"
+                                        @change="toggleStoreSelection(store)"
+                                        class="mr-2 form-checkbox h-4 w-4 text-blue-600"
+                                    >
+                                    <span class="text-sm">{{ store }}</span>
+                                </label>
+                            </div>
+
+                            <div v-if="filteredStores.length === 0" class="p-3 text-sm text-gray-500 text-center">
+                                No stores found
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="flex-1 min-w-[200px]">
@@ -614,13 +928,23 @@ onMounted(() => {
                 </div>
             </div>
 
+            <!-- Touch/Click Instructions for All Devices -->
+            <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p class="text-sm text-blue-800">
+                    <strong>Interaction Guide:</strong><br>
+                    • <strong>Hold/Long press 1 second:</strong> View adjustment history<br>
+                    • <strong>Double click/tap:</strong> Adjust item count<br>
+                    • <strong>Single click buttons:</strong> Direct actions<br>
+                    <span v-if="isMobile">• <strong>Use floating menu</strong> for exports and filters</span>
+                </p>
+            </div>
+
             <!-- Summary Section -->
             <details class="mb-4 bg-white rounded-lg shadow" open>
                 <summary class="px-4 py-3 text-lg font-medium cursor-pointer">
                     Inventory Summary
                 </summary>
                 <div class="p-4">
-                    <!-- Loading indicator for summary -->
                     <div v-if="isTableLoading" class="flex justify-center items-center py-8">
                         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
                         <span class="ml-3">Loading data...</span>
@@ -715,13 +1039,95 @@ onMounted(() => {
                 </div>
             </details>
 
-            <!-- DataTable -->
+            <!-- Data Display -->
             <div class="bg-white rounded-lg shadow">
                 <div v-if="isTableLoading" class="flex justify-center items-center py-12">
                     <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500"></div>
                     <span class="ml-4 text-lg">Loading inventory data...</span>
                 </div>
+                
+                <!-- Mobile View -->
+                <div v-if="isMobile" class="overflow-hidden">
+                    <div class="max-h-96 overflow-y-auto">
+                        <div v-for="item in inventory" :key="`${item.itemid}-${item.storename}`" 
+                             class="border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors select-none cursor-pointer"
+                             @touchstart="handleTouchStart(item, $event)"
+                             @touchend="handleTouchEnd(item, $event)"
+                             @touchcancel="clearTimeouts"
+                             @mousedown="handleMouseDown(item, $event)"
+                             @mouseup="handleMouseUp(item, $event)"
+                             @mouseleave="clearTimeouts"
+                             @contextmenu.prevent>
+                            
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="font-medium text-gray-900">{{ item?.itemname || '' }}</div>
+                                    <div class="text-sm text-gray-500">{{ item?.storename || '' }}</div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <span class="text-gray-600">Beginning:</span>
+                                        <span class="font-medium ml-1">{{ Number(item?.beginning || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Received:</span>
+                                        <span class="font-medium ml-1">{{ Number(item?.received_delivery || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Sales:</span>
+                                        <span class="font-medium ml-1">{{ Number(item?.sales || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Item Count:</span>
+                                        <span class="font-medium ml-1">{{ Number(item?.item_count || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Ending:</span>
+                                        <span class="font-bold ml-1">{{ Number(item?.ending || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Variance:</span>
+                                        <span :class="[
+                                            'font-bold ml-1',
+                                            Number(item?.variance || 0) < 0 ? 'text-red-600' : 'text-green-600'
+                                        ]">{{ Number(item?.variance || 0).toFixed(2) }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                                    <div>Throw Away: {{ Number(item?.throw_away || 0).toFixed(2) }}</div>
+                                    <div>Early Molds: {{ Number(item?.early_molds || 0).toFixed(2) }}</div>
+                                    <div>Pull Out: {{ Number(item?.pull_out || 0).toFixed(2) }}</div>
+                                </div>
+
+                                <div class="flex justify-end space-x-2 mt-2">
+                                    <button
+                                        @click.stop="openAdjustmentModal(item)"
+                                        class="text-blue-600 hover:text-blue-900 text-sm px-2 py-1 border border-blue-300 rounded"
+                                    >
+                                        Adjust
+                                    </button>
+                                    <button
+                                        @click.stop="openHistoryModal(item)"
+                                        class="text-green-600 hover:text-green-900 text-sm px-2 py-1 border border-green-300 rounded"
+                                    >
+                                        History
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desktop DataTable -->
                 <TableContainer v-else>
+                    <div class="p-4 bg-gray-50 border-b border-gray-200">
+                        <p class="text-sm text-gray-600">
+                            <strong>Desktop Interactions:</strong> 
+                            Hold any row for 1 second to view adjustment history, or double-click to adjust item count.
+                        </p>
+                    </div>
                     <DataTable 
                         :data="inventory" 
                         :columns="columns" 
@@ -730,6 +1136,84 @@ onMounted(() => {
                     />
                 </TableContainer>
             </div>
+
+            <!-- Mobile Floating Action Button and Menu -->
+            <div v-if="isMobile" class="fixed bottom-6 right-6 z-40">
+                <!-- Floating Menu Options -->
+                <div v-if="showFloatingMenu" class="absolute bottom-16 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-56 transform transition-all duration-200 ease-out">
+                    
+                    <!-- Export Options -->
+                    <div class="px-4 py-2 border-b border-gray-200">
+                        <p class="text-sm font-medium text-gray-700">Export Data</p>
+                    </div>
+                    
+                    <button
+                        @click="exportToCsv"
+                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                        <svg class="h-4 w-4 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export CSV
+                    </button>
+
+                    <button
+                        @click="exportToExcel"
+                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                        <svg class="h-4 w-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export Excel
+                    </button>
+
+                    <button
+                        @click="exportToPdf"
+                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                        <svg class="h-4 w-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export PDF
+                    </button>
+
+                    <button
+                        @click="printReport"
+                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                        <svg class="h-4 w-4 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Print Report
+                    </button>
+
+                    <div class="border-t border-gray-200 my-2"></div>
+
+                    <!-- Filter Options -->
+                    <button
+                        @click="clearFilters"
+                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                        <svg class="h-4 w-4 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
+                        </svg>
+                        Clear All Filters
+                    </button>
+                </div>
+
+                <!-- Main Floating Action Button -->
+                <button
+                    @click="toggleFloatingMenu"
+                    class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 ease-out transform hover:scale-105"
+                    :class="{ 'rotate-45': showFloatingMenu }"
+                >
+                    <MenuIcon v-if="!showFloatingMenu" class="h-6 w-6" />
+                    <CloseIcon v-else class="h-6 w-6" />
+                </button>
+            </div>
+
+            <!-- Overlay to close floating menu -->
+            <div v-if="showFloatingMenu" @click="closeFloatingMenu" class="fixed inset-0 bg-black bg-opacity-25 z-30"></div>
 
             <!-- Adjustment Modal -->
             <div v-if="showAdjustmentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -975,13 +1459,19 @@ table.dataTable thead th {
     z-index: 10;
 }
 
-table.dataTable tbody td {
+table.dataTable tbody tr {
     padding: 12px;
     border-bottom: 1px solid #e5e7eb;
+    user-select: none;
+    cursor: pointer;
 }
 
 table.dataTable tbody tr:hover {
     background-color: #f9fafb;
+}
+
+table.dataTable tbody tr.selected {
+    background-color: #dbeafe;
 }
 
 .dataTables_wrapper .dataTables_paginate {
@@ -1007,17 +1497,11 @@ table.dataTable tbody tr:hover {
 
 @media (max-width: 768px) {
     .dt-buttons {
-        position: static;
-        justify-content: center;
-        margin-bottom: 20px;
-        right: auto;
+        display: none; /* Hide DataTable buttons on mobile */
     }
     
     .dataTables_filter {
-        float: none;
-        text-align: center;
-        padding: 10px;
-        margin-right: 0;
+        display: none; /* Hide DataTable search on mobile */
     }
 
     table.dataTable {

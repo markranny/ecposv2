@@ -15,6 +15,7 @@ import Logout from "@/Components/Svgs/Logout.vue";
 import Receipt from "@/Components/Svgs/Picklist.vue";
 import List from "@/Components/Nav/List.vue";
 import Customers from "@/Components/Svgs/Customers.vue";
+import Attendance from "@/Components/Svgs/Attendance.vue";
 
 import { ref, computed, defineProps, toRefs } from 'vue';
 
@@ -88,8 +89,8 @@ const logout = () => {
                 </List>
             </li>
 
-            <div class="tooltip tooltip-right tooltip-primary" data-tip="Batch Counting">
-                <List :active-tab="activeTab" tabName="STOCK" url="/StockCounting"><Stock class="h-6 lg:h-8"/> </List>
+            <div class="tooltip tooltip-right tooltip-primary" data-tip="Attendance">
+                <List :active-tab="activeTab" tabName="ATTENDANCE" url="/attendance"><Attendance class="h-6 lg:h-8"/> </List>
             </div>
 
             <div class="tooltip tooltip-right tooltip-primary" data-tip="Customer">

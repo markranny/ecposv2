@@ -55,7 +55,7 @@
 import { ref, watch } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { Head } from '@inertiajs/vue3';
-import AdminPanel from '@/Layouts/Main.vue';
+import AdminPanel from '@/Layouts/AdminPanel.vue';
 import AttendanceForm from '@/Pages/Attendance/AttendanceForm.vue';
 import AttendanceTable from '@/Pages/Attendance/AttendanceTable.vue';
 import debounce from 'lodash/debounce';
