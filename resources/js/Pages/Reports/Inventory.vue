@@ -1121,7 +1121,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Desktop DataTable -->
-                <TableContainer v-else>
+                <TableContainer v-else class="max-h-[80vh] overflow-x-auto overflow-y-auto">
                     <div class="p-4 bg-gray-50 border-b border-gray-200">
                         <p class="text-sm text-gray-600">
                             <strong>Desktop Interactions:</strong> 

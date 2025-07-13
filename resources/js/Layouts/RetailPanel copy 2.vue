@@ -20,15 +20,12 @@ import CustomerGroup from "@/Components/Svgs/CustomerGroup.vue";
 import RetailGroup from "@/Components/Svgs/RetailGroup.vue";
 import SpecialGroup from "@/Components/Svgs/SpecialGroup.vue";
 
+
 import { ref, onMounted, onUnmounted } from 'vue';
 
-// Check if screen is small or mobile portrait
-const isSmallScreen = () => {
-    return window.innerWidth <= 768 || (window.innerWidth <= 1024 && window.innerHeight > window.innerWidth);
-};
 
-// Initialize sidebar state based on screen size
-const isSidebarOpen = ref(!isSmallScreen());
+
+const isSidebarOpen = ref(true);
 const showModalLogout = ref(false);
 
 const props = defineProps({
@@ -41,7 +38,6 @@ const props = defineProps({
         default: null
     }
 });
-
 const toggleSidebar = () => {
     isSidebarOpen.value = !isSidebarOpen.value;
 }
@@ -55,46 +51,20 @@ const logoutModalHandler = () => {
 };
 
 const rboinventitemretailgroups = () => {
-    window.location.href = '/rboinventitemretailgroups';
+  /* window.alert('You are Redirecting to Category Entries'); */
+  window.location.href = '/rboinventitemretailgroups';
 };
 
 const rbospecialgroups = () => {
-    window.location.href = '/rbospecialgroups';
+  /* window.alert('You are Redirecting to Special Category Entries'); */
+  window.location.href = '/rbospecialgroups';
 };
 
 const posperiodicdiscounts = () => {
-    window.location.href = '/discountsv2';
+  /* window.alert('You are Redirecting to Discount Entries'); */
+  window.location.href = '/discountv2';
 };
 
-const BODeclaration = () => {
-    window.location.href = '/bo-declaration';
-};
-
-// Handle window resize
-const handleResize = () => {
-    if (isSmallScreen()) {
-        isSidebarOpen.value = false;
-    } else {
-        isSidebarOpen.value = true;
-    }
-};
-
-// Handle orientation change
-const handleOrientationChange = () => {
-    setTimeout(() => {
-        handleResize();
-    }, 100); // Small delay to ensure dimensions are updated
-};
-
-onMounted(() => {
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleOrientationChange);
-});
-
-onUnmounted(() => {
-    window.removeEventListener('resize', handleResize);
-    window.removeEventListener('orientationchange', handleOrientationChange);
-});
 </script>
 
 <template>
@@ -106,29 +76,53 @@ onUnmounted(() => {
             </aside>
             <nav class="top-0 right-0 left-0 w-screen h-10 bg-white text-xs lg:text-sm text-black font-bold absolute z-10 pr-2 flex justify-end gap-4 items-center">
 
+                <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="BO Declaration">
+                    <Products class="h-5" @click="posperiodicdiscounts('/bo-declaration')"></Products>
+                </div>
+
+                <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Inventory">
+                    <Inventory class="h-5"></Inventory>
+                </div>
+
                 <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Retail Group">
                     <RetailGroup class="h-5" @click="rboinventitemretailgroups('/rboinventitemretailgroups')"></RetailGroup>
                 </div>
 
-                <!-- <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Link Items">
+                <!-- <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Customer Group">
+                    <CustomerGroup class="h-5"></CustomerGroup>
+                </div> -->
+
+                <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Special Group">
                     <SpecialGroup class="h-5" @click="rbospecialgroups('/rbospecialgroups')"></SpecialGroup>
-                </div> -->
-
-                <!-- <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Discount">
-                    <Transactions class="h-5"></Transactions>
-                </div> -->
-
-                <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Manage Discount">
-                    <Discount class="h-5" @click="posperiodicdiscounts('/discountsv2')"></Discount>
                 </div>
 
-                <!-- <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Barcode">
-                    <Barcodes class="h-5"></Barcodes>
+                <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Transactions">
+                    <Transactions class="h-5"></Transactions>
+                </div>
+
+                <!-- <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Discount Bundle">
+                    <Discount class="h-5" @click="posperiodicdiscounts('/posperiodicdiscounts')"></Discount>
                 </div> -->
 
-                <!-- <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Notifications">
-                    <Notifications class="h-5"></Notifications>
+                <!-- <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Discount Bundle">
+                    <Discount class="h-5" @click="posperiodicdiscounts('/discountsv2')"></Discount>
                 </div> -->
+
+                <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Barcode">
+                    <Barcodes class="h-5"></Barcodes>
+                </div>
+
+                <!-- <div class="tooltip tooltip-bottom tooltip-primary" data-tip="Show">
+                    <ShowEye class="h-5"></ShowEye>
+                </div>
+
+                <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" @click="hidePanel" data-tip="Hide">
+                    <HideEye class="h-5"></HideEye>
+                </div> -->
+
+                <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Notifications">
+                    <Notifications class="h-5"></Notifications>
+                </div>
 
                 <div class="tooltip tooltip-bottom tooltip-primary cursor-pointer" data-tip="Support">
                     <Headset class="h-5"></Headset>
@@ -143,12 +137,13 @@ onUnmounted(() => {
             <Logout :show-modal="showModalLogout" @toggle-active="logoutModalHandler" />
             <slot name="modals"></slot>
 
-            <main :class="['top-10 absolute right-0 bottom-0 transition-all ease-in-out duration-500', propClass, isSidebarOpen ? 'left-28' : 'left-0']">
+            <main :class="['top-10 absolute right-0 bottom-0 trnasition-all ease-in-out duration-500', propClass, isSidebarOpen ? 'left-28' : 'left-0']">
                 <slot name="main"></slot>
             </main>
         </section>
     </div>
 </template>
+
 
 <script>
 export default {
@@ -159,3 +154,4 @@ export default {
   }
 };
 </script>
+
