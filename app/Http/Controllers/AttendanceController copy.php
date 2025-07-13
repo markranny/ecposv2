@@ -19,40 +19,17 @@ class AttendanceController extends Controller
             ->map(function ($attendance) {
                 return [
                     ...$attendance->toArray(),
-                    // Generate full URLs for images - check if already a full URL
-                    'timeInPhoto' => $this->getImageUrl($attendance->timeInPhoto),
-                    'breakInPhoto' => $this->getImageUrl($attendance->breakInPhoto),
-                    'breakOutPhoto' => $this->getImageUrl($attendance->breakOutPhoto),
-                    'timeOutPhoto' => $this->getImageUrl($attendance->timeOutPhoto),
+                    // Generate full URLs for images
+                    'timeInPhoto' => $attendance->timeInPhoto ? asset('storage/' . $attendance->timeInPhoto) : null,
+                    'breakInPhoto' => $attendance->breakInPhoto ? asset('storage/' . $attendance->breakInPhoto) : null,
+                    'breakOutPhoto' => $attendance->breakOutPhoto ? asset('storage/' . $attendance->breakOutPhoto) : null,
+                    'timeOutPhoto' => $attendance->timeOutPhoto ? asset('storage/' . $attendance->timeOutPhoto) : null,
                 ];
             });
 
         return Inertia::render('Attendance/Index', [
             'attendances' => $attendances
         ]);
-    }
-
-    /**
-     * Helper method to generate proper image URLs
-     */
-    private function getImageUrl($imagePath)
-    {
-        if (!$imagePath) {
-            return null;
-        }
-
-        // If it's already a full URL (starts with http), return as is
-        if (str_starts_with($imagePath, 'http')) {
-            return $imagePath;
-        }
-
-        // If it starts with 'storage/', it's already the correct path for asset()
-        if (str_starts_with($imagePath, 'storage/')) {
-            return asset($imagePath);
-        }
-
-        // Otherwise, assume it's a relative path that needs 'storage/' prefix
-        return asset('storage/' . $imagePath);
     }
 
     public function store(Request $request)
@@ -236,10 +213,10 @@ class AttendanceController extends Controller
                 'type' => $validated['type'],
                 'recorded_time' => $validated['time'],
                 // Include full image URLs in API response
-                'timeInPhoto' => $this->getImageUrl($attendanceRecord->timeInPhoto),
-                'breakInPhoto' => $this->getImageUrl($attendanceRecord->breakInPhoto),
-                'breakOutPhoto' => $this->getImageUrl($attendanceRecord->breakOutPhoto),
-                'timeOutPhoto' => $this->getImageUrl($attendanceRecord->timeOutPhoto),
+                'timeInPhoto' => $attendanceRecord->timeInPhoto ? asset('storage/' . $attendanceRecord->timeInPhoto) : null,
+                'breakInPhoto' => $attendanceRecord->breakInPhoto ? asset('storage/' . $attendanceRecord->breakInPhoto) : null,
+                'breakOutPhoto' => $attendanceRecord->breakOutPhoto ? asset('storage/' . $attendanceRecord->breakOutPhoto) : null,
+                'timeOutPhoto' => $attendanceRecord->timeOutPhoto ? asset('storage/' . $attendanceRecord->timeOutPhoto) : null,
             ];
 
             Log::info('🎉 Attendance process completed successfully', [
@@ -268,82 +245,14 @@ class AttendanceController extends Controller
         }
     }
 
-    public function update(Request $request, AttendanceRecord $attendance)
-    {
-        $validated = $request->validate([
-            'staffId' => 'required|string|max:255',
-            'storeId' => 'required|string|max:255',
-            'date' => 'required|date',
-            'timeIn' => 'required|string|max:255',
-            'timeInPhoto' => 'sometimes|image|max:2048',
-            'breakIn' => 'nullable|string|max:255',
-            'breakInPhoto' => 'nullable|image|max:2048',
-            'breakOut' => 'nullable|string|max:255',
-            'breakOutPhoto' => 'nullable|image|max:2048',
-            'timeOut' => 'nullable|string|max:255',
-            'timeOutPhoto' => 'nullable|image|max:2048',
-            'status' => 'required|string|max:255'
-        ]);
-
-        // Handle file uploads with consistent directory naming
-        $photoFields = ['timeInPhoto', 'breakInPhoto', 'breakOutPhoto', 'timeOutPhoto'];
-        foreach ($photoFields as $field) {
-            if ($request->hasFile($field)) {
-                // Delete old photo if exists
-                if ($attendance->$field) {
-                    Storage::disk('public')->delete($attendance->$field);
-                }
-                // Use consistent directory naming
-                $validated[$field] = $request->file($field)->store('attendance_photos', 'public');
-            } else {
-                // Keep existing photo if no new one uploaded
-                unset($validated[$field]);
-            }
-        }
-
-        $attendance->update($validated);
-
-        Log::info('Attendance record updated', [
-            'id' => $attendance->id,
-            'staff' => $attendance->staffId,
-            'date' => $attendance->date
-        ]);
-
-        return redirect()->back()->with('success', 'Attendance record updated successfully.');
-    }
-
-    public function destroy(AttendanceRecord $attendance)
-    {
-        Log::info('Deleting attendance record', [
-            'id' => $attendance->id,
-            'staff' => $attendance->staffId,
-            'date' => $attendance->date
-        ]);
-
-        // Delete associated photos
-        $photoFields = ['timeInPhoto', 'breakInPhoto', 'breakOutPhoto', 'timeOutPhoto'];
-        foreach ($photoFields as $field) {
-            if ($attendance->$field) {
-                Storage::disk('public')->delete($attendance->$field);
-                Log::info('Deleted photo', ['field' => $field, 'path' => $attendance->$field]);
-            }
-        }
-
-        $attendance->delete();
-
-        Log::info('Attendance record deleted successfully', ['id' => $attendance->id]);
-
-        return redirect()->back()->with('success', 'Attendance record deleted successfully.');
-    }
-
     public function show(AttendanceRecord $attendance)
     {
         $attendanceData = [
             ...$attendance->toArray(),
-            'timeInPhoto' => $this->getImageUrl($attendance->timeInPhoto),
-            'breakInPhoto' => $this->getImageUrl($attendance->breakInPhoto),
-            'breakOutPhoto' => $this->getImageUrl($attendance->breakOutPhoto),
-            'timeOutPhoto' => $this->getImageUrl($attendance->timeOutPhoto),
+            'timeInPhoto' => $attendance->timeInPhoto ? asset('storage/' . $attendance->timeInPhoto) : null,
+            'breakInPhoto' => $attendance->breakInPhoto ? asset('storage/' . $attendance->breakInPhoto) : null,
+            'breakOutPhoto' => $attendance->breakOutPhoto ? asset('storage/' . $attendance->breakOutPhoto) : null,
+            'timeOutPhoto' => $attendance->timeOutPhoto ? asset('storage/' . $attendance->timeOutPhoto) : null,
         ];
 
         return Inertia::render('Attendance/Show', [
@@ -355,10 +264,10 @@ class AttendanceController extends Controller
     {
         $attendanceData = [
             ...$attendance->toArray(),
-            'timeInPhoto' => $this->getImageUrl($attendance->timeInPhoto),
-            'breakInPhoto' => $this->getImageUrl($attendance->breakInPhoto),
-            'breakOutPhoto' => $this->getImageUrl($attendance->breakOutPhoto),
-            'timeOutPhoto' => $this->getImageUrl($attendance->timeOutPhoto),
+            'timeInPhoto' => $attendance->timeInPhoto ? asset('storage/' . $attendance->timeInPhoto) : null,
+            'breakInPhoto' => $attendance->breakInPhoto ? asset('storage/' . $attendance->breakInPhoto) : null,
+            'breakOutPhoto' => $attendance->breakOutPhoto ? asset('storage/' . $attendance->breakOutPhoto) : null,
+            'timeOutPhoto' => $attendance->timeOutPhoto ? asset('storage/' . $attendance->timeOutPhoto) : null,
         ];
 
         return Inertia::render('Attendance/Edit', [
@@ -385,10 +294,10 @@ class AttendanceController extends Controller
 
         $attendanceData = [
             ...$attendance->toArray(),
-            'timeInPhoto' => $this->getImageUrl($attendance->timeInPhoto),
-            'breakInPhoto' => $this->getImageUrl($attendance->breakInPhoto),
-            'breakOutPhoto' => $this->getImageUrl($attendance->breakOutPhoto),
-            'timeOutPhoto' => $this->getImageUrl($attendance->timeOutPhoto),
+            'timeInPhoto' => $attendance->timeInPhoto ? asset('storage/' . $attendance->timeInPhoto) : null,
+            'breakInPhoto' => $attendance->breakInPhoto ? asset('storage/' . $attendance->breakInPhoto) : null,
+            'breakOutPhoto' => $attendance->breakOutPhoto ? asset('storage/' . $attendance->breakOutPhoto) : null,
+            'timeOutPhoto' => $attendance->timeOutPhoto ? asset('storage/' . $attendance->timeOutPhoto) : null,
         ];
 
         return response()->json([
@@ -397,7 +306,7 @@ class AttendanceController extends Controller
             'data' => $attendanceData
         ]);
     }
-    
+
     public function getAttendanceByDateRange(Request $request)
     {
         $validated = $request->validate([
@@ -418,11 +327,10 @@ class AttendanceController extends Controller
             ->map(function ($attendance) {
                 return [
                     ...$attendance->toArray(),
-                    // FIXED: Use the consistent getImageUrl() helper method
-                    'timeInPhoto' => $this->getImageUrl($attendance->timeInPhoto),
-                    'breakInPhoto' => $this->getImageUrl($attendance->breakInPhoto),
-                    'breakOutPhoto' => $this->getImageUrl($attendance->breakOutPhoto),
-                    'timeOutPhoto' => $this->getImageUrl($attendance->timeOutPhoto),
+                    'timeInPhoto' => $attendance->timeInPhoto ? Storage::url($attendance->timeInPhoto) : null,
+                    'breakInPhoto' => $attendance->breakInPhoto ? Storage::url($attendance->breakInPhoto) : null,
+                    'breakOutPhoto' => $attendance->breakOutPhoto ? Storage::url($attendance->breakOutPhoto) : null,
+                    'timeOutPhoto' => $attendance->timeOutPhoto ? Storage::url($attendance->timeOutPhoto) : null,
                 ];
             });
 
