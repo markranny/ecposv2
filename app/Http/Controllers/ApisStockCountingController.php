@@ -139,11 +139,12 @@ class ApisStockCountingController extends Controller
                 throw $e;
             }
         } else {
-            // NEW FUNCTIONALITY: Check and insert missing items if stockcountingtrans is not empty
+            // Check and insert missing items for both stockcountingtrans and inventory_summaries
             Log::info('Stock counting records found, checking for missing items', ['storeids' => $storeids]);
             
             foreach ($stockCounting as $stockCountRecord) {
                 $this->insertMissingItemsToStockCountingTrans($stockCountRecord->journalid, $storeids, $currentDate);
+                $this->insertMissingItemsToInventorySummaries($storeids, $currentDate);
             }
         }
 
@@ -259,7 +260,7 @@ private function insertMissingItemsToStockCountingTrans($journalId, $storeId, $c
                 DB::table('stockcountingtrans')->insert($chunk);
             }
 
-            Log::info('Missing items successfully inserted', [
+            Log::info('Missing items successfully inserted into stockcountingtrans', [
                 'inserted_count' => count($insertData),
                 'journalId' => $journalId,
                 'storeId' => $storeId
@@ -276,6 +277,121 @@ private function insertMissingItemsToStockCountingTrans($journalId, $storeId, $c
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString(),
             'journalId' => $journalId,
+            'storeId' => $storeId
+        ]);
+        // Don't throw the exception to avoid breaking the main flow
+    }
+}
+
+/**
+ * Insert missing items into inventory_summaries table
+ * 
+ * @param string $storeId
+ * @param string $currentDate
+ * @return void
+ */
+private function insertMissingItemsToInventorySummaries($storeId, $currentDate)
+{
+    try {
+        Log::info('Checking for missing items in inventory_summaries', [
+            'storeId' => $storeId,
+            'date' => $currentDate
+        ]);
+
+        // Check if inventory_summaries has any records for this store and date
+        $existingRecordsCount = DB::table('inventory_summaries')
+            ->where('storename', $storeId)
+            ->whereDate('report_date', $currentDate)
+            ->count();
+
+        if ($existingRecordsCount === 0) {
+            Log::info('No existing inventory_summaries records found, skipping missing items check');
+            return;
+        }
+
+        Log::info('Existing inventory_summaries records found', ['count' => $existingRecordsCount]);
+
+        // Get items that should be in inventory_summaries but are missing
+        if ($storeId == 'COMMUNITY') {
+            // For COMMUNITY store, get items where activeondelivery = 1
+            $missingItems = DB::table('inventtables as a')
+                ->leftJoin('rboinventtables as b', 'a.itemid', '=', 'b.itemid')
+                ->leftJoin('inventory_summaries as inv', function($join) use ($storeId, $currentDate) {
+                    $join->on('a.itemid', '=', 'inv.itemid')
+                         ->where('inv.storename', '=', $storeId)
+                         ->whereDate('inv.report_date', '=', $currentDate);
+                })
+                ->whereNull('inv.itemid') // Items not in inventory_summaries
+                ->where('b.activeondelivery', '1')
+                ->select('a.itemid', 'a.itemname')
+                ->get();
+        } else {
+            // For other stores, get items where itemname not like '%CLASS B%'
+            $missingItems = DB::table('inventtables as a')
+                ->leftJoin('rboinventtables as b', 'a.itemid', '=', 'b.itemid')
+                ->leftJoin('inventory_summaries as inv', function($join) use ($storeId, $currentDate) {
+                    $join->on('a.itemid', '=', 'inv.itemid')
+                         ->where('inv.storename', '=', $storeId)
+                         ->whereDate('inv.report_date', '=', $currentDate);
+                })
+                ->whereNull('inv.itemid') // Items not in inventory_summaries
+                ->where('a.itemname', 'not like', '%CLASS B%')
+                ->select('a.itemid', 'a.itemname')
+                ->get();
+        }
+
+        if ($missingItems->count() > 0) {
+            Log::info('Missing items found, inserting into inventory_summaries', [
+                'count' => $missingItems->count(),
+                'storeId' => $storeId
+            ]);
+
+            // Prepare data for bulk insert
+            $insertData = [];
+            foreach ($missingItems as $item) {
+                $insertData[] = [
+                    'itemid' => $item->itemid,
+                    'itemname' => $item->itemname,
+                    'storename' => $storeId,
+                    'beginning' => 0.00,
+                    'received_delivery' => 0.00,
+                    'stock_transfer' => 0.00,
+                    'sales' => 0.00,
+                    'bundle_sales' => 0.00,
+                    'throw_away' => 0.00,
+                    'early_molds' => 0.00,
+                    'pull_out' => 0.00,
+                    'rat_bites' => 0.00,
+                    'ant_bites' => 0.00,
+                    'item_count' => 0.00,
+                    'ending' => 0.00,
+                    'variance' => 0.00,
+                    'report_date' => $currentDate,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
+            }
+
+            // Insert missing items in chunks to avoid memory issues
+            $chunks = array_chunk($insertData, 100);
+            foreach ($chunks as $chunk) {
+                DB::table('inventory_summaries')->insert($chunk);
+            }
+
+            Log::info('Missing items successfully inserted into inventory_summaries', [
+                'inserted_count' => count($insertData),
+                'storeId' => $storeId
+            ]);
+        } else {
+            Log::info('No missing items found for inventory_summaries', [
+                'storeId' => $storeId
+            ]);
+        }
+
+    } catch (\Exception $e) {
+        Log::error('Error inserting missing items to inventory_summaries', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
             'storeId' => $storeId
         ]);
         // Don't throw the exception to avoid breaking the main flow
