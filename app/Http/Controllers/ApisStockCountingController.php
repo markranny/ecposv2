@@ -13,151 +13,274 @@ use Carbon\Carbon;
 class ApisStockCountingController extends Controller
 {
     public function index(Request $request, $storeids)
-    {
-        DB::enableQueryLog(); 
+{
+    DB::enableQueryLog(); 
 
-        try {
-            $currentDate = Carbon::now('Asia/Manila')->toDateString();
-            
-            $query = DB::table('stockcountingtables AS a')
-                ->select(
-                    'a.journalid',
-                    'a.storeid',
-                    'a.description',
-                    DB::raw('SUM(CAST(b.COUNTED AS UNSIGNED)) AS qty'),
-                    DB::raw('SUM(CAST(c.priceincltax AS DECIMAL(10,2)) * CAST(b.COUNTED AS UNSIGNED)) AS amount'),
-                    'a.posted',
-                    'a.updated_at',
-                    'a.journaltype',
-                    'a.createddatetime'
-                )
-                ->leftJoin('stockcountingtrans AS b', 'b.JOURNALID', '=', 'a.journalid')
-                ->leftJoin('inventtablemodules AS c', 'c.itemid', '=', 'b.ITEMID')
-                ->where('a.posted', '!=', '1')
-                ->whereDate('a.createddatetime', '=', $currentDate);
+    try {
+        $currentDate = Carbon::now('Asia/Manila')->toDateString();
+        
+        $query = DB::table('stockcountingtables AS a')
+            ->select(
+                'a.journalid',
+                'a.storeid',
+                'a.description',
+                DB::raw('SUM(CAST(b.COUNTED AS UNSIGNED)) AS qty'),
+                DB::raw('SUM(CAST(c.priceincltax AS DECIMAL(10,2)) * CAST(b.COUNTED AS UNSIGNED)) AS amount'),
+                'a.posted',
+                'a.updated_at',
+                'a.journaltype',
+                'a.createddatetime'
+            )
+            ->leftJoin('stockcountingtrans AS b', 'b.JOURNALID', '=', 'a.journalid')
+            ->leftJoin('inventtablemodules AS c', 'c.itemid', '=', 'b.ITEMID')
+            ->where('a.posted', '!=', '1')
+            ->whereDate('a.createddatetime', '=', $currentDate);
+
+        if ($storeids !== "HQ2") {
+            $query->where('a.storeid', '=', $storeids);
+        }
+
+        $stockCounting = $query
+            ->groupBy('a.journalid', 'a.storeid', 'a.description', 'a.posted', 
+                     'a.updated_at', 'a.journaltype', 'a.createddatetime')
+            ->orderBy('a.createddatetime', 'DESC')
+            ->get();
+
+        if ($stockCounting->isEmpty()) {
+            Log::info('No unposted stock counting records found, checking for posted records', ['storeids' => $storeids]);
+
+            // Check if there are any posted records for the current date
+            $postedRecordsQuery = DB::table('stockcountingtables')
+                ->where('posted', '=', '1')
+                ->whereDate('createddatetime', '=', $currentDate);
 
             if ($storeids !== "HQ2") {
-                $query->where('a.storeid', '=', $storeids);
+                $postedRecordsQuery->where('storeid', '=', $storeids);
             }
 
-            $stockCounting = $query
-                ->groupBy('a.journalid', 'a.storeid', 'a.description', 'a.posted', 
-                         'a.updated_at', 'a.journaltype', 'a.createddatetime')
-                ->orderBy('a.createddatetime', 'DESC')
-                ->get();
+            $hasPostedRecords = $postedRecordsQuery->exists();
 
-            if ($stockCounting->isEmpty()) {
-                Log::info('No unposted stock counting records found, checking for posted records', ['storeids' => $storeids]);
+            if ($hasPostedRecords) {
+                Log::info('Posted stock counting records already exist for current date', [
+                    'storeids' => $storeids,
+                    'date' => $currentDate
+                ]);
 
-                // Check if there are any posted records for the current date
-                $postedRecordsQuery = DB::table('stockcountingtables')
-                    ->where('posted', '=', '1')
-                    ->whereDate('createddatetime', '=', $currentDate);
-
-                if ($storeids !== "HQ2") {
-                    $postedRecordsQuery->where('storeid', '=', $storeids);
-                }
-
-                $hasPostedRecords = $postedRecordsQuery->exists();
-
-                if ($hasPostedRecords) {
-                    Log::info('Posted stock counting records already exist for current date', [
-                        'storeids' => $storeids,
-                        'date' => $currentDate
-                    ]);
-
-                    return response()->json([
-                        'success' => true,
-                        'data' => [],
-                        'message' => 'Stock counting already completed for today'
-                    ]);
-                }
-
-                // If no posted records exist, create new record
-                DB::beginTransaction();
-                try {
-                    $currentDateTime = Carbon::now('Asia/Manila');
-
-                    $stocknextrec = DB::table('nubersequencevalues')
-                        ->where('storeid', $storeids)
-                        ->lockForUpdate()
-                        ->value('stocknextrec');
-
-                    $stocknextrec = $stocknextrec !== null ? (int)$stocknextrec + 1 : 1;
-
-                    DB::table('nubersequencevalues')
-                        ->where('STOREID', $storeids)
-                        ->update(['stocknextrec' => $stocknextrec]);
-
-                    $journalId = $storeids . str_pad($stocknextrec, 8, '0', STR_PAD_LEFT);
-
-                    DB::table('stockcountingtables')->insert([
-                        'JOURNALID' => $stocknextrec,
-                        'STOREID' => $storeids,
-                        'DESCRIPTION' => 'BATCH' . $journalId,
-                        'POSTED' => 0,
-                        'POSTEDDATETIME' => $currentDateTime->format('Y-m-d H:i:s'),
-                        'JOURNALTYPE' => 1,
-                        'DELETEPOSTEDLINES' => 0,
-                        'CREATEDDATETIME' => $currentDateTime->format('Y-m-d H:i:s')
-                    ]);
-
-                    // Check if inventory summaries exist for this store and date
-                    $existingSummaries = DB::table('inventory_summaries')
-                        ->where('storename', $storeids)
-                        ->whereDate('report_date', $currentDate)
-                        ->exists();
-
-                    // If no existing summaries, insert new ones
-                    if (!$existingSummaries) {
-                        DB::table('inventory_summaries')
-                            ->insertUsing(
-                                ['itemid', 'itemname', 'storename', 'report_date'],
-                                DB::table('inventtables')
-                                    ->select('itemid', 'itemname', DB::raw("'{$storeids}' as storename"), DB::raw("'{$currentDate}' as report_date"))
-                            );
-                    }
-
-                    DB::commit();
-
-                    // Re-run the query to get the newly created record
-                    $stockCounting = $query
-                        ->groupBy('a.journalid', 'a.storeid', 'a.description', 'a.posted', 
-                                 'a.updated_at', 'a.journaltype', 'a.createddatetime')
-                        ->orderBy('a.createddatetime', 'DESC')
-                        ->get();
-
-                    Log::info('New stock counting record created', [
-                        'journalid' => $stocknextrec,
-                        'storeids' => $storeids
-                    ]);
-
-                } catch (Exception $e) {
-                    DB::rollBack();
-                    Log::error('Detailed error in transaction: ' . $e->getMessage());
-                    Log::error('Stack trace: ' . $e->getTraceAsString());
-                    throw $e;
-                }
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'message' => 'Stock counting already completed for today'
+                ]);
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => $stockCounting
-            ]);
+            // If no posted records exist, create new record
+            DB::beginTransaction();
+            try {
+                $currentDateTime = Carbon::now('Asia/Manila');
 
-        } catch (Exception $e) {
-            Log::error('Error in stock counting index', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'sql' => DB::getQueryLog()
-            ]);
+                $stocknextrec = DB::table('nubersequencevalues')
+                    ->where('storeid', $storeids)
+                    ->lockForUpdate()
+                    ->value('stocknextrec');
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Error loading stock counting data: ' . $e->getMessage()
-            ], 500);
+                $stocknextrec = $stocknextrec !== null ? (int)$stocknextrec + 1 : 1;
+
+                DB::table('nubersequencevalues')
+                    ->where('STOREID', $storeids)
+                    ->update(['stocknextrec' => $stocknextrec]);
+
+                $journalId = $storeids . str_pad($stocknextrec, 8, '0', STR_PAD_LEFT);
+
+                DB::table('stockcountingtables')->insert([
+                    'JOURNALID' => $stocknextrec,
+                    'STOREID' => $storeids,
+                    'DESCRIPTION' => 'BATCH' . $journalId,
+                    'POSTED' => 0,
+                    'POSTEDDATETIME' => $currentDateTime->format('Y-m-d H:i:s'),
+                    'JOURNALTYPE' => 1,
+                    'DELETEPOSTEDLINES' => 0,
+                    'CREATEDDATETIME' => $currentDateTime->format('Y-m-d H:i:s')
+                ]);
+
+                // Check if inventory summaries exist for this store and date
+                $existingSummaries = DB::table('inventory_summaries')
+                    ->where('storename', $storeids)
+                    ->whereDate('report_date', $currentDate)
+                    ->exists();
+
+                // If no existing summaries, insert new ones
+                if (!$existingSummaries) {
+                    DB::table('inventory_summaries')
+                        ->insertUsing(
+                            ['itemid', 'itemname', 'storename', 'report_date'],
+                            DB::table('inventtables')
+                                ->select('itemid', 'itemname', DB::raw("'{$storeids}' as storename"), DB::raw("'{$currentDate}' as report_date"))
+                        );
+                }
+
+                DB::commit();
+
+                // Re-run the query to get the newly created record
+                $stockCounting = $query
+                    ->groupBy('a.journalid', 'a.storeid', 'a.description', 'a.posted', 
+                             'a.updated_at', 'a.journaltype', 'a.createddatetime')
+                    ->orderBy('a.createddatetime', 'DESC')
+                    ->get();
+
+                Log::info('New stock counting record created', [
+                    'journalid' => $stocknextrec,
+                    'storeids' => $storeids
+                ]);
+
+            } catch (Exception $e) {
+                DB::rollBack();
+                Log::error('Detailed error in transaction: ' . $e->getMessage());
+                Log::error('Stack trace: ' . $e->getTraceAsString());
+                throw $e;
+            }
+        } else {
+            // NEW FUNCTIONALITY: Check and insert missing items if stockcountingtrans is not empty
+            Log::info('Stock counting records found, checking for missing items', ['storeids' => $storeids]);
+            
+            foreach ($stockCounting as $stockCountRecord) {
+                $this->insertMissingItemsToStockCountingTrans($stockCountRecord->journalid, $storeids, $currentDate);
+            }
         }
+
+        return response()->json([
+            'success' => true,
+            'data' => $stockCounting
+        ]);
+
+    } catch (Exception $e) {
+        Log::error('Error in stock counting index', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'sql' => DB::getQueryLog()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Error loading stock counting data: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+/**
+ * Insert missing items into stockcountingtrans table
+ * 
+ * @param int $journalId
+ * @param string $storeId
+ * @param string $currentDate
+ * @return void
+ */
+private function insertMissingItemsToStockCountingTrans($journalId, $storeId, $currentDate)
+{
+    try {
+        Log::info('Checking for missing items in stockcountingtrans', [
+            'journalId' => $journalId,
+            'storeId' => $storeId,
+            'date' => $currentDate
+        ]);
+
+        // Check if stockcountingtrans has any records for this journal
+        $existingRecordsCount = DB::table('stockcountingtrans')
+            ->where('JOURNALID', $journalId)
+            ->where('STORENAME', $storeId)
+            ->whereDate('TRANSDATE', $currentDate)
+            ->count();
+
+        if ($existingRecordsCount === 0) {
+            Log::info('No existing stockcountingtrans records found, skipping missing items check');
+            return;
+        }
+
+        Log::info('Existing stockcountingtrans records found', ['count' => $existingRecordsCount]);
+
+        // Get items that should be in stockcountingtrans but are missing
+        if ($storeId == 'COMMUNITY') {
+            // For COMMUNITY store, get items where activeondelivery = 1
+            $missingItems = DB::table('inventtables as a')
+                ->leftJoin('rboinventtables as b', 'a.itemid', '=', 'b.itemid')
+                ->leftJoin('stockcountingtrans as st', function($join) use ($journalId, $storeId, $currentDate) {
+                    $join->on('a.itemid', '=', 'st.ITEMID')
+                         ->where('st.JOURNALID', '=', $journalId)
+                         ->where('st.STORENAME', '=', $storeId)
+                         ->whereDate('st.TRANSDATE', '=', $currentDate);
+                })
+                ->whereNull('st.ITEMID') // Items not in stockcountingtrans
+                ->where('b.activeondelivery', '1')
+                ->select('a.itemid', 'b.itemdepartment')
+                ->get();
+        } else {
+            // For other stores, get items where itemname not like '%CLASS B%'
+            $missingItems = DB::table('inventtables as a')
+                ->leftJoin('rboinventtables as b', 'a.itemid', '=', 'b.itemid')
+                ->leftJoin('stockcountingtrans as st', function($join) use ($journalId, $storeId, $currentDate) {
+                    $join->on('a.itemid', '=', 'st.ITEMID')
+                         ->where('st.JOURNALID', '=', $journalId)
+                         ->where('st.STORENAME', '=', $storeId)
+                         ->whereDate('st.TRANSDATE', '=', $currentDate);
+                })
+                ->whereNull('st.ITEMID') // Items not in stockcountingtrans
+                ->where('a.itemname', 'not like', '%CLASS B%')
+                ->select('a.itemid', 'b.itemdepartment')
+                ->get();
+        }
+
+        if ($missingItems->count() > 0) {
+            Log::info('Missing items found, inserting into stockcountingtrans', [
+                'count' => $missingItems->count(),
+                'journalId' => $journalId,
+                'storeId' => $storeId
+            ]);
+
+            // Prepare data for bulk insert
+            $insertData = [];
+            foreach ($missingItems as $item) {
+                $insertData[] = [
+                    'JOURNALID' => $journalId,
+                    'ITEMDEPARTMENT' => $item->itemdepartment,
+                    'TRANSDATE' => $currentDate,
+                    'ITEMID' => $item->itemid,
+                    'ADJUSTMENT' => 0,
+                    'RECEIVEDCOUNT' => 0,
+                    'WASTECOUNT' => 0,
+                    'COUNTED' => 0,
+                    'STORENAME' => $storeId,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
+            }
+
+            // Insert missing items in chunks to avoid memory issues
+            $chunks = array_chunk($insertData, 100);
+            foreach ($chunks as $chunk) {
+                DB::table('stockcountingtrans')->insert($chunk);
+            }
+
+            Log::info('Missing items successfully inserted', [
+                'inserted_count' => count($insertData),
+                'journalId' => $journalId,
+                'storeId' => $storeId
+            ]);
+        } else {
+            Log::info('No missing items found for stockcountingtrans', [
+                'journalId' => $journalId,
+                'storeId' => $storeId
+            ]);
+        }
+
+    } catch (\Exception $e) {
+        Log::error('Error inserting missing items to stockcountingtrans', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+            'journalId' => $journalId,
+            'storeId' => $storeId
+        ]);
+        // Don't throw the exception to avoid breaking the main flow
+    }
+}
 
     public function update(Request $request, $storeids, $posted, $journalid)
     {

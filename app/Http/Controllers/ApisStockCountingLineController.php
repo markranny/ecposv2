@@ -525,31 +525,6 @@ class ApisStockCountingLineController extends Controller
     ]);
 
     try {
-        // Update item_count
-        Log::info("Updating item_count for inventory summaries");
-        $affectedRows = DB::statement("
-            UPDATE inventory_summaries 
-            SET item_count = (
-                SELECT COUNTED 
-                FROM stockcountingtrans 
-                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
-                  AND STORENAME = ?
-                  AND CAST(TRANSDATE AS DATE) = ?
-                  AND COUNTED > 0
-            )
-            WHERE CAST(report_date AS DATE) = ?
-              AND storename = ?
-              AND EXISTS (
-                SELECT 1 
-                FROM stockcountingtrans 
-                WHERE stockcountingtrans.itemid = inventory_summaries.itemid
-                  AND STORENAME = ?
-                  AND CAST(TRANSDATE AS DATE) = ?
-                  AND COUNTED > 0
-            )
-        ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
-        
-        Log::info("Item count update completed", ['affected_rows' => $affectedRows]);
 
         // Update throw_away
         Log::info("Updating throw_away for inventory summaries");
@@ -721,13 +696,39 @@ class ApisStockCountingLineController extends Controller
                      AND COALESCE(rat_bites, 0) = 0
                      AND COALESCE(ant_bites, 0) = 0
                 THEN beginning
-                ELSE COALESCE(beginning, 0) + COALESCE(received_delivery, 0) - COALESCE(stock_transfer, 0) - COALESCE(sales, 0) - COALESCE(bundle_sales, 0) - COALESCE(throw_away, 0) - COALESCE(early_molds, 0) - COALESCE(pull_out, 0) - COALESCE(rat_bites, 0) - COALESCE(ant_bites, 0)
+                ELSE 0
             END
             WHERE CAST(report_date AS DATE) = ?
               AND storename = ?
         ", [$currentDateTime, $storename]);
         
         Log::info("Item count recalculation completed", ['affected_rows' => $affectedRows]);
+
+        // Update item_count
+        Log::info("Updating item_count for inventory summaries");
+        $affectedRows = DB::statement("
+            UPDATE inventory_summaries 
+            SET item_count = (
+                SELECT COUNTED 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+                  AND COUNTED > 0
+            )
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+              AND EXISTS (
+                SELECT 1 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.itemid = inventory_summaries.itemid
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+                  AND COUNTED > 0
+            )
+        ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+        
+        Log::info("Item count update completed", ['affected_rows' => $affectedRows]);
 
         // Final item_count update with null safety
         Log::info("Performing final item_count update with null safety");

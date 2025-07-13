@@ -635,6 +635,7 @@ public function inventory(Request $request)
                 DB::raw('SUM(ending) as ending'),
                 DB::raw('SUM(variance) as variance')
             ])
+            //->where('itemid', 'NOT LIKE', '%PRM-PRO%')
             ->groupBy('itemid', 'itemname', 'storename')
             ->get()
             ->map(function ($item) {
