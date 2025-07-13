@@ -165,14 +165,21 @@ const closeAdjustmentModal = () => {
 
 // Submit adjustment
 const submitAdjustment = async () => {
-    if (!selectedItem.value || !adjustmentForm.value.adjustment_value || !adjustmentForm.value.remarks.trim()) {
+    // Validate form data
+    if (!adjustmentForm.value.adjustment_value || !adjustmentForm.value.remarks.trim()) {
         alert('Please fill in all required fields');
         return;
     }
 
-    // Check if item has an ID
+    // Check if selectedItem and its ID exist
+    if (!selectedItem.value) {
+        alert('No item selected. Please try again.');
+        return;
+    }
+
     if (!selectedItem.value.id) {
-        alert('Item ID is missing. Please refresh the page and try again.');
+        alert('Item ID is missing. This might be an aggregated record. Please contact support if this persists.');
+        console.error('Missing ID for item:', selectedItem.value);
         return;
     }
 
@@ -205,7 +212,9 @@ const submitAdjustment = async () => {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            console.error('HTTP Error Response:', errorText);
+            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
@@ -220,6 +229,9 @@ const submitAdjustment = async () => {
             alert(data.message || 'Failed to adjust item count');
             if (data.errors) {
                 console.error('Validation errors:', data.errors);
+                Object.keys(data.errors).forEach(key => {
+                    console.error(`${key}: ${data.errors[key].join(', ')}`);
+                });
             }
         }
     } catch (error) {
@@ -227,6 +239,50 @@ const submitAdjustment = async () => {
         alert('An error occurred while adjusting item count: ' + error.message);
     } finally {
         adjustmentLoading.value = false;
+    }
+};
+
+const itemCountColumn = {
+    data: 'item_count',
+    title: 'Item Count',
+    className: 'text-right',
+    render: (data, type, row) => {
+        const value = Number(data || 0).toFixed(2);
+        
+        // Check if row has valid ID
+        if (!row.id) {
+            return `<span>${value}</span><br><small class="text-gray-500">No adjustment available</small>`;
+        }
+        
+        const rowId = `adjust-${row.id}`;
+        const historyId = `history-${row.id}`;
+        
+        // Escape the JSON to prevent issues with quotes
+        const escapedRow = JSON.stringify(row).replace(/"/g, '&quot;');
+        
+        return `
+            <div class="flex items-center justify-between">
+                <span>${value}</span>
+                <div class="flex gap-1 ml-2">
+                    <button 
+                        id="${rowId}"
+                        class="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 border border-blue-300 rounded adjust-btn"
+                        title="Adjust Item Count"
+                        data-item="${escapedRow}"
+                    >
+                        Adjust
+                    </button>
+                    <button 
+                        id="${historyId}"
+                        class="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-300 rounded history-btn"
+                        title="View History"
+                        data-item="${escapedRow}"
+                    >
+                        History
+                    </button>
+                </div>
+            </div>
+        `;
     }
 };
 

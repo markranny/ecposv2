@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -602,7 +603,7 @@ public function inventory(Request $request)
             ? rbostoretables::select('STOREID', 'NAME')->orderBy('NAME')->get()
             : rbostoretables::select('STOREID', 'NAME')->where('STOREID', $userStoreId)->get();
 
-        // Build the base query
+        // Build the base query - Get individual records instead of aggregating
         $query = DB::table('inventory_summaries')
             ->whereBetween('report_date', [$startDate, $endDate]);
 
@@ -615,48 +616,53 @@ public function inventory(Request $request)
             $query->where('storename', $userStoreId);
         }
 
-        // Fetch and aggregate the data
+        // Get individual records with all fields including id
         $inventoryData = $query
             ->select([
+                'id',
                 'itemid',
                 'itemname',
                 'storename',
-                DB::raw('SUM(beginning) as beginning'),
-                DB::raw('SUM(received_delivery) as received_delivery'),
-                DB::raw('SUM(stock_transfer) as stock_transfer'),
-                DB::raw('SUM(sales) as sales'),
-                DB::raw('SUM(bundle_sales) as bundle_sales'),
-                DB::raw('SUM(throw_away) as throw_away'),
-                DB::raw('SUM(early_molds) as early_molds'),
-                DB::raw('SUM(pull_out) as pull_out'),
-                DB::raw('SUM(rat_bites) as rat_bites'),
-                DB::raw('SUM(ant_bites) as ant_bites'),
-                DB::raw('SUM(item_count) as item_count'),
-                DB::raw('SUM(ending) as ending'),
-                DB::raw('SUM(variance) as variance')
+                'beginning',
+                'received_delivery',
+                'stock_transfer',
+                'sales',
+                'bundle_sales',
+                'throw_away',
+                'early_molds',
+                'pull_out',
+                'rat_bites',
+                'ant_bites',
+                'item_count',
+                'ending',
+                'variance',
+                'report_date'
             ])
-            //->where('itemid', 'NOT LIKE', '%PRM-PRO%')
-            ->groupBy('itemid', 'itemname', 'storename')
+            ->orderBy('itemname')
+            ->orderBy('storename')
+            ->orderBy('report_date')
             ->get()
             ->map(function ($item) {
                 // Ensure all numeric values are properly formatted as floats
                 return [
+                    'id' => $item->id,
                     'itemid' => $item->itemid,
                     'itemname' => $item->itemname,
                     'storename' => $item->storename,
-                    'beginning' => (float) $item->beginning,
-                    'received_delivery' => (float) $item->received_delivery,
-                    'stock_transfer' => (float) $item->stock_transfer,
-                    'sales' => (float) $item->sales,
-                    'bundle_sales' => (float) $item->bundle_sales,
-                    'throw_away' => (float) $item->throw_away,
-                    'early_molds' => (float) $item->early_molds,
-                    'pull_out' => (float) $item->pull_out,
-                    'rat_bites' => (float) $item->rat_bites,
-                    'ant_bites' => (float) $item->ant_bites,
-                    'item_count' => (float) $item->item_count,
-                    'ending' => (float) $item->ending,
-                    'variance' => (float) $item->variance
+                    'beginning' => (float) ($item->beginning ?? 0),
+                    'received_delivery' => (float) ($item->received_delivery ?? 0),
+                    'stock_transfer' => (float) ($item->stock_transfer ?? 0),
+                    'sales' => (float) ($item->sales ?? 0),
+                    'bundle_sales' => (float) ($item->bundle_sales ?? 0),
+                    'throw_away' => (float) ($item->throw_away ?? 0),
+                    'early_molds' => (float) ($item->early_molds ?? 0),
+                    'pull_out' => (float) ($item->pull_out ?? 0),
+                    'rat_bites' => (float) ($item->rat_bites ?? 0),
+                    'ant_bites' => (float) ($item->ant_bites ?? 0),
+                    'item_count' => (float) ($item->item_count ?? 0),
+                    'ending' => (float) ($item->ending ?? 0),
+                    'variance' => (float) ($item->variance ?? 0),
+                    'report_date' => $item->report_date
                 ];
             });
 
