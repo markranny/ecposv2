@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
-class DiscountV2Controller extends Controller
+class Discountv2Controller extends Controller
 {
     /**
      * Display a listing of the discounts.
@@ -19,7 +19,11 @@ class DiscountV2Controller extends Controller
             $discounts = discounts::orderBy('created_at', 'desc')->get();
 
             return Inertia::render('Discounts/Index', [
-                'discounts' => $discounts
+                'discounts' => $discounts,
+                'flash' => [
+                    'message' => session('message'),
+                    'isSuccess' => session('isSuccess', true)
+                ]
             ]);
 
         } catch (\Exception $e) {
@@ -30,7 +34,10 @@ class DiscountV2Controller extends Controller
 
             return Inertia::render('Discounts/Index', [
                 'discounts' => collect([]),
-                'error' => 'Error loading discounts: ' . $e->getMessage()
+                'flash' => [
+                    'message' => 'Error loading discounts: ' . $e->getMessage(),
+                    'isSuccess' => false
+                ]
             ]);
         }
     }
@@ -40,7 +47,12 @@ class DiscountV2Controller extends Controller
      */
     public function create()
     {
-        return Inertia::render('Discounts/Create');
+        return Inertia::render('Discounts/Create', [
+            'flash' => [
+                'message' => session('message'),
+                'isSuccess' => session('isSuccess', true)
+            ]
+        ]);
     }
 
     /**
@@ -72,7 +84,7 @@ class DiscountV2Controller extends Controller
 
             DB::beginTransaction();
 
-            discounts::create([
+            $discount = discounts::create([
                 'DISCOFFERNAME' => strtoupper(trim($request->DISCOFFERNAME)),
                 'PARAMETER' => $request->PARAMETER,
                 'DISCOUNTTYPE' => $request->DISCOUNTTYPE
@@ -80,15 +92,15 @@ class DiscountV2Controller extends Controller
 
             DB::commit();
 
-            return redirect()->route('discounts.index')
-                ->with('message', 'Discount created successfully')
+            return redirect()->route('discountsv2.index')
+                ->with('message', 'Discount created successfully!')
                 ->with('isSuccess', true);
 
         } catch (ValidationException $e) {
             DB::rollBack();
             return back()->withErrors($e->errors())
                 ->withInput()
-                ->with('message', 'Validation failed')
+                ->with('message', 'Please fix the validation errors')
                 ->with('isSuccess', false);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -107,29 +119,55 @@ class DiscountV2Controller extends Controller
     /**
      * Display the specified discount.
      */
-    public function show(discounts $discount)
+    public function show($id)
     {
-        return Inertia::render('Discounts/Show', [
-            'discount' => $discount
-        ]);
+        try {
+            $discount = discounts::findOrFail($id);
+            
+            return Inertia::render('Discounts/Show', [
+                'discount' => $discount,
+                'flash' => [
+                    'message' => session('message'),
+                    'isSuccess' => session('isSuccess', true)
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->route('discountsv2.index')
+                ->with('message', 'Discount not found')
+                ->with('isSuccess', false);
+        }
     }
 
     /**
      * Show the form for editing the specified discount.
      */
-    public function edit(discounts $discount)
+    public function edit($id)
     {
-        return Inertia::render('Discounts/Edit', [
-            'discount' => $discount
-        ]);
+        try {
+            $discount = discounts::findOrFail($id);
+            
+            return Inertia::render('Discounts/Edit', [
+                'discount' => $discount,
+                'flash' => [
+                    'message' => session('message'),
+                    'isSuccess' => session('isSuccess', true)
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->route('discountsv2.index')
+                ->with('message', 'Discount not found')
+                ->with('isSuccess', false);
+        }
     }
 
     /**
      * Update the specified discount in storage.
      */
-    public function update(Request $request, discounts $discount)
+    public function update(Request $request, $id)
     {
         try {
+            $discount = discounts::findOrFail($id);
+            
             $request->validate([
                 'DISCOFFERNAME' => 'required|string|max:255|unique:discounts,DISCOFFERNAME,' . $discount->id,
                 'PARAMETER' => 'required|numeric|min:0',
@@ -161,21 +199,21 @@ class DiscountV2Controller extends Controller
 
             DB::commit();
 
-            return redirect()->route('discounts.index')
-                ->with('message', 'Discount updated successfully')
+            return redirect()->route('discountsv2.index')
+                ->with('message', 'Discount updated successfully!')
                 ->with('isSuccess', true);
 
         } catch (ValidationException $e) {
             DB::rollBack();
             return back()->withErrors($e->errors())
                 ->withInput()
-                ->with('message', 'Validation failed')
+                ->with('message', 'Please fix the validation errors')
                 ->with('isSuccess', false);
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Error updating discount', [
                 'error' => $e->getMessage(),
-                'discount_id' => $discount->id,
+                'discount_id' => $id,
                 'data' => $request->all()
             ]);
             
@@ -189,28 +227,29 @@ class DiscountV2Controller extends Controller
     /**
      * Remove the specified discount from storage.
      */
-    public function destroy(discounts $discount)
+    public function destroy($id)
     {
         try {
             DB::beginTransaction();
 
+            $discount = discounts::findOrFail($id);
             $discountName = $discount->DISCOFFERNAME;
             $discount->delete();
 
             DB::commit();
 
-            return redirect()->route('discounts.index')
-                ->with('message', "Discount '{$discountName}' deleted successfully")
+            return redirect()->route('discountsv2.index')
+                ->with('message', "Discount '{$discountName}' deleted successfully!")
                 ->with('isSuccess', true);
 
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Error deleting discount', [
                 'error' => $e->getMessage(),
-                'discount_id' => $discount->id
+                'discount_id' => $id
             ]);
             
-            return back()
+            return redirect()->route('discountsv2.index')
                 ->with('message', 'Error deleting discount: ' . $e->getMessage())
                 ->with('isSuccess', false);
         }

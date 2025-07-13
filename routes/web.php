@@ -196,7 +196,21 @@ Route::middleware(['auth', 'role:ADMIN,SUPERADMIN'])->group(function () {
     Route::post('/inventory/adjustment-history', [ECReportController::class, 'getAdjustmentHistory'])
         ->name('inventory.adjustment-history');
 
-    Route::resource('discountsv2', Discountv2Controller::class);
+    /* Route::resource('discountsv2', Discountv2Controller::class);
+    Route::get('/api/discountsv2', [Discountv2Controller::class, 'getDiscounts'])->name('discounts.api');
+    Route::post('/api/discountsv2/calculate', [Discountv2Controller::class, 'calculateDiscount'])->name('discounts.calculate');
+    Route::get('/api/discountsv2/export', [Discountv2Controller::class, 'export'])->name('discounts.export'); */
+
+    // DISCOUNT ROUTES - FIXED AND CORRECTLY PLACED
+    Route::get('/discountsv2', [Discountv2Controller::class, 'index'])->name('discountsv2.index');
+    Route::get('/discountsv2/create', [Discountv2Controller::class, 'create'])->name('discountsv2.create');
+    Route::post('/discountsv2', [Discountv2Controller::class, 'store'])->name('discountsv2.store');
+    Route::get('/discountsv2/{discount}', [Discountv2Controller::class, 'show'])->name('discountsv2.show');
+    Route::get('/discountsv2/{discount}/edit', [Discountv2Controller::class, 'edit'])->name('discountsv2.edit');
+    Route::put('/discountsv2/{discount}', [Discountv2Controller::class, 'update'])->name('discountsv2.update');
+    Route::delete('/discountsv2/{discount}', [Discountv2Controller::class, 'destroy'])->name('discountsv2.destroy');
+    
+    // API routes for discounts
     Route::get('/api/discountsv2', [Discountv2Controller::class, 'getDiscounts'])->name('discounts.api');
     Route::post('/api/discountsv2/calculate', [Discountv2Controller::class, 'calculateDiscount'])->name('discounts.calculate');
     Route::get('/api/discountsv2/export', [Discountv2Controller::class, 'export'])->name('discounts.export');

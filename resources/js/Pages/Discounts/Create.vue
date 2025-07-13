@@ -3,7 +3,6 @@ import { ref, computed, watch } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import Main from "@/Layouts/AdminPanel.vue";
 import StorePanel from "@/Layouts/Main.vue";
-import TableContainer from "@/Components/Tables/TableContainer.vue";
 
 const props = defineProps({
     auth: {
@@ -143,9 +142,28 @@ const formatCurrency = (value) => {
 
     <component :is="layoutComponent" active-tab="DISCOUNTS">
         <template v-slot:main>
-            <TableContainer>
-                <!-- Header -->
-                <div class="mb-6">
+            <div class="min-h-screen bg-gray-50 p-2 sm:p-4 lg:p-6">
+                <!-- Mobile Header -->
+                <div class="mb-4 lg:hidden">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">Create Discount</h1>
+                            <p class="text-sm text-gray-600">Add a new discount offer</p>
+                        </div>
+                        <Link
+                            :href="route('discountsv2.index')"
+                            class="inline-flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
+                        >
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            Back
+                        </Link>
+                    </div>
+                </div>
+
+                <!-- Desktop Header -->
+                <div class="hidden lg:block mb-6">
                     <div class="flex items-center justify-between">
                         <div>
                             <h1 class="text-2xl font-bold text-gray-900">Create New Discount</h1>
@@ -168,18 +186,18 @@ const formatCurrency = (value) => {
                 <!-- Flash Messages -->
                 <div v-if="flash.message" 
                      :class="[
-                         'mb-6 px-4 py-2 rounded-md',
+                         'mb-4 lg:mb-6 px-4 py-2 rounded-md',
                          flash.isSuccess ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                      ]">
                     {{ flash.message }}
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
                     <!-- Form Section -->
-                    <div class="bg-white rounded-lg shadow-sm p-6">
-                        <h2 class="text-lg font-medium text-gray-900 mb-6">Discount Information</h2>
+                    <div class="bg-white rounded-lg shadow-sm p-4 lg:p-6">
+                        <h2 class="text-lg font-medium text-gray-900 mb-4 lg:mb-6">Discount Information</h2>
                         
-                        <form @submit.prevent="submitForm" class="space-y-6">
+                        <form @submit.prevent="submitForm" class="space-y-4 lg:space-y-6">
                             <!-- Discount Name -->
                             <div>
                                 <label for="discountName" class="block text-sm font-medium text-gray-700 mb-2">
@@ -190,7 +208,7 @@ const formatCurrency = (value) => {
                                     v-model="form.DISCOFFERNAME"
                                     type="text"
                                     placeholder="Enter discount name (e.g., SENIOR CITIZEN, STUDENT DISCOUNT)"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    class="w-full px-3 py-2 text-sm lg:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     :class="{ 'border-red-500': form.errors.DISCOFFERNAME }"
                                     required
                                 >
@@ -207,7 +225,7 @@ const formatCurrency = (value) => {
                                 <select
                                     id="discountType"
                                     v-model="form.DISCOUNTTYPE"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    class="w-full px-3 py-2 text-sm lg:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     :class="{ 'border-red-500': form.errors.DISCOUNTTYPE }"
                                     required
                                 >
@@ -242,7 +260,7 @@ const formatCurrency = (value) => {
                                         min="0"
                                         :max="isPercentage ? 100 : undefined"
                                         :placeholder="parameterPlaceholder"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="w-full px-3 py-2 text-sm lg:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         :class="{ 'border-red-500': form.errors.PARAMETER || parameterError }"
                                         required
                                     >
@@ -262,17 +280,17 @@ const formatCurrency = (value) => {
                             </div>
 
                             <!-- Submit Button -->
-                            <div class="flex justify-end space-x-3 pt-6">
+                            <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 lg:pt-6">
                                 <Link
                                     :href="route('discountsv2.index')"
-                                    class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium rounded-md transition-colors"
+                                    class="w-full sm:w-auto px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium rounded-md transition-colors text-center"
                                 >
                                     Cancel
                                 </Link>
                                 <button
                                     type="submit"
                                     :disabled="form.processing || parameterError || !form.DISCOFFERNAME || !form.DISCOUNTTYPE || !form.PARAMETER"
-                                    class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    class="w-full sm:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {{ form.processing ? 'Creating...' : 'Create Discount' }}
                                 </button>
@@ -281,16 +299,16 @@ const formatCurrency = (value) => {
                     </div>
 
                     <!-- Preview Section -->
-                    <div class="space-y-6">
+                    <div class="space-y-4 lg:space-y-6">
                         <!-- Discount Preview -->
-                        <div class="bg-white rounded-lg shadow-sm p-6">
+                        <div class="bg-white rounded-lg shadow-sm p-4 lg:p-6">
                             <h2 class="text-lg font-medium text-gray-900 mb-4">Discount Preview</h2>
                             
                             <div v-if="!form.DISCOUNTTYPE" class="text-center py-8 text-gray-500">
                                 <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                Select a discount type to see preview
+                                <p class="text-sm lg:text-base">Select a discount type to see preview</p>
                             </div>
 
                             <div v-else class="space-y-4">
@@ -304,7 +322,7 @@ const formatCurrency = (value) => {
                                         type="number"
                                         step="0.01"
                                         min="0"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="w-full px-3 py-2 text-sm lg:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="Enter amount to test discount"
                                     >
                                 </div>
@@ -329,12 +347,12 @@ const formatCurrency = (value) => {
                         </div>
 
                         <!-- Discount Type Guide -->
-                        <div class="bg-white rounded-lg shadow-sm p-6">
+                        <div class="bg-white rounded-lg shadow-sm p-4 lg:p-6">
                             <h2 class="text-lg font-medium text-gray-900 mb-4">Discount Types Guide</h2>
                             
                             <div class="space-y-4">
                                 <div v-for="type in discountTypes" :key="type.value" 
-                                     class="p-4 border rounded-md"
+                                     class="p-3 lg:p-4 border rounded-md"
                                      :class="form.DISCOUNTTYPE === type.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200'">
                                     <h3 class="font-medium text-gray-900 mb-2">{{ type.label }}</h3>
                                     <p class="text-sm text-gray-600 mb-3">{{ type.description }}</p>
@@ -342,22 +360,43 @@ const formatCurrency = (value) => {
                                     <!-- Examples -->
                                     <div class="text-xs text-gray-500">
                                         <strong>Example:</strong>
-                                        <div v-if="type.value === 'FIXED'">
+                                        <div v-if="type.value === 'FIXED'" class="mt-1">
                                             ₱10 off per item → Item costs ₱50, customer pays ₱40
                                         </div>
-                                        <div v-else-if="type.value === 'FIXEDTOTAL'">
+                                        <div v-else-if="type.value === 'FIXEDTOTAL'" class="mt-1">
                                             ₱100 off total → Bill is ₱500, customer pays ₱400
                                         </div>
-                                        <div v-else-if="type.value === 'PERCENTAGE'">
+                                        <div v-else-if="type.value === 'PERCENTAGE'" class="mt-1">
                                             20% off → Bill is ₱500, customer pays ₱400
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Mobile Preview Summary -->
+                        <div class="lg:hidden bg-white rounded-lg shadow-sm p-4" v-if="form.DISCOUNTTYPE && form.PARAMETER">
+                            <h3 class="font-medium text-gray-900 mb-3">Quick Summary</h3>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Name:</span>
+                                    <span class="font-medium">{{ form.DISCOFFERNAME || 'Not set' }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Type:</span>
+                                    <span class="font-medium">{{ form.DISCOUNTTYPE }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Value:</span>
+                                    <span class="font-medium text-blue-600">
+                                        {{ form.DISCOUNTTYPE === 'PERCENTAGE' ? form.PARAMETER + '%' : '₱' + Number(form.PARAMETER).toFixed(2) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </TableContainer>
+            </div>
         </template>
     </component>
 </template>
