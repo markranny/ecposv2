@@ -19,7 +19,7 @@ class AttendanceController extends Controller
             ->map(function ($attendance) {
                 return [
                     ...$attendance->toArray(),
-                    // Generate full URLs for images - check if already a full URL
+                    // Generate full URLs for images
                     'timeInPhoto' => $this->getImageUrl($attendance->timeInPhoto),
                     'breakInPhoto' => $this->getImageUrl($attendance->breakInPhoto),
                     'breakOutPhoto' => $this->getImageUrl($attendance->breakOutPhoto),
@@ -46,12 +46,20 @@ class AttendanceController extends Controller
             return $imagePath;
         }
 
-        // If it starts with 'storage/', it's already the correct path for asset()
-        if (str_starts_with($imagePath, 'storage/')) {
-            return asset($imagePath);
+        // Check if file exists in storage
+        if (Storage::disk('public')->exists($imagePath)) {
+            return Storage::disk('public')->url($imagePath);
         }
 
-        // Otherwise, assume it's a relative path that needs 'storage/' prefix
+        // Try with attendance_photos prefix if not already present
+        if (!str_starts_with($imagePath, 'attendance_photos/')) {
+            $prefixedPath = 'attendance_photos/' . $imagePath;
+            if (Storage::disk('public')->exists($prefixedPath)) {
+                return Storage::disk('public')->url($prefixedPath);
+            }
+        }
+
+        // Fallback: return the asset URL even if file doesn't exist
         return asset('storage/' . $imagePath);
     }
 
@@ -136,7 +144,8 @@ class AttendanceController extends Controller
             $photoPath = $photoFile->store('attendance_photos', 'public');
             Log::info('📂 Photo stored at', [
                 'path' => $photoPath,
-                'full_path' => Storage::disk('public')->path($photoPath)
+                'full_path' => Storage::disk('public')->path($photoPath),
+                'exists' => Storage::disk('public')->exists($photoPath)
             ]);
         }
 
@@ -418,7 +427,6 @@ class AttendanceController extends Controller
             ->map(function ($attendance) {
                 return [
                     ...$attendance->toArray(),
-                    // FIXED: Use the consistent getImageUrl() helper method
                     'timeInPhoto' => $this->getImageUrl($attendance->timeInPhoto),
                     'breakInPhoto' => $this->getImageUrl($attendance->breakInPhoto),
                     'breakOutPhoto' => $this->getImageUrl($attendance->breakOutPhoto),
