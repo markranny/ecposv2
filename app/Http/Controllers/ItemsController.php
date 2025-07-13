@@ -682,32 +682,90 @@ public function import(Request $request)
         $csv = array_map('str_getcsv', $csvContent);
         $header = array_shift($csv); // Remove header row
 
+        // Clean headers (remove BOM and trim whitespace)
+        $header = array_map(function($h) {
+            return trim(str_replace("\xEF\xBB\xBF", '', $h));
+        }, $header);
+
         \Log::info('CSV parsed', [
             'header' => $header,
             'data_rows' => count($csv)
         ]);
 
-        // Validate header format
-        $expectedHeaders = [
-            'itemid', 'itemname', 'barcode', 'itemgroup', 'specialgroup', 
-            'production', 'moq', 'cost', 'price', 'manilaprice', 'mallprice',
-            'grabfoodprice', 'foodpandaprice', 'foodpandamallprice', 
-            'grabfoodmallprice', 'default1', 'default2', 'default3', 'Activeondelivery'
+        // Define expected headers and their aliases/variations
+        $headerMapping = [
+            'itemid' => ['itemid', 'item_id', 'ITEMID'],
+            'itemname' => ['itemname', 'item_name', 'ITEMNAME', 'name'],
+            'barcode' => ['barcode', 'BARCODE'],
+            'itemgroup' => ['itemgroup', 'item_group', 'ITEMGROUP', 'category'],
+            'specialgroup' => ['specialgroup', 'special_group', 'SPECIALGROUP', 'itemdepartment', 'department'],
+            'production' => ['production', 'PRODUCTION'],
+            'moq' => ['moq', 'MOQ', 'minimum_order_quantity'],
+            'cost' => ['cost', 'COST', 'price'],
+            'price' => ['price', 'PRICE', 'selling_price', 'priceincltax'],
+            'manilaprice' => ['manilaprice', 'manila_price', 'MANILAPRICE'],
+            'mallprice' => ['mallprice', 'mall_price', 'MALLPRICE'],
+            'grabfoodprice' => ['grabfoodprice', 'grabfood_price', 'GRABFOODPRICE', 'grabfood'],
+            'foodpandaprice' => ['foodpandaprice', 'foodpanda_price', 'FOODPANDAPRICE', 'foodpanda'],
+            'foodpandamallprice' => ['foodpandamallprice', 'foodpandamall_price', 'FOODPANDAMALLPRICE', 'foodpandamall'],
+            'grabfoodmallprice' => ['grabfoodmallprice', 'grabfoodmall_price', 'GRABFOODMALLPRICE', 'grabfoodmall'],
+            'default1' => ['default1', 'DEFAULT1'],
+            'default2' => ['default2', 'DEFAULT2'],
+            'default3' => ['default3', 'DEFAULT3'],
+            'Activeondelivery' => ['Activeondelivery', 'activeondelivery', 'ACTIVEONDELIVERY', 'active_on_delivery', 'active']
         ];
 
-        $missingHeaders = array_diff($expectedHeaders, $header);
-        if (count($missingHeaders) > 0) {
-            \Log::error('Header validation failed', [
-                'expected' => $expectedHeaders,
-                'received' => $header,
-                'missing' => $missingHeaders
-            ]);
-            
-            return back()->with('message', 'CSV header format is incorrect. Missing headers: ' . implode(', ', $missingHeaders) . '. Please use the provided template.')
-                          ->with('isSuccess', false);
+        // Map the actual headers to expected headers
+        $mappedHeaders = [];
+        $headerIndexMapping = [];
+        
+        foreach ($header as $index => $actualHeader) {
+            $mapped = false;
+            foreach ($headerMapping as $expectedHeader => $variations) {
+                if (in_array($actualHeader, $variations)) {
+                    $mappedHeaders[] = $expectedHeader;
+                    $headerIndexMapping[$expectedHeader] = $index;
+                    $mapped = true;
+                    break;
+                }
+            }
+            if (!$mapped) {
+                $mappedHeaders[] = $actualHeader; // Keep original if no mapping found
+                $headerIndexMapping[$actualHeader] = $index;
+            }
         }
 
-        \Log::info('Header validation passed');
+        \Log::info('Header mapping completed', [
+            'original_headers' => $header,
+            'mapped_headers' => $mappedHeaders,
+            'mapping' => $headerIndexMapping
+        ]);
+
+        // Check for required headers only
+        $requiredHeaders = ['itemid', 'itemname'];
+        $missingRequired = [];
+        
+        foreach ($requiredHeaders as $required) {
+            if (!isset($headerIndexMapping[$required])) {
+                $missingRequired[] = $required;
+            }
+        }
+
+        if (!empty($missingRequired)) {
+            $errorMessage = 'CSV header format is incorrect. Missing required headers: ' . implode(', ', $missingRequired) . 
+                           '. Available headers: ' . implode(', ', $header) . 
+                           '. Please ensure your CSV contains at least itemid and itemname columns.';
+            
+            \Log::error('Required header validation failed', [
+                'required' => $requiredHeaders,
+                'received' => $header,
+                'missing_required' => $missingRequired
+            ]);
+            
+            return back()->with('message', $errorMessage)->with('isSuccess', false);
+        }
+
+        \Log::info('Required header validation passed');
 
         DB::beginTransaction();
         \Log::info('Database transaction started');
@@ -721,36 +779,51 @@ public function import(Request $request)
         foreach ($csv as $rowIndex => $row) {
             $actualRowNumber = $rowIndex + 2; // +2 because we removed header and arrays are 0-indexed
             
+            // Skip empty rows or rows that start with # (comments)
+            if (empty($row) || (isset($row[0]) && (empty(trim($row[0])) || strpos(trim($row[0]), '#') === 0))) {
+                \Log::info("Skipping row {$actualRowNumber}: Empty or comment row");
+                continue;
+            }
+            
             \Log::info("Processing row {$actualRowNumber}", [
                 'row_data' => $row,
                 'row_count' => count($row),
                 'header_count' => count($header)
             ]);
 
-            if (count($row) !== count($header)) {
-                $error = "Row {$actualRowNumber}: Column count mismatch. Expected " . count($header) . " columns, got " . count($row);
-                \Log::warning($error, [
-                    'row_data' => $row,
-                    'expected_columns' => count($header),
-                    'actual_columns' => count($row)
-                ]);
-                $errors[] = $error;
-                $errorCount++;
-                continue;
+            // Create data array using the header index mapping
+            $data = [];
+            foreach ($headerIndexMapping as $expectedHeader => $originalIndex) {
+                $data[$expectedHeader] = isset($row[$originalIndex]) ? trim($row[$originalIndex]) : '';
             }
             
-            $data = array_combine($header, $row);
-            \Log::info("Row {$actualRowNumber} data combined", ['data' => $data]);
+            // Set defaults for missing optional fields
+            $data['barcode'] = $data['barcode'] ?? '';
+            $data['itemgroup'] = $data['itemgroup'] ?? 'GENERAL';
+            $data['specialgroup'] = $data['specialgroup'] ?? 'REGULAR PRODUCT';
+            $data['production'] = $data['production'] ?? 'NEWCOM';
+            $data['moq'] = $data['moq'] ?? '';
+            $data['cost'] = $data['cost'] ?? '0';
+            $data['price'] = $data['price'] ?? '0';
+            $data['manilaprice'] = $data['manilaprice'] ?? '0';
+            $data['mallprice'] = $data['mallprice'] ?? '0';
+            $data['grabfoodprice'] = $data['grabfoodprice'] ?? '0';
+            $data['foodpandaprice'] = $data['foodpandaprice'] ?? '0';
+            $data['foodpandamallprice'] = $data['foodpandamallprice'] ?? '0';
+            $data['grabfoodmallprice'] = $data['grabfoodmallprice'] ?? '0';
+            $data['default1'] = $data['default1'] ?? '0';
+            $data['default2'] = $data['default2'] ?? '0';
+            $data['default3'] = $data['default3'] ?? '0';
+            $data['Activeondelivery'] = $data['Activeondelivery'] ?? '1';
+            
+            \Log::info("Row {$actualRowNumber} data prepared", ['data' => $data]);
             
             try {
                 $name = Auth::user()->name;
                 
-                // Validate required fields (barcode is now optional)
-                $requiredFields = ['itemid', 'itemname'];
-                foreach ($requiredFields as $field) {
-                    if (empty($data[$field])) {
-                        throw new \Exception("Required field '{$field}' is empty");
-                    }
+                // Validate required fields
+                if (empty($data['itemid']) || empty($data['itemname'])) {
+                    throw new \Exception("Required fields 'itemid' or 'itemname' are empty");
                 }
 
                 // Clean and validate all fields with defaults
@@ -764,7 +837,7 @@ public function import(Request $request)
                 $price = is_numeric($data['price']) ? floatval($data['price']) : 0;
                 $moq = !empty($data['moq']) && is_numeric($data['moq']) ? intval($data['moq']) : null;
                 
-                \Log::info("Row {$actualRowNumber}: Required field validation passed", [
+                \Log::info("Row {$actualRowNumber}: Field validation passed", [
                     'barcode' => $barcode,
                     'barcode_provided' => !is_null($barcode)
                 ]);
@@ -963,11 +1036,11 @@ public function import(Request $request)
                     // Create rboinventtables record
                     $rboInventTable = rboinventtables::create([
                         'itemid' => $data['itemid'],
-                        'itemgroup' => $data['itemgroup'],
-                        'itemdepartment' => $data['specialgroup'],
+                        'itemgroup' => $itemgroup,
+                        'itemdepartment' => $specialgroup,
                         'barcode' => $barcode, // Can be null
                         'activeondelivery' => $data['Activeondelivery'] == '1' ? 1 : 0,
-                        'production' => $data['production'],
+                        'production' => $production,
                         'moq' => !empty($data['moq']) ? intval($data['moq']) : null,
                         'default1' => $data['default1'] == '1' ? 1 : 0,
                         'default2' => $data['default2'] == '1' ? 1 : 0,

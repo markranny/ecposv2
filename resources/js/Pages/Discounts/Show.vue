@@ -203,8 +203,8 @@ const formatDate = (dateString) => {
     <component :is="layoutComponent" active-tab="DISCOUNTS">
         <template v-slot:main>
             <div class="min-h-screen bg-gray-50">
-                <!-- Mobile Header -->
-                <div class="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 sm:px-6">
+                <!-- Mobile Header (Only visible on mobile) -->
+                <div class="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 sm:px-6">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <Link
@@ -235,10 +235,78 @@ const formatDate = (dateString) => {
                     </div>
                 </div>
 
+                <!-- Desktop Header (Only visible on desktop) -->
+                <div class="hidden lg:block p-6 bg-white rounded-lg shadow-sm mb-6">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div class="flex items-start space-x-4">
+                            <div class="flex-shrink-0">
+                                <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a1.994 1.994 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <h1 class="text-3xl font-bold text-gray-900">{{ discount.DISCOFFERNAME }}</h1>
+                                    <span :class="[
+                                        'px-3 py-1 text-sm font-medium rounded-full border',
+                                        discountTypeClass
+                                    ]">
+                                        {{ discountTypeLabel }}
+                                    </span>
+                                </div>
+                                <p class="text-gray-600 mb-2">{{ discountTypeDescription }}</p>
+                                <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                    <span class="flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a1.994 1.994 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                        </svg>
+                                        ID: #{{ discount.id }}
+                                    </span>
+                                    <span class="flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                        </svg>
+                                        Value: {{ formatDiscountValue }}
+                                    </span>
+                                    <span class="flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 12v-2m0 0V7m0 4H7m0 0h4m0 0h4" />
+                                        </svg>
+                                        Created: {{ formatDate(discount.created_at) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <Link
+                                v-if="isAdmin"
+                                :href="route('discountsv2.edit', discount.id)"
+                                class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                            >
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit Discount
+                            </Link>
+                            <Link
+                                :href="route('discountsv2.index')"
+                                class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+                            >
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Back to Discounts
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Flash Messages -->
                 <div v-if="flash.message" 
                      :class="[
-                         'mx-4 mt-4 px-4 py-3 rounded-lg',
+                         'mb-4 lg:mb-6 px-4 py-3 rounded-lg mx-4 lg:mx-0',
                          flash.isSuccess ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
                      ]">
                     <div class="flex items-center">
@@ -253,131 +321,454 @@ const formatDate = (dateString) => {
                 </div>
 
                 <!-- Main Content -->
-                <div class="p-4 sm:p-6 space-y-6">
-                    <!-- Discount Overview Card -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <!-- Header -->
-                        <div class="p-4 sm:p-6 border-b border-gray-200">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1 min-w-0">
-                                    <h2 class="text-xl font-bold text-gray-900 mb-2">{{ discount.DISCOFFERNAME }}</h2>
-                                    <div class="flex items-center space-x-3 mb-3">
-                                        <span :class="[
-                                            'px-3 py-1 text-sm font-medium rounded-full border',
-                                            discountTypeClass
-                                        ]">
-                                            {{ discountTypeLabel }}
-                                        </span>
-                                        <span class="text-2xl font-bold text-green-600">{{ formatDiscountValue }}</span>
+                <div class="p-4 lg:p-0">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
+                        <!-- Mobile Content (Only visible on mobile) -->
+                        <div class="lg:hidden space-y-6">
+                            <!-- Discount Overview Card -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <!-- Header -->
+                                <div class="p-4 sm:p-6 border-b border-gray-200">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1 min-w-0">
+                                            <h2 class="text-xl font-bold text-gray-900 mb-2">{{ discount.DISCOFFERNAME }}</h2>
+                                            <div class="flex items-center space-x-3 mb-3">
+                                                <span :class="[
+                                                    'px-3 py-1 text-sm font-medium rounded-full border',
+                                                    discountTypeClass
+                                                ]">
+                                                    {{ discountTypeLabel }}
+                                                </span>
+                                                <span class="text-2xl font-bold text-green-600">{{ formatDiscountValue }}</span>
+                                            </div>
+                                            <p class="text-sm text-gray-600">{{ discountTypeDescription }}</p>
+                                        </div>
                                     </div>
-                                    <p class="text-sm text-gray-600">{{ discountTypeDescription }}</p>
+                                </div>
+
+                                <!-- Quick Stats -->
+                                <div class="grid grid-cols-2 divide-x divide-gray-200">
+                                    <div class="p-4 text-center">
+                                        <div class="text-lg font-semibold text-gray-900">{{ formatDiscountValue }}</div>
+                                        <div class="text-xs text-gray-500 mt-1">Discount Value</div>
+                                    </div>
+                                    <div class="p-4 text-center">
+                                        <div class="text-lg font-semibold text-gray-900">#{{ discount.id }}</div>
+                                        <div class="text-xs text-gray-500 mt-1">Discount ID</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Calculator -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Calculator</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Test Amount (₱)
+                                        </label>
+                                        <input
+                                            v-model.number="previewAmount"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Enter amount to test discount"
+                                        >
+                                    </div>
+
+                                    <div v-if="discountPreview" class="p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Original Amount:</span>
+                                                <span class="font-medium">{{ formatCurrency(discountPreview.originalAmount) }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Discount:</span>
+                                                <span class="font-medium text-red-600">-{{ formatCurrency(discountPreview.discountAmount) }}</span>
+                                            </div>
+                                            <div class="flex justify-between border-t pt-2">
+                                                <span class="font-bold text-gray-900">Final Amount:</span>
+                                                <span class="font-bold text-green-600">{{ formatCurrency(discountPreview.finalAmount) }}</span>
+                                            </div>
+                                            <div class="text-center pt-2 border-t">
+                                                <span class="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                                    {{ discountPreview.savingsPercentage }}% Total Savings
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Discount Details -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Discount Information</h3>
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</label>
+                                            <p class="text-sm text-gray-900 mt-1">{{ formatDate(discount.created_at) }}</p>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Updated</label>
+                                            <p class="text-sm text-gray-900 mt-1">{{ formatDate(discount.updated_at) }}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Discount Rules -->
+                                    <div class="pt-4 border-t border-gray-200">
+                                        <h4 class="font-medium text-gray-900 mb-3">How This Discount Works</h4>
+                                        <div v-if="discount.DISCOUNTTYPE === 'FIXED'" class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                            <ul class="text-sm text-green-800 space-y-1">
+                                                <li>• ₱{{ Number(discount.PARAMETER).toFixed(2) }} discount applied per item</li>
+                                                <li>• Cannot exceed the individual item's price</li>
+                                                <li>• If item costs less than discount, full item price is discounted</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <div v-if="discount.DISCOUNTTYPE === 'FIXEDTOTAL'" class="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                            <ul class="text-sm text-purple-800 space-y-1">
+                                                <li>• ₱{{ Number(discount.PARAMETER).toFixed(2) }} deducted from total bill</li>
+                                                <li>• Applied once per transaction</li>
+                                                <li>• Minimum final amount is ₱0.00</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <div v-if="discount.DISCOUNTTYPE === 'PERCENTAGE'" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <ul class="text-sm text-blue-800 space-y-1">
+                                                <li>• {{ discount.PARAMETER }}% discount applied to total amount</li>
+                                                <li>• Higher bills result in higher savings</li>
+                                                <li>• Applied once per transaction</li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Quick Stats -->
-                        <div class="grid grid-cols-2 divide-x divide-gray-200">
-                            <div class="p-4 text-center">
-                                <div class="text-lg font-semibold text-gray-900">{{ formatDiscountValue }}</div>
-                                <div class="text-xs text-gray-500 mt-1">Discount Value</div>
-                            </div>
-                            <div class="p-4 text-center">
-                                <div class="text-lg font-semibold text-gray-900">#{{ discount.id }}</div>
-                                <div class="text-xs text-gray-500 mt-1">Discount ID</div>
-                            </div>
-                        </div>
-                    </div>
+                        <!-- Desktop Layout (Only visible on desktop) -->
+                        <!-- Left Column - Discount Info -->
+                        <div class="hidden lg:block lg:col-span-2 space-y-6">
+                            <!-- Discount Overview -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <!-- Value Display -->
+                                    <div class="text-center p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                                        <div class="text-4xl font-bold text-blue-600 mb-2">{{ formatDiscountValue }}</div>
+                                        <div class="text-sm text-blue-700 font-medium">Discount Value</div>
+                                        <div class="text-xs text-blue-600 mt-1">{{ discountTypeLabel }}</div>
+                                    </div>
+                                    
+                                    <!-- Quick Stats -->
+                                    <div class="space-y-4">
+                                        <div class="text-center p-4 bg-gray-50 rounded-lg">
+                                            <div class="text-2xl font-semibold text-gray-900">#{{ discount.id }}</div>
+                                            <div class="text-xs text-gray-500 mt-1">Discount ID</div>
+                                        </div>
+                                        <div class="text-center p-4 bg-green-50 rounded-lg">
+                                            <div class="text-lg font-semibold text-green-700">Active</div>
+                                            <div class="text-xs text-green-600 mt-1">Status</div>
+                                        </div>
+                                    </div>
 
-                    <!-- Quick Calculator -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Calculator</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Test Amount (₱)
-                                </label>
-                                <input
-                                    v-model.number="previewAmount"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Enter amount to test discount"
-                                >
-                            </div>
-
-                            <div v-if="discountPreview" class="p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
-                                <div class="space-y-2 text-sm">
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">Original Amount:</span>
-                                        <span class="font-medium">{{ formatCurrency(discountPreview.originalAmount) }}</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">Discount:</span>
-                                        <span class="font-medium text-red-600">-{{ formatCurrency(discountPreview.discountAmount) }}</span>
-                                    </div>
-                                    <div class="flex justify-between border-t pt-2">
-                                        <span class="font-bold text-gray-900">Final Amount:</span>
-                                        <span class="font-bold text-green-600">{{ formatCurrency(discountPreview.finalAmount) }}</span>
-                                    </div>
-                                    <div class="text-center pt-2 border-t">
-                                        <span class="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                            {{ discountPreview.savingsPercentage }}% Total Savings
-                                        </span>
+                                    <!-- Details -->
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</label>
+                                            <p class="text-sm text-gray-900 mt-1">{{ formatDate(discount.created_at) }}</p>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Updated</label>
+                                            <p class="text-sm text-gray-900 mt-1">{{ formatDate(discount.updated_at) }}</p>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Type</label>
+                                            <p class="text-sm text-gray-900 mt-1">{{ discountTypeLabel }}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Discount Details -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Discount Information</h3>
-                        <div class="space-y-4">
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</label>
-                                    <p class="text-sm text-gray-900 mt-1">{{ formatDate(discount.created_at) }}</p>
-                                </div>
-                                <div>
-                                    <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Updated</label>
-                                    <p class="text-sm text-gray-900 mt-1">{{ formatDate(discount.updated_at) }}</p>
-                                </div>
-                            </div>
-                            
-                            <!-- Discount Rules -->
-                            <div class="pt-4 border-t border-gray-200">
-                                <h4 class="font-medium text-gray-900 mb-3">How This Discount Works</h4>
-                                <div v-if="discount.DISCOUNTTYPE === 'FIXED'" class="p-3 bg-green-50 border border-green-200 rounded-lg">
-                                    <ul class="text-sm text-green-800 space-y-1">
-                                        <li>• ₱{{ Number(discount.PARAMETER).toFixed(2) }} discount applied per item</li>
-                                        <li>• Cannot exceed the individual item's price</li>
-                                        <li>• If item costs less than discount, full item price is discounted</li>
+                            <!-- How It Works -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 class="text-xl font-semibold text-gray-900 mb-4">How This Discount Works</h3>
+                                <p class="text-gray-600 mb-4">{{ discountTypeDescription }}</p>
+                                
+                                <div v-if="discount.DISCOUNTTYPE === 'FIXED'" class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <h4 class="font-medium text-green-800 mb-2">Fixed Amount Rules</h4>
+                                    <ul class="text-sm text-green-700 space-y-2">
+                                        <li class="flex items-start">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                            ₱{{ Number(discount.PARAMETER).toFixed(2) }} discount applied per item
+                                        </li>
+                                        <li class="flex items-start">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                            Cannot exceed the individual item's price
+                                        </li>
+                                        <li class="flex items-start">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                            If item costs less than discount, full item price is discounted
+                                        </li>
                                     </ul>
                                 </div>
                                 
-                                <div v-if="discount.DISCOUNTTYPE === 'FIXEDTOTAL'" class="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                                    <ul class="text-sm text-purple-800 space-y-1">
-                                        <li>• ₱{{ Number(discount.PARAMETER).toFixed(2) }} deducted from total bill</li>
-                                        <li>• Applied once per transaction</li>
-                                        <li>• Minimum final amount is ₱0.00</li>
+                                <div v-if="discount.DISCOUNTTYPE === 'FIXEDTOTAL'" class="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                                    <h4 class="font-medium text-purple-800 mb-2">Fixed Total Rules</h4>
+                                    <ul class="text-sm text-purple-700 space-y-2">
+                                        <li class="flex items-start">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                            ₱{{ Number(discount.PARAMETER).toFixed(2) }} deducted from total bill
+                                        </li>
+                                        <li class="flex items-start">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                            Applied once per transaction
+                                        </li>
+                                        <li class="flex items-start">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                            Minimum final amount is ₱0.00
+                                        </li>
                                     </ul>
                                 </div>
                                 
-                                <div v-if="discount.DISCOUNTTYPE === 'PERCENTAGE'" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                    <ul class="text-sm text-blue-800 space-y-1">
-                                        <li>• {{ discount.PARAMETER }}% discount applied to total amount</li>
-                                        <li>• Higher bills result in higher savings</li>
-                                        <li>• Applied once per transaction</li>
+                                <div v-if="discount.DISCOUNTTYPE === 'PERCENTAGE'" class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <h4 class="font-medium text-blue-800 mb-2">Percentage Rules</h4>
+                                    <ul class="text-sm text-blue-700 space-y-2">
+                                        <li class="flex items-start">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                            Applied once per transaction
+                                        </li>
                                     </ul>
+                                </div>
+                            </div>
+
+                            <!-- Example Scenarios (Desktop) -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 class="text-xl font-semibold text-gray-900 mb-4">Example Scenarios</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <!-- Small Purchase -->
+                                    <div class="p-4 bg-gray-50 rounded-lg border">
+                                        <h4 class="font-medium text-gray-900 mb-3 flex items-center">
+                                            <span class="inline-block w-6 h-6 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center mr-2">1</span>
+                                            Small Purchase
+                                        </h4>
+                                        <div class="text-sm text-gray-600 space-y-1">
+                                            <div class="flex justify-between">
+                                                <span>Original:</span>
+                                                <span class="font-medium">₱{{ calculateExample(100).original.toFixed(2) }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span>Discount:</span>
+                                                <span class="font-medium text-red-600">-₱{{ calculateExample(100).discount.toFixed(2) }}</span>
+                                            </div>
+                                            <div class="flex justify-between font-semibold text-green-600 pt-1 border-t border-gray-300">
+                                                <span>Final:</span>
+                                                <span>₱{{ calculateExample(100).final.toFixed(2) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Medium Purchase -->
+                                    <div class="p-4 bg-gray-50 rounded-lg border">
+                                        <h4 class="font-medium text-gray-900 mb-3 flex items-center">
+                                            <span class="inline-block w-6 h-6 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center mr-2">2</span>
+                                            Medium Purchase
+                                        </h4>
+                                        <div class="text-sm text-gray-600 space-y-1">
+                                            <div class="flex justify-between">
+                                                <span>Original:</span>
+                                                <span class="font-medium">₱{{ calculateExample(500).original.toFixed(2) }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span>Discount:</span>
+                                                <span class="font-medium text-red-600">-₱{{ calculateExample(500).discount.toFixed(2) }}</span>
+                                            </div>
+                                            <div class="flex justify-between font-semibold text-green-600 pt-1 border-t border-gray-300">
+                                                <span>Final:</span>
+                                                <span>₱{{ calculateExample(500).final.toFixed(2) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Large Purchase -->
+                                    <div class="p-4 bg-gray-50 rounded-lg border">
+                                        <h4 class="font-medium text-gray-900 mb-3 flex items-center">
+                                            <span class="inline-block w-6 h-6 bg-purple-500 text-white text-xs font-bold rounded-full flex items-center justify-center mr-2">3</span>
+                                            Large Purchase
+                                        </h4>
+                                        <div class="text-sm text-gray-600 space-y-1">
+                                            <div class="flex justify-between">
+                                                <span>Original:</span>
+                                                <span class="font-medium">₱{{ calculateExample(1000).original.toFixed(2) }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span>Discount:</span>
+                                                <span class="font-medium text-red-600">-₱{{ calculateExample(1000).discount.toFixed(2) }}</span>
+                                            </div>
+                                            <div class="flex justify-between font-semibold text-green-600 pt-1 border-t border-gray-300">
+                                                <span>Final:</span>
+                                                <span>₱{{ calculateExample(1000).final.toFixed(2) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column - Calculator & Actions (Desktop) -->
+                        <div class="hidden lg:block space-y-6">
+                            <!-- Interactive Calculator -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Discount Calculator</h3>
+                                
+                                <div class="space-y-4">
+                                    <!-- Test Amount Input -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Test Amount (₱)
+                                        </label>
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span class="text-gray-500 text-lg">₱</span>
+                                            </div>
+                                            <input
+                                                v-model.number="previewAmount"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                class="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-medium"
+                                                placeholder="0.00"
+                                            >
+                                        </div>
+                                    </div>
+
+                                    <!-- Quick Amount Buttons -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-3">Quick Test Amounts</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button
+                                                v-for="amount in [100, 500, 1000, 2000]"
+                                                :key="amount"
+                                                @click="previewAmount = amount"
+                                                class="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                                                :class="{ 'bg-blue-100 text-blue-700 ring-2 ring-blue-500': previewAmount === amount }"
+                                            >
+                                                ₱{{ amount.toLocaleString() }}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Calculation Results -->
+                                    <div v-if="discountPreview" class="space-y-3 p-5 bg-gradient-to-br from-blue-50 via-green-50 to-purple-50 rounded-lg border-2 border-blue-200">
+                                        <div class="flex justify-between items-center py-2">
+                                            <span class="text-sm font-medium text-gray-700">Original Amount:</span>
+                                            <span class="text-lg font-semibold text-gray-900">{{ formatCurrency(discountPreview.originalAmount) }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center py-2">
+                                            <span class="text-sm font-medium text-gray-700">Discount Amount:</span>
+                                            <span class="text-lg font-semibold text-red-600">-{{ formatCurrency(discountPreview.discountAmount) }}</span>
+                                        </div>
+                                        <hr class="border-gray-300">
+                                        <div class="flex justify-between items-center py-2">
+                                            <span class="text-base font-bold text-gray-900">Customer Pays:</span>
+                                            <span class="text-2xl font-bold text-green-600">{{ formatCurrency(discountPreview.finalAmount) }}</span>
+                                        </div>
+                                        <div class="text-center pt-3 border-t border-gray-200">
+                                            <div class="space-y-2">
+                                                <span class="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                                                    {{ discountPreview.savingsPercentage }}% Total Savings
+                                                </span>
+                                                <div class="text-xs text-gray-600">
+                                                    Saves {{ formatCurrency(discountPreview.discountAmount) }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Actions -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                                
+                                <div class="space-y-3">
+                                    <Link
+                                        v-if="isAdmin"
+                                        :href="route('discountsv2.edit', discount.id)"
+                                        class="w-full inline-flex items-center justify-center px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-lg transition-colors"
+                                    >
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Edit Discount
+                                    </Link>
+
+                                    <Link
+                                        :href="route('discountsv2.index')"
+                                        class="w-full inline-flex items-center justify-center px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium rounded-lg transition-colors"
+                                    >
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                        </svg>
+                                        All Discounts
+                                    </Link>
+                                    
+                                    <button
+                                        v-if="isAdmin"
+                                        @click="confirmDelete"
+                                        class="w-full inline-flex items-center justify-center px-4 py-3 bg-red-50 hover:bg-red-100 text-red-700 font-medium rounded-lg transition-colors"
+                                    >
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete Discount
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Discount Information Summary -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Information</h3>
+                                
+                                <div class="space-y-4">
+                                    <div class="p-3 bg-gray-50 rounded-lg">
+                                        <div class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Discount ID</div>
+                                        <div class="text-lg font-semibold text-gray-900">#{{ discount.id }}</div>
+                                    </div>
+                                    
+                                    <div class="p-3 bg-gray-50 rounded-lg">
+                                        <div class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Status</div>
+                                        <div class="flex items-center">
+                                            <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                            <span class="text-sm font-medium text-green-700">Active</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-xs text-gray-500 pt-2 border-t border-gray-200">
+                                        This discount is available for use in POS systems and online transactions.
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Floating Action Menu -->
-                <div class="fixed bottom-6 right-6 z-40">
+                <!-- Mobile Floating Action Menu (Only visible on mobile) -->
+                <div class="lg:hidden fixed bottom-6 right-6 z-40">
                     <!-- Menu Options -->
                     <div v-if="showFloatingMenu" class="absolute bottom-16 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-56 transform transition-all duration-200 ease-out">
                         <!-- Edit Discount -->
@@ -464,8 +855,9 @@ const formatDate = (dateString) => {
                     </button>
                 </div>
 
+                <!-- Mobile Modals (Unchanged) -->
                 <!-- Advanced Calculator Panel -->
-                <div v-if="showCalculatorPanel" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
+                <div v-if="showCalculatorPanel" class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
                     <div class="bg-white rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
                         <!-- Header -->
                         <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 rounded-t-xl">
@@ -551,7 +943,7 @@ const formatDate = (dateString) => {
                 </div>
 
                 <!-- Examples Panel -->
-                <div v-if="showExamplesPanel" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
+                <div v-if="showExamplesPanel" class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
                     <div class="bg-white rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
                         <!-- Header -->
                         <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 rounded-t-xl">
@@ -700,7 +1092,7 @@ const formatDate = (dateString) => {
                 </div>
 
                 <!-- Overlay to close floating menu -->
-                <div v-if="showFloatingMenu" @click="closeFloatingMenu" class="fixed inset-0 bg-black bg-opacity-25 z-30"></div>
+                <div v-if="showFloatingMenu" @click="closeFloatingMenu" class="lg:hidden fixed inset-0 bg-black bg-opacity-25 z-30"></div>
             </div>
         </template>
     </component>

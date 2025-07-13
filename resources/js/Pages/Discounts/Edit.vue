@@ -212,8 +212,8 @@ const deleteDiscount = () => {
     <component :is="layoutComponent" active-tab="DISCOUNTS">
         <template v-slot:main>
             <div class="min-h-screen bg-gray-50">
-                <!-- Mobile Header -->
-                <div class="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 sm:px-6">
+                <!-- Mobile Header (Only visible on mobile) -->
+                <div class="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 sm:px-6">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <Link
@@ -238,9 +238,60 @@ const deleteDiscount = () => {
                                 class="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                             >
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                 </svg>
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desktop Header (Only visible on desktop) -->
+                <div class="hidden lg:block p-6 bg-white rounded-lg shadow-sm mb-6">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div class="flex items-start space-x-4">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <h1 class="text-2xl font-bold text-gray-900">Edit Discount</h1>
+                                    <div v-if="formHasChanges" class="flex items-center space-x-2 px-3 py-1 bg-orange-100 border border-orange-200 rounded-full">
+                                        <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                                        <span class="text-xs font-medium text-orange-700">Unsaved Changes</span>
+                                    </div>
+                                </div>
+                                <p class="text-gray-600 mb-1">{{ discount.DISCOFFERNAME }}</p>
+                                <div class="flex items-center space-x-2 text-sm text-gray-500">
+                                    <span>ID: #{{ discount.id }}</span>
+                                    <span>•</span>
+                                    <span>{{ formatDiscountValue(discount) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <Link
+                                :href="route('discountsv2.show', discount.id)"
+                                class="inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+                            >
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                View Details
+                            </Link>
+                            <Link
+                                :href="route('discountsv2.index')"
+                                class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+                            >
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Back to Discounts
                             </Link>
                         </div>
                     </div>
@@ -249,7 +300,7 @@ const deleteDiscount = () => {
                 <!-- Flash Messages -->
                 <div v-if="flash.message" 
                      :class="[
-                         'mx-4 mt-4 px-4 py-3 rounded-lg',
+                         'mb-4 lg:mb-6 px-4 py-3 rounded-lg mx-4 lg:mx-0',
                          flash.isSuccess ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'
                      ]">
                     <div class="flex items-center">
@@ -263,8 +314,8 @@ const deleteDiscount = () => {
                     </div>
                 </div>
 
-                <!-- Changes Warning -->
-                <div v-if="formHasChanges" class="mx-4 mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <!-- Changes Warning (Mobile Only) -->
+                <div v-if="formHasChanges" class="lg:hidden mx-4 mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div class="flex items-start">
                         <svg class="h-5 w-5 text-yellow-400 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
@@ -277,149 +328,279 @@ const deleteDiscount = () => {
                 </div>
 
                 <!-- Main Content -->
-                <div class="p-4 sm:p-6">
-                    <!-- Form Card -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="p-4 sm:p-6">
-                            <form @submit.prevent="submitForm" class="space-y-6">
-                                <!-- Discount Name -->
-                                <div>
-                                    <label for="discountName" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Discount Name *
-                                    </label>
-                                    <input
-                                        id="discountName"
-                                        v-model="form.DISCOFFERNAME"
-                                        type="text"
-                                        placeholder="e.g., SENIOR CITIZEN, STUDENT DISCOUNT"
-                                        class="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                        :class="{ 'border-red-500 ring-red-500': form.errors.DISCOFFERNAME }"
-                                        required
-                                    >
-                                    <p v-if="form.errors.DISCOFFERNAME" class="mt-2 text-sm text-red-600">
-                                        {{ form.errors.DISCOFFERNAME }}
-                                    </p>
-                                </div>
-
-                                <!-- Discount Type -->
-                                <div>
-                                    <label for="discountType" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Discount Type *
-                                    </label>
-                                    <select
-                                        id="discountType"
-                                        v-model="form.DISCOUNTTYPE"
-                                        class="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                        :class="{ 'border-red-500 ring-red-500': form.errors.DISCOUNTTYPE }"
-                                        required
-                                    >
-                                        <option value="">Select discount type</option>
-                                        <option v-for="type in discountTypes" :key="type.value" :value="type.value">
-                                            {{ type.label }}
-                                        </option>
-                                    </select>
-                                    <p v-if="form.errors.DISCOUNTTYPE" class="mt-2 text-sm text-red-600">
-                                        {{ form.errors.DISCOUNTTYPE }}
-                                    </p>
-                                    
-                                    <!-- Type Description -->
-                                    <div v-if="form.DISCOUNTTYPE" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                        <p class="text-sm text-blue-800">
-                                            {{ discountTypes.find(t => t.value === form.DISCOUNTTYPE)?.description }}
+                <div class="p-4 lg:p-0">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
+                        <!-- Form Section -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden lg:order-1">
+                            <div class="p-4 lg:p-6">
+                                <h2 class="text-lg font-medium text-gray-900 mb-4 lg:mb-6">Discount Information</h2>
+                                
+                                <form @submit.prevent="submitForm" class="space-y-4 lg:space-y-6">
+                                    <!-- Discount Name -->
+                                    <div>
+                                        <label for="discountName" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Discount Name *
+                                        </label>
+                                        <input
+                                            id="discountName"
+                                            v-model="form.DISCOFFERNAME"
+                                            type="text"
+                                            placeholder="e.g., SENIOR CITIZEN, STUDENT DISCOUNT"
+                                            class="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            :class="{ 'border-red-500 ring-red-500': form.errors.DISCOFFERNAME }"
+                                            required
+                                        >
+                                        <p v-if="form.errors.DISCOFFERNAME" class="mt-2 text-sm text-red-600">
+                                            {{ form.errors.DISCOFFERNAME }}
                                         </p>
                                     </div>
+
+                                    <!-- Discount Type -->
+                                    <div>
+                                        <label for="discountType" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Discount Type *
+                                        </label>
+                                        <select
+                                            id="discountType"
+                                            v-model="form.DISCOUNTTYPE"
+                                            class="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            :class="{ 'border-red-500 ring-red-500': form.errors.DISCOUNTTYPE }"
+                                            required
+                                        >
+                                            <option value="">Select discount type</option>
+                                            <option v-for="type in discountTypes" :key="type.value" :value="type.value">
+                                                {{ type.label }}
+                                            </option>
+                                        </select>
+                                        <p v-if="form.errors.DISCOUNTTYPE" class="mt-2 text-sm text-red-600">
+                                            {{ form.errors.DISCOUNTTYPE }}
+                                        </p>
+                                        
+                                        <!-- Type Description -->
+                                        <div v-if="form.DISCOUNTTYPE" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <p class="text-sm text-blue-800">
+                                                {{ discountTypes.find(t => t.value === form.DISCOUNTTYPE)?.description }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Discount Value -->
+                                    <div v-if="form.DISCOUNTTYPE">
+                                        <label for="parameter" class="block text-sm font-medium text-gray-700 mb-2">
+                                            {{ parameterLabel }} *
+                                        </label>
+                                        <div class="relative">
+                                            <input
+                                                id="parameter"
+                                                v-model="form.PARAMETER"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                :max="isPercentage ? 100 : undefined"
+                                                :placeholder="parameterPlaceholder"
+                                                class="w-full px-4 py-3 pr-12 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                                :class="{ 'border-red-500 ring-red-500': form.errors.PARAMETER || parameterError }"
+                                                required
+                                            >
+                                            <div v-if="isPercentage" class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                                <span class="text-gray-500 text-base font-medium">%</span>
+                                            </div>
+                                            <div v-else-if="form.DISCOUNTTYPE" class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                                <span class="text-gray-500 text-base font-medium">₱</span>
+                                            </div>
+                                        </div>
+                                        <p v-if="form.errors.PARAMETER" class="mt-2 text-sm text-red-600">
+                                            {{ form.errors.PARAMETER }}
+                                        </p>
+                                        <p v-else-if="parameterError" class="mt-2 text-sm text-red-600">
+                                            {{ parameterError }}
+                                        </p>
+                                    </div>
+
+                                    <!-- Preview Summary (Mobile Inline) -->
+                                    <div v-if="form.DISCOUNTTYPE && form.PARAMETER && discountPreview" 
+                                         class="lg:hidden p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+                                        <h3 class="text-sm font-medium text-gray-900 mb-3">Quick Preview</h3>
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Test Amount:</span>
+                                                <span class="font-medium">{{ formatCurrency(previewAmount) }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Discount:</span>
+                                                <span class="font-medium text-red-600">-{{ formatCurrency(discountPreview.discountAmount) }}</span>
+                                            </div>
+                                            <div class="flex justify-between border-t pt-2">
+                                                <span class="font-medium text-gray-900">Final Amount:</span>
+                                                <span class="font-bold text-green-600">{{ formatCurrency(discountPreview.finalAmount) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="bg-gray-50 px-4 py-4 lg:px-6 border-t border-gray-200">
+                                <div class="flex flex-col-reverse sm:flex-row space-y-reverse space-y-3 sm:space-y-0 sm:space-x-3">
+                                    <button
+                                        v-if="formHasChanges"
+                                        @click="resetForm"
+                                        type="button"
+                                        class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        Reset
+                                    </button>
+                                    <Link
+                                        :href="route('discountsv2.index')"
+                                        class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </Link>
+                                    <button
+                                        @click="submitForm"
+                                        :disabled="form.processing || parameterError || !form.DISCOFFERNAME || !form.DISCOUNTTYPE || !form.PARAMETER || !formHasChanges"
+                                        class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <svg v-if="form.processing" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        {{ form.processing ? 'Updating...' : 'Update Discount' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Desktop Preview Section (Only visible on desktop) -->
+                        <div class="hidden lg:block space-y-6 lg:order-2">
+                            <!-- Live Preview Panel -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h2 class="text-lg font-medium text-gray-900 mb-4">Live Preview</h2>
+                                
+                                <div v-if="!form.DISCOUNTTYPE" class="text-center py-8 text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    <p class="text-base">Configure discount to see preview</p>
                                 </div>
 
-                                <!-- Discount Value -->
-                                <div v-if="form.DISCOUNTTYPE">
-                                    <label for="parameter" class="block text-sm font-medium text-gray-700 mb-2">
-                                        {{ parameterLabel }} *
-                                    </label>
-                                    <div class="relative">
+                                <div v-else class="space-y-4">
+                                    <!-- Preview Amount Input -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Test Amount (₱)
+                                        </label>
                                         <input
-                                            id="parameter"
-                                            v-model="form.PARAMETER"
+                                            v-model.number="previewAmount"
                                             type="number"
                                             step="0.01"
                                             min="0"
-                                            :max="isPercentage ? 100 : undefined"
-                                            :placeholder="parameterPlaceholder"
-                                            class="w-full px-4 py-3 pr-12 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                            :class="{ 'border-red-500 ring-red-500': form.errors.PARAMETER || parameterError }"
-                                            required
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Enter amount to test discount"
                                         >
-                                        <div v-if="isPercentage" class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                                            <span class="text-gray-500 text-base font-medium">%</span>
-                                        </div>
-                                        <div v-else-if="form.DISCOUNTTYPE" class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                                            <span class="text-gray-500 text-base font-medium">₱</span>
-                                        </div>
                                     </div>
-                                    <p v-if="form.errors.PARAMETER" class="mt-2 text-sm text-red-600">
-                                        {{ form.errors.PARAMETER }}
-                                    </p>
-                                    <p v-else-if="parameterError" class="mt-2 text-sm text-red-600">
-                                        {{ parameterError }}
-                                    </p>
-                                </div>
 
-                                <!-- Preview Summary (Mobile Inline) -->
-                                <div v-if="form.DISCOUNTTYPE && form.PARAMETER && discountPreview" 
-                                     class="p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
-                                    <h3 class="text-sm font-medium text-gray-900 mb-3">Quick Preview</h3>
-                                    <div class="space-y-2 text-sm">
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600">Test Amount:</span>
-                                            <span class="font-medium">{{ formatCurrency(previewAmount) }}</span>
+                                    <!-- Preview Results -->
+                                    <div v-if="discountPreview" class="space-y-3 p-4 bg-gradient-to-br from-blue-50 via-green-50 to-purple-50 rounded-lg border-2 border-blue-200">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm font-medium text-gray-700">Original Amount:</span>
+                                            <span class="text-lg font-semibold text-gray-900">{{ formatCurrency(discountPreview.originalAmount) }}</span>
                                         </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600">Discount:</span>
-                                            <span class="font-medium text-red-600">-{{ formatCurrency(discountPreview.discountAmount) }}</span>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm font-medium text-gray-700">Discount Amount:</span>
+                                            <span class="text-lg font-semibold text-red-600">-{{ formatCurrency(discountPreview.discountAmount) }}</span>
                                         </div>
-                                        <div class="flex justify-between border-t pt-2">
-                                            <span class="font-medium text-gray-900">Final Amount:</span>
-                                            <span class="font-bold text-green-600">{{ formatCurrency(discountPreview.finalAmount) }}</span>
+                                        <hr class="border-gray-300">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-base font-bold text-gray-900">Customer Pays:</span>
+                                            <span class="text-2xl font-bold text-green-600">{{ formatCurrency(discountPreview.finalAmount) }}</span>
                                         </div>
                                     </div>
                                 </div>
-                            </form>
-                        </div>
+                            </div>
 
-                        <!-- Form Actions -->
-                        <div class="bg-gray-50 px-4 py-4 sm:px-6 border-t border-gray-200">
-                            <div class="flex flex-col-reverse sm:flex-row space-y-reverse space-y-3 sm:space-y-0 sm:space-x-3">
-                                <button
-                                    v-if="formHasChanges"
-                                    @click="resetForm"
-                                    type="button"
-                                    class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    Reset
-                                </button>
-                                <Link
-                                    :href="route('discountsv2.index')"
-                                    class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
-                                >
-                                    Cancel
-                                </Link>
-                                <button
-                                    @click="submitForm"
-                                    :disabled="form.processing || parameterError || !form.DISCOFFERNAME || !form.DISCOUNTTYPE || !form.PARAMETER || !formHasChanges"
-                                    class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <svg v-if="form.processing" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    {{ form.processing ? 'Updating...' : 'Update Discount' }}
-                                </button>
+                            <!-- Changes Comparison (Desktop Only) -->
+                            <div v-if="formHasChanges" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h2 class="text-lg font-medium text-gray-900 mb-4">Changes Summary</h2>
+                                
+                                <div class="space-y-4">
+                                    <!-- Original Values -->
+                                    <div class="p-4 bg-gray-50 rounded-lg border">
+                                        <h4 class="text-sm font-medium text-gray-700 mb-3">Original Values</h4>
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Name:</span>
+                                                <span class="font-medium">{{ discount.DISCOFFERNAME }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Type:</span>
+                                                <span class="font-medium">{{ discount.DISCOUNTTYPE }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Value:</span>
+                                                <span class="font-medium">{{ formatDiscountValue(discount) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- New Values -->
+                                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                        <h4 class="text-sm font-medium text-blue-700 mb-3">New Values</h4>
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-blue-600">Name:</span>
+                                                <span class="font-medium text-blue-900">{{ form.DISCOFFERNAME }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-blue-600">Type:</span>
+                                                <span class="font-medium text-blue-900">{{ form.DISCOUNTTYPE }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-blue-600">Value:</span>
+                                                <span class="font-medium text-blue-900">
+                                                    {{ form.DISCOUNTTYPE === 'PERCENTAGE' ? form.PARAMETER + '%' : '₱' + Number(form.PARAMETER).toFixed(2) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Actions (Desktop Only) -->
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h2 class="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
+                                
+                                <div class="space-y-3">
+                                    <Link
+                                        :href="route('discountsv2.show', discount.id)"
+                                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-lg transition-colors"
+                                    >
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        View Discount Details
+                                    </Link>
+                                    
+                                    <button
+                                        v-if="isAdmin"
+                                        @click="confirmDelete"
+                                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 font-medium rounded-lg transition-colors"
+                                    >
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete Discount
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Floating Action Menu -->
-                <div class="fixed bottom-6 right-6 z-40">
+                <!-- Mobile Floating Action Menu (Only visible on mobile) -->
+                <div class="lg:hidden fixed bottom-6 right-6 z-40">
                     <!-- Menu Options -->
                     <div v-if="showFloatingMenu" class="absolute bottom-16 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-56 transform transition-all duration-200 ease-out">
                         <!-- Preview Calculator -->
@@ -429,7 +610,7 @@ const deleteDiscount = () => {
                             class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center transition-colors"
                         >
                             <svg class="h-4 w-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                             Preview Calculator
@@ -467,7 +648,7 @@ const deleteDiscount = () => {
                             class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center transition-colors"
                         >
                             <svg class="h-4 w-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                             View Details
@@ -513,8 +694,9 @@ const deleteDiscount = () => {
                     </button>
                 </div>
 
+                <!-- Mobile Modals (Unchanged) -->
                 <!-- Preview Panel Modal -->
-                <div v-if="showPreviewPanel" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
+                <div v-if="showPreviewPanel" class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
                     <div class="bg-white rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
                         <!-- Header -->
                         <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 rounded-t-xl">
@@ -569,7 +751,7 @@ const deleteDiscount = () => {
                 </div>
 
                 <!-- Changes Panel Modal -->
-                <div v-if="showChangesPanel" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
+                <div v-if="showChangesPanel" class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
                     <div class="bg-white rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
                         <!-- Header -->
                         <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 rounded-t-xl">
@@ -693,7 +875,7 @@ const deleteDiscount = () => {
                 </div>
 
                 <!-- Overlay to close floating menu -->
-                <div v-if="showFloatingMenu" @click="closeFloatingMenu" class="fixed inset-0 bg-black bg-opacity-25 z-30"></div>
+                <div v-if="showFloatingMenu" @click="closeFloatingMenu" class="lg:hidden fixed inset-0 bg-black bg-opacity-25 z-30"></div>
             </div>
         </template>
     </component>
