@@ -818,22 +818,23 @@ public function tsales(Request $request)
     $role = Auth::user()->role;
     $userStoreId = Auth::user()->storeid;
 
-      DB::statement("
-         DELETE t1
-         FROM rbotransactionsalestrans t1
-         JOIN rbotransactionsalestrans t2
-         ON t1.transactionid = t2.transactionid
-         AND t1.linenum = t2.linenum
-         AND t1.id > t2.id
-     ");
+    // Clean up duplicate records
+    DB::statement("
+        DELETE t1
+        FROM rbotransactionsalestrans t1
+        JOIN rbotransactionsalestrans t2
+        ON t1.transactionid = t2.transactionid
+        AND t1.linenum = t2.linenum
+        AND t1.id > t2.id
+    ");
 
-     DB::statement("
-         DELETE t1
-         FROM rbotransactiontables t1
-         JOIN rbotransactiontables t2
-         ON t1.transactionid = t2.transactionid
-         AND t1.id > t2.id
-     "); 
+    DB::statement("
+        DELETE t1
+        FROM rbotransactiontables t1
+        JOIN rbotransactiontables t2
+        ON t1.transactionid = t2.transactionid
+        AND t1.id > t2.id
+    ");
 
     $query = DB::table('rbotransactionsalestrans')
         ->select(
@@ -856,9 +857,83 @@ public function tsales(Request $request)
             DB::raw('rbotransactionsalestrans.netamountnotincltax as vatablesales'),
             DB::raw('rbotransactionsalestrans.taxinclinprice as vat'),
             'rbotransactionsalestrans.store as storename',
-            'rbotransactionsalestrans.staff'
+            'rbotransactionsalestrans.staff',
+            'rbotransactionsalestrans.remarks',
+            
+            // Payment methods from rbotransactiontables
+            DB::raw('COALESCE(rbt.charge, 0) as charge'),
+            DB::raw('COALESCE(rbt.gcash, 0) as gcash'),
+            DB::raw('COALESCE(rbt.paymaya, 0) as paymaya'),
+            DB::raw('COALESCE(rbt.cash, 0) as cash'),
+            DB::raw('COALESCE(rbt.card, 0) as card'),
+            DB::raw('COALESCE(rbt.loyaltycard, 0) as loyaltycard'),
+            DB::raw('COALESCE(rbt.foodpanda, 0) as foodpanda'),
+            DB::raw('COALESCE(rbt.grabfood, 0) as grabfood'),
+            DB::raw('COALESCE(rbt.representation, 0) as representation'),
+            
+            // Commission calculation based on remarks
+            DB::raw("
+                CASE 
+                    WHEN LOWER(TRIM(rbotransactionsalestrans.remarks)) = 'qrph' 
+                    THEN rbotransactionsalestrans.netamount - 0.75
+                    ELSE 0 
+                END as commission
+            "),
+            
+            // RD Discount - include '20% EMPLOYEE DISCOUNT'
+            DB::raw("
+                CASE 
+                    WHEN rbotransactionsalestrans.discofferid LIKE '%SENIOR%' 
+                      OR rbotransactionsalestrans.discofferid LIKE '%PWD%'
+                      OR rbotransactionsalestrans.discofferid = '25% One Day Before'
+                      OR rbotransactionsalestrans.discofferid = '20% EMPLOYEE DISCOUNT'
+                    THEN rbotransactionsalestrans.discamount 
+                    ELSE 0 
+                END as rddisc
+            "),
+            
+            // Marketing Discount - exclude '20% EMPLOYEE DISCOUNT'
+            DB::raw("
+                CASE 
+                    WHEN rbotransactionsalestrans.discofferid IS NOT NULL 
+                      AND rbotransactionsalestrans.discofferid != ''
+                      AND rbotransactionsalestrans.discofferid NOT LIKE '%SENIOR%' 
+                      AND rbotransactionsalestrans.discofferid NOT LIKE '%PWD%'
+                      AND rbotransactionsalestrans.discofferid != '25% One Day Before'
+                      AND rbotransactionsalestrans.discofferid != '20% EMPLOYEE DISCOUNT'
+                    THEN rbotransactionsalestrans.discamount 
+                    ELSE 0 
+                END as mrktgdisc
+            "),
+            
+            // Product categories
+            DB::raw("
+                CASE 
+                    WHEN rbotransactionsalestrans.itemgroup = 'BW PRODUCTS' 
+                    THEN rbotransactionsalestrans.netamount 
+                    ELSE 0 
+                END as bw_products
+            "),
+            DB::raw("
+                CASE 
+                    WHEN rbotransactionsalestrans.itemgroup = 'MERCHANDISE' 
+                    THEN rbotransactionsalestrans.netamount 
+                    ELSE 0 
+                END as merchandise
+            "),
+            DB::raw("
+                CASE 
+                    WHEN rbotransactionsalestrans.itemgroup = 'PARTYCAKES' 
+                    THEN rbotransactionsalestrans.netamount 
+                    ELSE 0 
+                END as partycakes
+            ")
         )
         ->leftJoin('rbostoretables', 'rbotransactionsalestrans.store', '=', 'rbostoretables.STOREID')
+        ->leftJoin('rbotransactiontables as rbt', function($join) {
+            $join->on('rbotransactionsalestrans.transactionid', '=', 'rbt.transactionid')
+                 ->on('rbotransactionsalestrans.store', '=', 'rbt.store');
+        })
         ->orderBy('rbotransactionsalestrans.transactionid', 'DESC');
 
     if ($request->filled(['startDate', 'endDate'])) {
@@ -883,9 +958,10 @@ public function tsales(Request $request)
     $ec = $query->orderBy('createddate', 'desc')->get();
 
     $totals = [
-        'grossamount' => $ec->sum('grossamount'),
-        'discamount' => $ec->sum('discamount'),
-        'netamount' => $ec->sum('netamount'),
+        'grossamount' => $ec->sum('total_grossamount'),
+        'discamount' => $ec->sum('total_discamount'),
+        'netamount' => $ec->sum('total_netamount'),
+        'commission' => $ec->sum('commission'),
     ];
 
     return Inertia::render('Reports/TSales', [

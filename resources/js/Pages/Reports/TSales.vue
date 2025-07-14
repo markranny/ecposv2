@@ -1,147 +1,208 @@
 <template>
     <component :is="layoutComponent" active-tab="REPORTS">
         <template v-slot:main>
-            <!-- Filters Section -->
-            <div class="mb-4 flex flex-wrap gap-4 p-4 bg-white rounded-lg shadow z-[999]">
-                <!-- Store Selection with Search -->
-                <div 
-                    v-if="userRole.toUpperCase() === 'ADMIN' || userRole.toUpperCase() === 'SUPERADMIN'" 
-                    class="flex-1 min-w-[200px] store-dropdown-container relative"
-                >
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Stores</label>
-                    <div class="relative">
-                        <button
-                            @click="showStoreDropdown = !showStoreDropdown"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-left bg-white"
+            <!-- Enhanced Header Section -->
+            <!-- <div class="mb-6">
+                <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg shadow-lg">
+                    <h1 class="text-2xl font-bold mb-2">Transaction Sales Report</h1>
+                    <p class="text-blue-100">Detailed sales transaction analysis with payment methods and commissions</p>
+                </div>
+            </div> -->
+
+            <!-- Enhanced Filters Section -->
+            <div class="mb-6 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z"></path>
+                        </svg>
+                        Filters & Options
+                    </h3>
+                </div>
+                
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <!-- Store Selection -->
+                        <div 
+                            v-if="userRole.toUpperCase() === 'ADMIN' || userRole.toUpperCase() === 'SUPERADMIN'" 
+                            class="store-dropdown-container relative"
                         >
-                            <span v-if="selectedStores.length === 0" class="text-gray-500">Select stores...</span>
-                            <span v-else-if="selectedStores.length === 1">{{ selectedStores[0] }}</span>
-                            <span v-else>{{ selectedStores.length }} stores selected</span>
-                            <svg class="float-right mt-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                Store Selection
+                            </label>
+                            <div class="relative">
+                                <button
+                                    @click="showStoreDropdown = !showStoreDropdown"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-left bg-white hover:bg-gray-50 transition-colors"
+                                >
+                                    <span v-if="selectedStores.length === 0" class="text-gray-500">Select stores...</span>
+                                    <span v-else-if="selectedStores.length === 1" class="text-gray-900">{{ selectedStores[0] }}</span>
+                                    <span v-else class="text-gray-900">{{ selectedStores.length }} stores selected</span>
+                                    <svg class="float-right mt-1 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+
+                                <!-- Enhanced Dropdown -->
+                                <div v-if="showStoreDropdown" class="absolute z-50 w-full mt-2 bg-white border border-gray-300 rounded-lg shadow-xl max-h-72 overflow-hidden">
+                                    <!-- Search input -->
+                                    <div class="p-3 border-b border-gray-200 bg-gray-50">
+                                        <input
+                                            ref="storeSearchInput"
+                                            v-model="storeSearchQuery"
+                                            type="text"
+                                            placeholder="Search stores..."
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            @click.stop
+                                            @input="handleStoreSearch"
+                                        >
+                                    </div>
+
+                                    <!-- Action buttons -->
+                                    <div class="p-3 border-b border-gray-200 flex gap-2 bg-gray-50">
+                                        <button
+                                            @click="selectAllStores"
+                                            class="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                                        >
+                                            Select All
+                                        </button>
+                                        <button
+                                            @click="clearStoreSelection"
+                                            class="flex-1 px-3 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+
+                                    <!-- Store options -->
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <label 
+                                            v-for="store in filteredStores" 
+                                            :key="store"
+                                            class="flex items-center px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                :checked="isStoreSelected(store)"
+                                                @change="toggleStoreSelection(store)"
+                                                class="mr-3 form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                            >
+                                            <span class="text-sm text-gray-700">{{ store }}</span>
+                                        </label>
+                                    </div>
+
+                                    <div v-if="filteredStores.length === 0" class="p-4 text-sm text-gray-500 text-center">
+                                        No stores found
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Date filters -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                Start Date
+                            </label>
+                            <input
+                                type="date"
+                                v-model="startDate"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                End Date
+                            </label>
+                            <input
+                                type="date"
+                                v-model="endDate"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            >
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div class="flex items-end">
+                            <button
+                                @click="clearFilters"
+                                class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+                            >
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Clear Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Summary Section for Mobile -->
+            <div v-if="isMobile" class="mb-6 bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    Sales Summary
+                </h3>
+                <div v-if="isTableLoading" class="flex justify-center items-center py-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                    <span class="ml-3 text-gray-600">Loading data...</span>
+                </div>
+                <div v-else class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
+                        <p class="text-xs text-blue-600 font-medium">Total Qty</p>
+                        <p class="text-xl font-bold text-blue-800">{{ footerTotals.total_qty.toLocaleString() }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
+                        <p class="text-xs text-green-600 font-medium">Gross Amount</p>
+                        <p class="text-xl font-bold text-green-800">₱{{ footerTotals.total_grossamount.toFixed(2) }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
+                        <p class="text-xs text-purple-600 font-medium">Net Amount</p>
+                        <p class="text-xl font-bold text-purple-800">₱{{ footerTotals.total_netamount.toFixed(2) }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg">
+                        <p class="text-xs text-orange-600 font-medium">Commission</p>
+                        <p class="text-xl font-bold text-orange-800">₱{{ footerTotals.commission.toFixed(2) }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Data Display -->
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <!-- Header -->
+                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
-                        </button>
-
-                        <!-- Dropdown -->
-                        <div v-if="showStoreDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
-                            <!-- Search input -->
-                            <div class="p-2 border-b border-gray-200 sticky top-0 bg-white">
-                                <input
-                                    ref="storeSearchInput"
-                                    v-model="storeSearchQuery"
-                                    type="text"
-                                    placeholder="Search stores..."
-                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    @click.stop
-                                    @input="handleStoreSearch"
-                                >
-                            </div>
-
-                            <!-- Action buttons -->
-                            <div class="p-2 border-b border-gray-200 flex gap-2 sticky top-[46px] bg-white">
-                                <button
-                                    @click="selectAllStores"
-                                    class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                                >
-                                    Select All
-                                </button>
-                                <button
-                                    @click="clearStoreSelection"
-                                    class="px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
-                                >
-                                    Clear
-                                </button>
-                            </div>
-
-                            <!-- Store options -->
-                            <div class="max-h-40 overflow-y-auto">
-                                <label 
-                                    v-for="store in filteredStores" 
-                                    :key="store"
-                                    class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        :checked="isStoreSelected(store)"
-                                        @change="toggleStoreSelection(store)"
-                                        class="mr-2 form-checkbox h-4 w-4 text-blue-600"
-                                    >
-                                    <span class="text-sm">{{ store }}</span>
-                                </label>
-                            </div>
-
-                            <div v-if="filteredStores.length === 0" class="p-3 text-sm text-gray-500 text-center">
-                                No stores found
-                            </div>
+                            Transaction Sales Data
+                        </h3>
+                        <div class="text-sm text-gray-500">
+                            {{ filteredData.length }} transactions
                         </div>
                     </div>
                 </div>
 
-                <!-- Date filters -->
-                <div class="flex-1 min-w-[150px]">
-                    <label class="block text-sm font-medium text-gray-700">Start Date</label>
-                    <input
-                        type="date"
-                        v-model="startDate"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                    >
+                <div v-if="isTableLoading" class="flex justify-center items-center py-16">
+                    <div class="text-center">
+                        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+                        <span class="mt-4 text-lg text-gray-600 block">Loading sales data...</span>
+                    </div>
                 </div>
                 
-                <div class="flex-1 min-w-[150px]">
-                    <label class="block text-sm font-medium text-gray-700">End Date</label>
-                    <input
-                        type="date"
-                        v-model="endDate"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                    >
-                </div>
-
-                <!-- Clear filters button -->
-                <div class="flex items-end">
-                    <button
-                        @click="clearFilters"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-md text-sm"
-                    >
-                        Clear Filters
-                    </button>
-                </div>
-            </div>
-
-            <!-- Summary Section for Mobile -->
-            <div v-if="isMobile" class="mb-4 bg-white rounded-lg shadow p-4">
-                <h3 class="text-lg font-medium text-gray-900 mb-3">Sales Summary</h3>
-                <div v-if="isTableLoading" class="flex justify-center items-center py-4">
-                    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-                    <span class="ml-3">Loading data...</span>
-                </div>
-                <div v-else class="grid grid-cols-2 gap-3 text-sm">
-                    <div class="bg-gray-50 p-3 rounded">
-                        <p class="text-xs text-gray-600">Total Qty</p>
-                        <p class="text-lg font-bold">{{ footerTotals.total_qty.toLocaleString() }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded">
-                        <p class="text-xs text-gray-600">Gross Amount</p>
-                        <p class="text-lg font-bold">₱{{ footerTotals.total_grossamount.toFixed(2) }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded">
-                        <p class="text-xs text-gray-600">Net Amount</p>
-                        <p class="text-lg font-bold">₱{{ footerTotals.total_netamount.toFixed(2) }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded">
-                        <p class="text-xs text-gray-600">Total Cash</p>
-                        <p class="text-lg font-bold">₱{{ footerTotals.cash.toFixed(2) }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Data Display -->
-            <div class="bg-white rounded-lg shadow">
-                <div v-if="isTableLoading" class="flex justify-center items-center py-12">
-                    <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500"></div>
-                    <span class="ml-4 text-lg">Loading sales data...</span>
-                </div>
-                
-                <!-- Mobile View with Long Press -->
+                <!-- Mobile View with Enhanced Cards -->
                 <div v-if="isMobile && !isTableLoading" class="overflow-hidden">
                     <div class="max-h-96 overflow-y-auto">
                         <div v-for="(item, index) in filteredData" :key="`${item.transactionid}-${index}`" 
@@ -155,8 +216,18 @@
                                 <div class="flex justify-between items-start">
                                     <div class="flex-1 min-w-0">
                                         <div class="font-medium text-gray-900 truncate">{{ item?.itemname || '' }}</div>
-                                        <div class="text-sm text-gray-500">{{ item?.storename || '' }}</div>
-                                        <div class="text-xs text-blue-600 mt-1">Long press for details</div>
+                                        <div class="text-sm text-gray-500 flex items-center">
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                            </svg>
+                                            {{ item?.storename || '' }}
+                                        </div>
+                                        <div class="text-xs text-blue-600 mt-1 flex items-center">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 1v1a1 1 0 001 1h8a1 1 0 001-1V5M7 10h10"></path>
+                                            </svg>
+                                            Long press for details
+                                        </div>
                                     </div>
                                     <div class="text-right">
                                         <div class="text-sm text-gray-500">{{ item?.createddate || '' }}</div>
@@ -164,7 +235,19 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Transaction Details -->
+                                <!-- Key Financial Info -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-green-50 p-3 rounded-lg">
+                                        <span class="text-xs text-green-600 font-medium">Net Amount</span>
+                                        <p class="text-lg font-bold text-green-800">₱{{ Number(item?.total_netamount || 0).toFixed(2) }}</p>
+                                    </div>
+                                    <div class="bg-orange-50 p-3 rounded-lg">
+                                        <span class="text-xs text-orange-600 font-medium">Commission</span>
+                                        <p class="text-lg font-bold text-orange-800">₱{{ Number(item?.commission || 0).toFixed(2) }}</p>
+                                    </div>
+                                </div>
+
+                                <!-- Transaction Basic Info -->
                                 <div class="grid grid-cols-2 gap-2 text-sm">
                                     <div>
                                         <span class="text-gray-600">Receipt:</span>
@@ -183,72 +266,45 @@
                                         <span class="font-medium ml-1">{{ item?.custaccount || 'N/A' }}</span>
                                     </div>
                                 </div>
-
-                                <!-- Financial Details -->
-                                <div class="grid grid-cols-2 gap-2 text-sm">
-                                    <div>
-                                        <span class="text-gray-600">Gross:</span>
-                                        <span class="font-medium ml-1">₱{{ Number(item?.total_grossamount || 0).toFixed(2) }}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-600">Discount:</span>
-                                        <span class="font-medium ml-1">₱{{ Number(item?.total_discamount || 0).toFixed(2) }}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-600">Net:</span>
-                                        <span class="font-bold ml-1 text-green-600">₱{{ Number(item?.total_netamount || 0).toFixed(2) }}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-600">VAT:</span>
-                                        <span class="font-medium ml-1">₱{{ Number(item?.vat || 0).toFixed(2) }}</span>
-                                    </div>
-                                </div>
-
-                                <!-- Payment Methods (only show if has value) -->
-                                <div v-if="Number(item?.cash || 0) > 0 || Number(item?.gcash || 0) > 0 || Number(item?.card || 0) > 0" 
-                                     class="grid grid-cols-3 gap-2 text-xs text-gray-600">
-                                    <div v-if="Number(item?.cash || 0) > 0">Cash: ₱{{ Number(item.cash).toFixed(2) }}</div>
-                                    <div v-if="Number(item?.gcash || 0) > 0">GCash: ₱{{ Number(item.gcash).toFixed(2) }}</div>
-                                    <div v-if="Number(item?.card || 0) > 0">Card: ₱{{ Number(item.card).toFixed(2) }}</div>
-                                    <div v-if="Number(item?.paymaya || 0) > 0">PayMaya: ₱{{ Number(item.paymaya).toFixed(2) }}</div>
-                                    <div v-if="Number(item?.foodpanda || 0) > 0">FoodPanda: ₱{{ Number(item.foodpanda).toFixed(2) }}</div>
-                                    <div v-if="Number(item?.grabfood || 0) > 0">GrabFood: ₱{{ Number(item.grabfood).toFixed(2) }}</div>
-                                </div>
-
-                                <!-- Additional Info -->
-                                <div v-if="item?.itemgroup || item?.discofferid" class="text-xs text-gray-500">
-                                    <span v-if="item.itemgroup">Group: {{ item.itemgroup }}</span>
-                                    <span v-if="item.itemgroup && item.discofferid"> • </span>
-                                    <span v-if="item.discofferid">Promo: {{ item.discofferid }}</span>
-                                </div>
                             </div>
                         </div>
                         
-                        <div v-if="filteredData.length === 0" class="text-center py-8 text-gray-500">
-                            No sales data available for the selected filters.
+                        <div v-if="filteredData.length === 0" class="text-center py-12 text-gray-500">
+                            <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <p>No sales data available for the selected filters.</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Desktop DataTable -->
-                <TableContainer v-if="!isMobile" class="max-h-[80vh] overflow-x-auto overflow-y-auto">
-                    <DataTable 
-                        v-if="filteredData.length > 0"
-                        :data="filteredData" 
-                        :columns="columns" 
-                        class="w-full relative display compact-table" 
-                        :options="options"
-                    />
+                <!-- Enhanced Desktop DataTable -->
+                <div v-if="!isMobile && !isTableLoading" class="overflow-hidden">
+                    <TableContainer class="max-h-[75vh] overflow-x-auto overflow-y-auto">
+                        <DataTable 
+                            v-if="filteredData.length > 0"
+                            :data="filteredData" 
+                            :columns="columns" 
+                            class="w-full relative display enhanced-table" 
+                            :options="options"
+                        />
 
-                    <!-- Fallback message when no data is available -->
-                    <p v-else class="text-center py-8 text-gray-500">No data available for the selected filters.</p>
-                </TableContainer>
+                        <!-- Fallback message when no data is available -->
+                        <div v-else class="text-center py-12 text-gray-500">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <p class="text-lg font-medium">No data available</p>
+                            <p class="text-sm text-gray-400 mt-1">Try adjusting your filters or date range</p>
+                        </div>
+                    </TableContainer>
+                </div>
             </div>
 
             <!-- Mobile Floating Action Button and Menu -->
             <div v-if="isMobile" class="fixed bottom-6 right-6 z-40">
                 <!-- Floating Menu Options -->
-                <div v-if="showFloatingMenu" class="absolute bottom-16 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-56 transform transition-all duration-200 ease-out">
+                <div v-if="showFloatingMenu" class="absolute bottom-16 right-0 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-56 transform transition-all duration-200 ease-out">
                     
                     <!-- Export Options -->
                     <div class="px-4 py-2 border-b border-gray-200">
@@ -323,16 +379,16 @@
             <!-- Overlay to close floating menu -->
             <div v-if="showFloatingMenu" @click="closeFloatingMenu" class="fixed inset-0 bg-black bg-opacity-25 z-30"></div>
 
-            <!-- Mobile Item Detail Modal -->
+            <!-- Enhanced Mobile Item Detail Modal -->
             <div v-if="showItemDetail && selectedItem" 
                  class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
                  @click="closeItemDetail">
-                <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto" @click.stop>
-                    <div class="p-4">
+                <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl" @click.stop>
+                    <div class="p-6">
                         <!-- Header -->
-                        <div class="flex justify-between items-start mb-4">
-                            <h3 class="text-lg font-semibold text-gray-900">Item Details</h3>
-                            <button @click="closeItemDetail" class="text-gray-500 hover:text-gray-700">
+                        <div class="flex justify-between items-start mb-6">
+                            <h3 class="text-xl font-bold text-gray-900">Transaction Details</h3>
+                            <button @click="closeItemDetail" class="text-gray-500 hover:text-gray-700 p-1">
                                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
@@ -340,78 +396,205 @@
                         </div>
 
                         <!-- Item Information -->
-                        <div class="space-y-4">
+                        <div class="space-y-6">
                             <!-- Basic Info -->
-                            <div class="border-b pb-4">
-                                <h4 class="font-medium text-gray-900 mb-2">{{ selectedItem.itemname }}</h4>
-                                <div class="grid grid-cols-2 gap-2 text-sm">
-                                    <div><span class="font-medium">Store:</span> {{ selectedItem.storename }}</div>
-                                    <div><span class="font-medium">Staff:</span> {{ selectedItem.staff }}</div>
-                                    <div><span class="font-medium">Date:</span> {{ selectedItem.createddate }}</div>
-                                    <div><span class="font-medium">Time:</span> {{ selectedItem.timeonly }}</div>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Basic Information
+                                </h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Item:</span>
+                                        <span class="text-gray-900">{{ selectedItem.itemname }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Store:</span>
+                                        <span class="text-gray-900">{{ selectedItem.storename }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Staff:</span>
+                                        <span class="text-gray-900">{{ selectedItem.staff }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Date & Time:</span>
+                                        <span class="text-gray-900">{{ selectedItem.createddate }} {{ selectedItem.timeonly }}</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Transaction Details -->
-                            <div class="border-b pb-4">
-                                <h4 class="font-medium text-gray-900 mb-2">Transaction</h4>
-                                <div class="grid grid-cols-1 gap-2 text-sm">
-                                    <div><span class="font-medium">Transaction ID:</span> {{ selectedItem.transactionid }}</div>
-                                    <div><span class="font-medium">Receipt ID:</span> {{ selectedItem.receiptid }}</div>
-                                    <div><span class="font-medium">Customer:</span> {{ selectedItem.custaccount || 'Walk-in Customer' }}</div>
-                                    <div><span class="font-medium">Item Group:</span> {{ selectedItem.itemgroup }}</div>
-                                    <div><span class="font-medium">Promo:</span> {{ selectedItem.discofferid || 'None' }}</div>
-                                    <div><span class="font-medium">Quantity:</span> {{ Math.round(selectedItem.qty || 0) }}</div>
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    Transaction Details
+                                </h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Transaction ID:</span>
+                                        <span class="text-gray-900">{{ selectedItem.transactionid }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Receipt ID:</span>
+                                        <span class="text-gray-900">{{ selectedItem.receiptid }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Customer:</span>
+                                        <span class="text-gray-900">{{ selectedItem.custaccount || 'Walk-in Customer' }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Item Group:</span>
+                                        <span class="text-gray-900">{{ selectedItem.itemgroup }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Promo:</span>
+                                        <span class="text-gray-900">{{ selectedItem.discofferid || 'None' }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Quantity:</span>
+                                        <span class="text-gray-900">{{ Math.round(selectedItem.qty || 0) }}</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Financial Details -->
-                            <div class="border-b pb-4">
-                                <h4 class="font-medium text-gray-900 mb-2">Financial</h4>
-                                <div class="grid grid-cols-1 gap-2 text-sm">
-                                    <div><span class="font-medium">Cost Price:</span> ₱{{ Number(selectedItem.total_costprice || 0).toFixed(2) }}</div>
-                                    <div><span class="font-medium">Gross Amount:</span> ₱{{ Number(selectedItem.total_grossamount || 0).toFixed(2) }}</div>
-                                    <div><span class="font-medium">Cost Amount:</span> ₱{{ Number(selectedItem.total_costamount || 0).toFixed(2) }}</div>
-                                    <div><span class="font-medium">Discount Amount:</span> ₱{{ Number(selectedItem.total_discamount || 0).toFixed(2) }}</div>
-                                    <div class="text-lg"><span class="font-medium">Net Amount:</span> <span class="font-bold text-green-600">₱{{ Number(selectedItem.total_netamount || 0).toFixed(2) }}</span></div>
-                                    <div><span class="font-medium">Vatable Sales:</span> ₱{{ Number(selectedItem.vatablesales || 0).toFixed(2) }}</div>
-                                    <div><span class="font-medium">VAT:</span> ₱{{ Number(selectedItem.vat || 0).toFixed(2) }}</div>
+                            <div class="bg-green-50 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                    </svg>
+                                    Financial Details
+                                </h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Cost Price:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.total_costprice || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Gross Amount:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.total_grossamount || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Cost Amount:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.total_costamount || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Discount Amount:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.total_discamount || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="flex justify-between border-t border-green-200 pt-2">
+                                        <span class="font-bold text-gray-700">Net Amount:</span>
+                                        <span class="font-bold text-green-700">₱{{ Number(selectedItem.total_netamount || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="flex justify-between border-t border-green-200 pt-2">
+                                        <span class="font-bold text-gray-700">Commission:</span>
+                                        <span class="font-bold text-orange-600">₱{{ Number(selectedItem.commission || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Vatable Sales:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.vatablesales || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium text-gray-600">VAT:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.vat || 0).toFixed(2) }}</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Payment Methods -->
-                            <div class="border-b pb-4">
-                                <h4 class="font-medium text-gray-900 mb-2">Payment Methods</h4>
+                            <div class="bg-purple-50 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                                    </svg>
+                                    Payment Methods
+                                </h4>
                                 <div class="grid grid-cols-2 gap-2 text-sm">
-                                    <div v-if="Number(selectedItem.cash || 0) > 0"><span class="font-medium">Cash:</span> ₱{{ Number(selectedItem.cash).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.charge || 0) > 0"><span class="font-medium">Charge:</span> ₱{{ Number(selectedItem.charge).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.representation || 0) > 0"><span class="font-medium">Representation:</span> ₱{{ Number(selectedItem.representation).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.gcash || 0) > 0"><span class="font-medium">GCash:</span> ₱{{ Number(selectedItem.gcash).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.paymaya || 0) > 0"><span class="font-medium">PayMaya:</span> ₱{{ Number(selectedItem.paymaya).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.card || 0) > 0"><span class="font-medium">Card:</span> ₱{{ Number(selectedItem.card).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.loyaltycard || 0) > 0"><span class="font-medium">Loyalty Card:</span> ₱{{ Number(selectedItem.loyaltycard).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.foodpanda || 0) > 0"><span class="font-medium">FoodPanda:</span> ₱{{ Number(selectedItem.foodpanda).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.grabfood || 0) > 0"><span class="font-medium">GrabFood:</span> ₱{{ Number(selectedItem.grabfood).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.mrktgdisc || 0) > 0"><span class="font-medium">Marketing Disc:</span> ₱{{ Number(selectedItem.mrktgdisc).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.rddisc || 0) > 0"><span class="font-medium">RD Disc:</span> ₱{{ Number(selectedItem.rddisc).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.cash || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Cash:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.cash).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.charge || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Charge:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.charge).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.representation || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Representation:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.representation).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.gcash || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">GCash:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.gcash).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.paymaya || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">PayMaya:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.paymaya).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.card || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Card:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.card).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.loyaltycard || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Loyalty Card:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.loyaltycard).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.foodpanda || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">FoodPanda:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.foodpanda).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.grabfood || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">GrabFood:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.grabfood).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.mrktgdisc || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Marketing Disc:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.mrktgdisc).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.rddisc || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">RD Disc:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.rddisc).toFixed(2) }}</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Product Categories -->
-                            <div class="pb-4">
-                                <h4 class="font-medium text-gray-900 mb-2">Product Categories</h4>
-                                <div class="grid grid-cols-1 gap-2 text-sm">
-                                    <div v-if="Number(selectedItem.bw_products || 0) > 0"><span class="font-medium">BW Products:</span> ₱{{ Number(selectedItem.bw_products).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.merchandise || 0) > 0"><span class="font-medium">Merchandise:</span> ₱{{ Number(selectedItem.merchandise).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.partycakes || 0) > 0"><span class="font-medium">Party Cakes:</span> ₱{{ Number(selectedItem.partycakes).toFixed(2) }}</div>
-                                    <div v-if="Number(selectedItem.commission || 0) > 0"><span class="font-medium">Commission:</span> ₱{{ Number(selectedItem.commission).toFixed(2) }}</div>
+                            <div v-if="Number(selectedItem.bw_products || 0) > 0 || Number(selectedItem.merchandise || 0) > 0 || Number(selectedItem.partycakes || 0) > 0" 
+                                 class="bg-yellow-50 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                    </svg>
+                                    Product Categories
+                                </h4>
+                                <div class="space-y-2 text-sm">
+                                    <div v-if="Number(selectedItem.bw_products || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">BW Products:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.bw_products).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.merchandise || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Merchandise:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.merchandise).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="Number(selectedItem.partycakes || 0) > 0" class="flex justify-between">
+                                        <span class="font-medium text-gray-600">Party Cakes:</span>
+                                        <span class="text-gray-900">₱{{ Number(selectedItem.partycakes).toFixed(2) }}</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Notes -->
-                            <div v-if="selectedItem.remarks" class="pb-4">
-                                <h4 class="font-medium text-gray-900 mb-2">Notes</h4>
-                                <p class="text-sm text-gray-600">{{ selectedItem.remarks }}</p>
+                            <div v-if="selectedItem.remarks" class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-900 mb-2 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                    Notes
+                                </h4>
+                                <p class="text-sm text-gray-600 bg-white p-3 rounded border">{{ selectedItem.remarks }}</p>
                             </div>
                         </div>
                     </div>
@@ -462,7 +645,6 @@ const storeSearchInput = ref(null);
 
 // Handle store search input
 const handleStoreSearch = () => {
-    // Force reactivity update
     storeSearchQuery.value = storeSearchQuery.value;
 };
 
@@ -475,7 +657,6 @@ watch(showStoreDropdown, (newVal) => {
             }
         });
     } else {
-        // Clear search when dropdown closes
         storeSearchQuery.value = '';
     }
 });
@@ -512,11 +693,10 @@ const layoutComponent = computed(() => {
     return props.userRole.toUpperCase() === 'STORE' ? StorePanel : Main;
 });
 
-// Mobile long press handlers with better visual feedback
+// Mobile long press handlers
 const handleTouchStart = (item, event) => {
     event.preventDefault();
     
-    // Add visual feedback class
     const element = event.currentTarget;
     element.classList.add('touching', 'long-press-indicator', 'pressing');
     
@@ -524,14 +704,12 @@ const handleTouchStart = (item, event) => {
         selectedItem.value = item;
         showItemDetail.value = true;
         
-        // Remove visual feedback
         element.classList.remove('touching', 'pressing');
         
-        // Add haptic feedback if available
         if (navigator.vibrate) {
-            navigator.vibrate([50, 30, 50]); // More sophisticated vibration pattern
+            navigator.vibrate([50, 30, 50]);
         }
-    }, 500); // 500ms long press
+    }, 500);
 };
 
 const handleTouchEnd = (event) => {
@@ -540,7 +718,6 @@ const handleTouchEnd = (event) => {
         longPressTimer.value = null;
     }
     
-    // Remove visual feedback classes
     if (event && event.currentTarget) {
         const element = event.currentTarget;
         element.classList.remove('touching', 'long-press-indicator', 'pressing');
@@ -552,25 +729,20 @@ const closeItemDetail = () => {
     selectedItem.value = null;
 };
 
-// Filtered stores based on search - handle both string and object formats
+// Filtered stores based on search
 const filteredStores = computed(() => {
     let stores = [];
     
-    // Handle different store data formats
     if (Array.isArray(props.stores)) {
         stores = props.stores.map(store => {
-            // Handle if store is already a string
             if (typeof store === 'string') {
                 return store;
             }
             
-            // Handle if store is an object with name property
             if (typeof store === 'object' && store !== null) {
-                // Handle specific format like {"STOREID": "BW0011", "NAME": "ANCHETA"}
                 if (store.NAME) {
                     return store.NAME;
                 }
-                // Handle other common name properties
                 if (store.name) {
                     return store.name;
                 }
@@ -581,26 +753,21 @@ const filteredStores = computed(() => {
                     return store.store_name;
                 }
                 
-                // Try to extract NAME from string representation
                 const storeStr = JSON.stringify(store);
                 const nameMatch = storeStr.match(/"NAME"\s*:\s*"([^"]+)"/);
                 if (nameMatch) {
                     return nameMatch[1];
                 }
                 
-                // Last resort - clean up the object string
                 return storeStr.replace(/[{}":]/g, '').replace(/STOREID[^,]*,?\s*/g, '').replace(/NAME/g, '').trim() || 'Unknown Store';
             }
             
-            // Fallback - convert to string
             return String(store);
         });
     }
     
-    // Remove duplicates and sort
     stores = [...new Set(stores)].sort();
     
-    // Filter based on search query
     if (!storeSearchQuery.value || storeSearchQuery.value.trim() === '') {
         return stores;
     }
@@ -631,19 +798,15 @@ const clearStoreSelection = () => {
 };
 
 const selectAllStores = () => {
-    // Handle both string and object formats
     const allStores = props.stores.map(store => {
-        // Handle if store is already a string
         if (typeof store === 'string') {
             return store;
         }
         
         if (typeof store === 'object' && store !== null) {
-            // Handle specific format like {"STOREID": "BW0011", "NAME": "ANCHETA"}
             if (store.NAME) {
                 return store.NAME;
             }
-            // Handle other common name properties
             if (store.name) {
                 return store.name;
             }
@@ -654,20 +817,17 @@ const selectAllStores = () => {
                 return store.store_name;
             }
             
-            // Try to extract NAME from string representation
             const storeStr = JSON.stringify(store);
             const nameMatch = storeStr.match(/"NAME"\s*:\s*"([^"]+)"/);
             if (nameMatch) {
                 return nameMatch[1];
             }
             
-            // Last resort - clean up the object string
             return storeStr.replace(/[{}":]/g, '').replace(/STOREID[^,]*,?\s*/g, '').replace(/NAME/g, '').trim() || 'Unknown Store';
         }
         return String(store);
     });
     
-    // Remove duplicates
     selectedStores.value = [...new Set(allStores)];
     showStoreDropdown.value = false;
 };
@@ -699,11 +859,6 @@ onMounted(() => {
     startDate.value = props.filters.startDate || '';
     endDate.value = props.filters.endDate || '';
     
-    // Debug: Log the stores data format
-    console.log('Stores data:', props.stores);
-    console.log('First store item:', props.stores[0]);
-    
-    // Setup event listeners
     window.addEventListener('resize', checkScreenSize);
     document.addEventListener('click', handleClickOutside);
     checkScreenSize();
@@ -751,7 +906,6 @@ const filteredData = computed(() => {
 
 const footerTotals = computed(() => {
     return filteredData.value.reduce((acc, row) => {
-        // Existing totals
         acc.total_discamount += (parseFloat(row.total_discamount) || 0);
         acc.total_costprice += (parseFloat(row.total_costprice) || 0);
         acc.total_netamount += (parseFloat(row.total_netamount) || 0);
@@ -760,6 +914,7 @@ const footerTotals = computed(() => {
         acc.total_grossamount += (parseFloat(row.total_grossamount) || 0);
         acc.total_costamount += (parseFloat(row.total_costamount) || 0);
         acc.total_qty += Math.round(row.qty || 0);
+        acc.commission += (parseFloat(row.commission) || 0);
 
         // Payment method totals
         acc.cash += (parseFloat(row.cash) || 0);
@@ -777,11 +932,9 @@ const footerTotals = computed(() => {
         acc.bw_products += (parseFloat(row.bw_products) || 0);
         acc.merchandise += (parseFloat(row.merchandise) || 0);
         acc.partycakes += (parseFloat(row.partycakes) || 0);
-        acc.commission += (parseFloat(row.commission) || 0);
 
         return acc;
     }, {
-        // Initialize all totals
         total_qty: 0,
         total_discamount: 0,
         total_costprice: 0,
@@ -790,6 +943,7 @@ const footerTotals = computed(() => {
         vat: 0,
         total_grossamount: 0,
         total_costamount: 0,
+        commission: 0,
         
         // Payment method totals
         cash: 0,
@@ -806,8 +960,7 @@ const footerTotals = computed(() => {
 
         bw_products: 0,
         merchandise: 0,
-        partycakes: 0,
-        commission: 0
+        partycakes: 0
     });
 });
 
@@ -816,7 +969,7 @@ const columns = [
         data: 'storename', 
         title: 'Store', 
         footer: 'Grand Total',
-        className: 'min-w-[100px] max-w-[120px]'
+        className: 'min-w-[100px] max-w-[120px] font-medium'
     },
     { 
         data: 'staff', 
@@ -828,25 +981,25 @@ const columns = [
         data: 'createddate', 
         title: 'Date', 
         footer: '',
-        className: 'min-w-[85px] max-w-[100px]'
+        className: 'min-w-[85px] max-w-[100px] text-center'
     },
     { 
         data: 'timeonly', 
         title: 'Time', 
         footer: '',
-        className: 'min-w-[70px] max-w-[80px]'
+        className: 'min-w-[70px] max-w-[80px] text-center'
     },
     { 
         data: 'transactionid', 
         title: 'Transaction ID', 
         footer: '',
-        className: 'min-w-[120px] max-w-[140px]'
+        className: 'min-w-[120px] max-w-[140px] font-mono text-sm'
     },
     { 
         data: 'receiptid', 
         title: 'Receipt ID', 
         footer: '',
-        className: 'min-w-[100px] max-w-[120px]'
+        className: 'min-w-[100px] max-w-[120px] font-mono text-sm'
     },
     { 
         data: 'custaccount', 
@@ -858,7 +1011,7 @@ const columns = [
         data: 'itemname', 
         title: 'Item Name', 
         footer: '',
-        className: 'min-w-[150px] max-w-[200px]'
+        className: 'min-w-[150px] max-w-[200px] font-medium'
     },
     { 
         data: 'itemgroup', 
@@ -870,7 +1023,7 @@ const columns = [
         data: 'discofferid', 
         title: 'PROMO', 
         footer: '',
-        className: 'min-w-[100px] max-w-[120px]'
+        className: 'min-w-[100px] max-w-[120px] text-sm'
     },
     
     // Columns with footer calculations
@@ -879,7 +1032,7 @@ const columns = [
         title: 'Qty',
         render: (data) => Math.round(data || 0),
         footer: '',
-        className: 'text-right min-w-[60px] max-w-[80px]'
+        className: 'text-right min-w-[60px] max-w-[80px] font-semibold'
     },
     { 
         data: 'total_costprice', 
@@ -893,7 +1046,7 @@ const columns = [
         title: 'Gross Amount',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
         footer: '',
-        className: 'text-right min-w-[100px] max-w-[120px]'
+        className: 'text-right min-w-[100px] max-w-[120px] font-semibold'
     },
     { 
         data: 'total_costamount', 
@@ -907,14 +1060,21 @@ const columns = [
         title: 'Discount Amount',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
         footer: '',
-        className: 'text-right min-w-[110px] max-w-[130px]'
+        className: 'text-right min-w-[110px] max-w-[130px] text-red-600'
     },
     { 
         data: 'total_netamount', 
         title: 'Net Amount',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
         footer: '',
-        className: 'text-right min-w-[100px] max-w-[120px]'
+        className: 'text-right min-w-[100px] max-w-[120px] font-bold text-green-600'
+    },
+    { 
+        data: 'commission', 
+        title: 'Commission',
+        render: (data) => (parseFloat(data) || 0).toFixed(2),
+        footer: '',
+        className: 'text-right min-w-[100px] max-w-[120px] font-bold text-orange-600'
     },
     { 
         data: 'vatablesales', 
@@ -1000,14 +1160,14 @@ const columns = [
         title: 'Mktg Disc',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
         footer: '',
-        className: 'text-right min-w-[80px] max-w-[100px]'
+        className: 'text-right min-w-[80px] max-w-[100px] text-purple-600'
     },
     { 
         data: 'rddisc', 
         title: 'RD Disc',
         render: (data) => (parseFloat(data) || 0).toFixed(2),
         footer: '',
-        className: 'text-right min-w-[80px] max-w-[100px]'
+        className: 'text-right min-w-[80px] max-w-[100px] text-blue-600'
     },
     { 
         data: 'bw_products', 
@@ -1031,17 +1191,10 @@ const columns = [
         className: 'text-right min-w-[100px] max-w-[120px]'
     },
     { 
-        data: 'commission', 
-        title: 'Commission',
-        render: (data) => (parseFloat(data) || 0).toFixed(2),
-        footer: '',
-        className: 'text-right min-w-[90px] max-w-[110px]'
-    },
-    { 
         data: 'remarks', 
         title: 'NOTE', 
         footer: '',
-        className: 'min-w-[120px] max-w-[150px]'
+        className: 'min-w-[120px] max-w-[150px] text-sm'
     }
 ];
 
@@ -1065,15 +1218,28 @@ const options = {
         { targets: [3], className: 'text-center' }
     ],
     buttons: [
-        'copy',
         {
-            text: 'Export Excel',
+            text: '<i class="fas fa-copy"></i> Copy',
+            extend: 'copy',
+            className: 'btn-export btn-copy'
+        },
+        {
+            text: '<i class="fas fa-file-excel"></i> Excel',
             action: function(e, dt, node, config) {
                 exportToExcel(dt);
-            }
+            },
+            className: 'btn-export btn-excel'
         },
-        'pdf',
-        'print'
+        {
+            text: '<i class="fas fa-file-pdf"></i> PDF',
+            extend: 'pdf',
+            className: 'btn-export btn-pdf'
+        },
+        {
+            text: '<i class="fas fa-print"></i> Print',
+            extend: 'print',
+            className: 'btn-export btn-print'
+        }
     ],
     drawCallback: function(settings) {
         const api = new DataTablesCore.Api(settings);
@@ -1087,6 +1253,7 @@ const options = {
             total_costamount: 0,
             total_discamount: 0,
             total_netamount: 0,
+            commission: 0,
             vatablesales: 0,
             vat: 0,
             cash: 0,
@@ -1102,20 +1269,19 @@ const options = {
             rddisc: 0,
             bw_products: 0,
             merchandise: 0,
-            partycakes: 0,
-            commission: 0
+            partycakes: 0
         };
 
         // Calculate totals only for filtered/searched rows
         api.rows({ search: 'applied' }).every(function(rowIdx) {
             const data = this.data();
-            // Update numerical totals - fix qty calculation
             filteredTotals.total_qty += Math.round(Number(data.qty) || 0);
             filteredTotals.total_costprice += Number(data.total_costprice) || 0;
             filteredTotals.total_grossamount += Number(data.total_grossamount) || 0;
             filteredTotals.total_costamount += Number(data.total_costamount) || 0;
             filteredTotals.total_discamount += Number(data.total_discamount) || 0;
             filteredTotals.total_netamount += Number(data.total_netamount) || 0;
+            filteredTotals.commission += Number(data.commission) || 0;
             filteredTotals.vatablesales += Number(data.vatablesales) || 0;
             filteredTotals.vat += Number(data.vat) || 0;
             filteredTotals.cash += Number(data.cash) || 0;
@@ -1132,7 +1298,6 @@ const options = {
             filteredTotals.bw_products += Number(data.bw_products) || 0;
             filteredTotals.merchandise += Number(data.merchandise) || 0;
             filteredTotals.partycakes += Number(data.partycakes) || 0;
-            filteredTotals.commission += Number(data.commission) || 0;
         });
 
         // Update footer with new totals
@@ -1148,23 +1313,23 @@ const options = {
                 { index: 13, key: 'total_costamount' },
                 { index: 14, key: 'total_discamount' },
                 { index: 15, key: 'total_netamount' },
-                { index: 16, key: 'vatablesales' },
-                { index: 17, key: 'vat' },
-                { index: 18, key: 'cash' },
-                { index: 19, key: 'charge' },
-                { index: 20, key: 'representation' },
-                { index: 21, key: 'gcash' },
-                { index: 22, key: 'paymaya' },
-                { index: 23, key: 'card' },
-                { index: 24, key: 'loyaltycard' },
-                { index: 25, key: 'foodpanda' },
-                { index: 26, key: 'grabfood' },
-                { index: 27, key: 'mrktgdisc' },
-                { index: 28, key: 'rddisc' },
-                { index: 29, key: 'bw_products' },
-                { index: 30, key: 'merchandise' },
-                { index: 31, key: 'partycakes' },
-                { index: 32, key: 'commission' }
+                { index: 16, key: 'commission' },
+                { index: 17, key: 'vatablesales' },
+                { index: 18, key: 'vat' },
+                { index: 19, key: 'cash' },
+                { index: 20, key: 'charge' },
+                { index: 21, key: 'representation' },
+                { index: 22, key: 'gcash' },
+                { index: 23, key: 'paymaya' },
+                { index: 24, key: 'card' },
+                { index: 25, key: 'loyaltycard' },
+                { index: 26, key: 'foodpanda' },
+                { index: 27, key: 'grabfood' },
+                { index: 28, key: 'mrktgdisc' },
+                { index: 29, key: 'rddisc' },
+                { index: 30, key: 'bw_products' },
+                { index: 31, key: 'merchandise' },
+                { index: 32, key: 'partycakes' }
             ];
 
             // Update footer cells with filtered totals
@@ -1193,7 +1358,7 @@ const exportToCsv = () => {
 
 const exportToExcel = (dt) => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Sales Data');
+    const worksheet = workbook.addWorksheet('Transaction Sales Data');
     
     // Define columns with proper width and number formats
     const excelColumns = [
@@ -1213,6 +1378,7 @@ const exportToExcel = (dt) => {
         { header: 'COST AMOUNT', key: 'total_costamount', width: 15, style: { numFmt: '#,##0.00' } },
         { header: 'DISCOUNT AMOUNT', key: 'total_discamount', width: 12, style: { numFmt: '#,##0.00' } },
         { header: 'NET AMOUNT', key: 'total_netamount', width: 15, style: { numFmt: '#,##0.00' } },
+        { header: 'COMMISSION', key: 'commission', width: 12, style: { numFmt: '#,##0.00' } },
         { header: 'VATABLE SALES', key: 'vatablesales', width: 15, style: { numFmt: '#,##0.00' } },
         { header: 'VAT', key: 'vat', width: 12, style: { numFmt: '#,##0.00' } },
         { header: 'CASH', key: 'cash', width: 12, style: { numFmt: '#,##0.00' } },
@@ -1229,7 +1395,6 @@ const exportToExcel = (dt) => {
         { header: 'BW PRODUCTS', key: 'bw_products', width: 15, style: { numFmt: '#,##0.00' } },
         { header: 'MERCHANDISE', key: 'merchandise', width: 15, style: { numFmt: '#,##0.00' } },
         { header: 'PARTY CAKES', key: 'partycakes', width: 15, style: { numFmt: '#,##0.00' } },
-        { header: 'COMMISSION', key: 'commission', width: 12, style: { numFmt: '#,##0.00' } },
         { header: 'NOTE', key: 'remarks', width: 20 }
     ];
 
@@ -1237,13 +1402,12 @@ const exportToExcel = (dt) => {
 
     // Style the header row
     const headerRow = worksheet.getRow(1);
-    headerRow.font = { bold: true };
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF333F4F' }
+        fgColor: { argb: 'FF4F46E5' }
     };
-    headerRow.font = { color: { argb: 'FFFFFFFF' }, bold: true };
 
     // Get filtered data from DataTable or use filteredData
     let dataToExport = filteredData.value;
@@ -1270,6 +1434,7 @@ const exportToExcel = (dt) => {
             total_costamount: Number(row.total_costamount) || 0,
             total_discamount: Number(row.total_discamount) || 0,
             total_netamount: Number(row.total_netamount) || 0,
+            commission: Number(row.commission) || 0,
             vatablesales: Number(row.vatablesales) || 0,
             vat: Number(row.vat) || 0,
             cash: Number(row.cash) || 0,
@@ -1286,7 +1451,6 @@ const exportToExcel = (dt) => {
             bw_products: Number(row.bw_products) || 0,
             merchandise: Number(row.merchandise) || 0,
             partycakes: Number(row.partycakes) || 0,
-            commission: Number(row.commission) || 0,
             remarks: row.remarks || ''
         });
     });
@@ -1299,6 +1463,7 @@ const exportToExcel = (dt) => {
         total_costamount: acc.total_costamount + Number(row.total_costamount || 0),
         total_discamount: acc.total_discamount + Number(row.total_discamount || 0),
         total_netamount: acc.total_netamount + Number(row.total_netamount || 0),
+        commission: acc.commission + Number(row.commission || 0),
         vatablesales: acc.vatablesales + Number(row.vatablesales || 0),
         vat: acc.vat + Number(row.vat || 0),
         cash: acc.cash + Number(row.cash || 0),
@@ -1314,8 +1479,7 @@ const exportToExcel = (dt) => {
         rddisc: acc.rddisc + Number(row.rddisc || 0),
         bw_products: acc.bw_products + Number(row.bw_products || 0),
         merchandise: acc.merchandise + Number(row.merchandise || 0),
-        partycakes: acc.partycakes + Number(row.partycakes || 0),
-        commission: acc.commission + Number(row.commission || 0)
+        partycakes: acc.partycakes + Number(row.partycakes || 0)
     }), {
         total_qty: 0,
         total_costprice: 0,
@@ -1323,6 +1487,7 @@ const exportToExcel = (dt) => {
         total_costamount: 0,
         total_discamount: 0,
         total_netamount: 0,
+        commission: 0,
         vatablesales: 0,
         vat: 0,
         cash: 0,
@@ -1338,8 +1503,7 @@ const exportToExcel = (dt) => {
         rddisc: 0,
         bw_products: 0,
         merchandise: 0,
-        partycakes: 0,
-        commission: 0
+        partycakes: 0
     });
 
     // Add totals row
@@ -1360,6 +1524,7 @@ const exportToExcel = (dt) => {
         total_costamount: filteredTotals.total_costamount,
         total_discamount: filteredTotals.total_discamount,
         total_netamount: filteredTotals.total_netamount,
+        commission: filteredTotals.commission,
         vatablesales: filteredTotals.vatablesales,
         vat: filteredTotals.vat,
         cash: filteredTotals.cash,
@@ -1376,7 +1541,6 @@ const exportToExcel = (dt) => {
         bw_products: filteredTotals.bw_products,
         merchandise: filteredTotals.merchandise,
         partycakes: filteredTotals.partycakes,
-        commission: filteredTotals.commission,
         remarks: ''
     });
 
@@ -1385,7 +1549,7 @@ const exportToExcel = (dt) => {
     totalsRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFE9ECEF' }
+        fgColor: { argb: 'FFE5E7EB' }
     };
 
     // Format date cells
@@ -1424,7 +1588,7 @@ const exportToExcel = (dt) => {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `Sales_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+                link.download = `Transaction_Sales_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1476,28 +1640,28 @@ const formatCurrency = (value) => {
 </script>
 
 <style scoped>
-/* Better spacing for desktop table */
-
-
-.compact-table {
+/* Enhanced table styling */
+.enhanced-table {
     font-size: 13px;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
 
-.compact-table :deep(.dataTable) {
+.enhanced-table :deep(.dataTable) {
     width: 100% !important;
     border-collapse: collapse;
     border-spacing: 0;
-    font-family: 'Arial', sans-serif;
-    margin-top: 20px;
+    margin-top: 0;
     table-layout: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-
-.compact-table :deep(.dataTable thead th) {
-    background-color: #1f2937;
+.enhanced-table :deep(.dataTable thead th) {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
     color: #ffffff;
-    padding: 12px 8px;
-    border-bottom: 2px solid #e5e7eb;
+    padding: 16px 12px;
+    border-bottom: 3px solid #0ea5e9;
     font-weight: 600;
     position: sticky;
     top: 0;
@@ -1505,165 +1669,217 @@ const formatCurrency = (value) => {
     font-size: 13px;
     white-space: nowrap;
     text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.compact-table :deep(.dataTable tbody tr) {
-    border-bottom: 1px solid #e5e7eb;
+.enhanced-table :deep(.dataTable tbody tr) {
+    border-bottom: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
 }
 
-.compact-table :deep(.dataTable tbody tr:nth-child(odd)) {
+.enhanced-table :deep(.dataTable tbody tr:nth-child(odd)) {
     background-color: #ffffff;
 }
 
-.compact-table :deep(.dataTable tbody tr:nth-child(even)) {
-    background-color: #f8f9fa;
+.enhanced-table :deep(.dataTable tbody tr:nth-child(even)) {
+    background-color: #f8fafc;
 }
 
-.compact-table :deep(.dataTable tbody tr:hover) {
-    background-color: #e3f2fd;
+.enhanced-table :deep(.dataTable tbody tr:hover) {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    transform: scale(1.01);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
     cursor: pointer;
 }
 
-.compact-table :deep(.dataTable th),
-.compact-table :deep(.dataTable td) {
-    padding: 10px 8px;
+.enhanced-table :deep(.dataTable th),
+.enhanced-table :deep(.dataTable td) {
+    padding: 12px 10px;
     text-align: left;
-    border: 1px solid #dee2e6;
+    border: 1px solid #e2e8f0;
     font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    vertical-align: middle;
 }
 
-/* Right align numeric columns */
-.compact-table :deep(.dataTable .text-right) {
-    text-align: right !important;
+/* Color coding for different types of data */
+.enhanced-table :deep(.dataTable .text-green-600) {
+    color: #059669 !important;
+    font-weight: 600;
 }
 
-.compact-table :deep(.dataTable .text-center) {
-    text-align: center !important;
+.enhanced-table :deep(.dataTable .text-red-600) {
+    color: #dc2626 !important;
+    font-weight: 600;
 }
 
-/* Footer styling - Maroon background */
-.compact-table :deep(.dataTable tfoot) {
-    background-color: #800020 !important; /* Maroon background */
+.enhanced-table :deep(.dataTable .text-orange-600) {
+    color: #ea580c !important;
+    font-weight: 600;
+}
+
+.enhanced-table :deep(.dataTable .text-purple-600) {
+    color: #9333ea !important;
+    font-weight: 600;
+}
+
+.enhanced-table :deep(.dataTable .text-blue-600) {
+    color: #2563eb !important;
+    font-weight: 600;
+}
+
+/* Enhanced footer styling */
+.enhanced-table :deep(.dataTable tfoot) {
+    background: linear-gradient(135deg, #7c2d12 0%, #991b1b 100%);
     color: white !important;
     font-weight: bold;
     text-align: center;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.compact-table :deep(.dataTable tfoot td),
-.compact-table :deep(.dataTable tfoot th) {
-    padding: 12px 8px !important;
-    font-size: 12px !important;
+.enhanced-table :deep(.dataTable tfoot td),
+.enhanced-table :deep(.dataTable tfoot th) {
+    padding: 16px 12px !important;
+    font-size: 13px !important;
     font-weight: bold !important;
-    background-color: #800020 !important;
+    background: linear-gradient(135deg, #7c2d12 0%, #991b1b 100%) !important;
     color: white !important;
-    border: 1px solid #600018 !important;
+    border: 1px solid #92400e !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* DataTable controls styling - Button design */
-.compact-table :deep(.dt-buttons) {
+/* Enhanced button styling */
+.enhanced-table :deep(.dt-buttons) {
     display: flex;
     justify-content: flex-end;
     align-items: center;
     position: absolute;
     z-index: 1000;
-    margin: 15px;
+    margin: 20px;
     right: 0;
     top: 0;
-    gap: 8px;
+    gap: 12px;
 }
 
-.compact-table :deep(.dt-button),
-.compact-table :deep(.buttons-copy),
-.compact-table :deep(.buttons-print),
-.compact-table :deep(.buttons-excel) {
-    padding: 10px 16px !important;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+.enhanced-table :deep(.btn-export) {
+    padding: 12px 20px !important;
     margin: 0 !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
     color: white !important;
-    border: 2px solid #1d4ed8 !important;
+    border: none !important;
     cursor: pointer !important;
     font-size: 13px !important;
     font-weight: 600 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
     transition: all 0.3s ease !important;
-    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3) !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    min-width: 80px !important;
+    min-width: 100px !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
-.compact-table :deep(.dt-button:hover),
-.compact-table :deep(.buttons-copy:hover),
-.compact-table :deep(.buttons-print:hover),
-.compact-table :deep(.buttons-excel:hover) {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+.enhanced-table :deep(.btn-copy) {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
+}
+
+.enhanced-table :deep(.btn-excel) {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+}
+
+.enhanced-table :deep(.btn-pdf) {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+}
+
+.enhanced-table :deep(.btn-print) {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+}
+
+.enhanced-table :deep(.btn-export:hover) {
     transform: translateY(-2px) !important;
-    box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4) !important;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2) !important;
 }
 
-.compact-table :deep(.dt-button:active),
-.compact-table :deep(.buttons-copy:active),
-.compact-table :deep(.buttons-print:active),
-.compact-table :deep(.buttons-excel:active) {
+.enhanced-table :deep(.btn-export:active) {
     transform: translateY(0px) !important;
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
-.compact-table :deep(.dataTables_filter) {
+/* Enhanced search and pagination */
+.enhanced-table :deep(.dataTables_filter) {
     float: right;
-    padding: 15px;
+    padding: 20px;
     position: relative;
     z-index: 999;
-    margin-right: 200px;
+    margin-right: 220px;
 }
 
-.compact-table :deep(.dataTables_filter input) {
-    padding: 8px;
-    border: 1px solid #e5e7eb;
-    border-radius: 5px;
+.enhanced-table :deep(.dataTables_filter input) {
+    padding: 10px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
     margin-left: 8px;
-    font-size: 13px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.compact-table :deep(.dataTables_wrapper .dataTables_paginate) {
-    padding: 15px;
+.enhanced-table :deep(.dataTables_filter input:focus) {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: none;
+}
+
+.enhanced-table :deep(.dataTables_wrapper .dataTables_paginate) {
+    padding: 20px;
     text-align: right;
 }
 
-.compact-table :deep(.dataTables_wrapper .dataTables_paginate .paginate_button) {
-    margin-left: 5px;
-    padding: 5px 10px;
-    border-radius: 4px;
+.enhanced-table :deep(.dataTables_wrapper .dataTables_paginate .paginate_button) {
+    margin-left: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 12px;
-}
-
-.compact-table :deep(.dataTables_wrapper .dataTables_paginate .paginate_button.current) {
-    background-color: #3b82f6;
-    color: white !important;
-}
-
-.compact-table :deep(.dataTables_wrapper .dataTables_info) {
-    padding: 15px;
     font-size: 13px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.enhanced-table :deep(.dataTables_wrapper .dataTables_paginate .paginate_button:hover) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.enhanced-table :deep(.dataTables_wrapper .dataTables_paginate .paginate_button.current) {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white !important;
+    border-color: #2563eb;
+}
+
+.enhanced-table :deep(.dataTables_wrapper .dataTables_info) {
+    padding: 20px;
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
 }
 
 /* Mobile long press visual feedback */
 @media (max-width: 768px) {
     .mobile-item:active,
     .mobile-item.touching {
-        background-color: #e3f2fd !important;
+        background-color: #dbeafe !important;
         transform: scale(0.98);
         transition: all 0.1s ease;
     }
     
-    /* Better mobile card interaction */
     .mobile-sales-item {
         user-select: none;
         -webkit-user-select: none;
@@ -1672,11 +1888,10 @@ const formatCurrency = (value) => {
     }
     
     .mobile-sales-item:active {
-        background-color: #e3f2fd !important;
+        background-color: #dbeafe !important;
         transform: scale(0.98);
     }
     
-    /* Long press indicator */
     .long-press-indicator {
         position: relative;
         overflow: hidden;
@@ -1698,24 +1913,30 @@ const formatCurrency = (value) => {
     }
 }
 
-/* Scrollbar styling for desktop */
-.compact-table :deep(.dataTables_scrollBody::-webkit-scrollbar) {
-    height: 8px;
-    width: 8px;
+/* Enhanced scrollbar styling */
+.enhanced-table :deep(.dataTables_scrollBody::-webkit-scrollbar) {
+    height: 10px;
+    width: 10px;
 }
 
-.compact-table :deep(.dataTables_scrollBody::-webkit-scrollbar-track) {
-    background: #f1f1f1;
-    border-radius: 4px;
+.enhanced-table :deep(.dataTables_scrollBody::-webkit-scrollbar-track) {
+    background: #f1f5f9;
+    border-radius: 5px;
 }
 
-.compact-table :deep(.dataTables_scrollBody::-webkit-scrollbar-thumb) {
-    background: #c1c1c1;
-    border-radius: 4px;
+.enhanced-table :deep(.dataTables_scrollBody::-webkit-scrollbar-thumb) {
+    background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+    border-radius: 5px;
 }
 
-.compact-table :deep(.dataTables_scrollBody::-webkit-scrollbar-thumb:hover) {
-    background: #a8a8a8;
+.enhanced-table :deep(.dataTables_scrollBody::-webkit-scrollbar-thumb:hover) {
+    background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+}
+
+/* Store dropdown styling */
+.store-dropdown-container .relative > div {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
 }
 
 /* Loading spinner */
@@ -1728,37 +1949,26 @@ const formatCurrency = (value) => {
     to { transform: rotate(360deg); }
 }
 
+/* Gradient backgrounds for cards */
+.bg-gradient-to-br {
+    background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+
 /* Smooth transitions */
 .transition-smooth {
-    transition: all 0.2s ease-in-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Currency styling */
-.currency-positive {
-    color: #059669;
-    font-weight: 600;
-}
-
-.currency-negative {
-    color: #dc2626;
-    font-weight: 600;
-}
-
-/* Card hover effects */
+/* Enhanced card hover effects */
 .card-hover:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Store dropdown styling */
-.store-dropdown-container .relative > div {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
 /* Floating menu animation */
 .floating-menu-enter-active,
 .floating-menu-leave-active {
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .floating-menu-enter-from,
