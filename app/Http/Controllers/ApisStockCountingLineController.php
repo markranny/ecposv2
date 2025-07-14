@@ -534,6 +534,7 @@ class ApisStockCountingLineController extends Controller
                 SELECT SUM(WASTECOUNT) 
                 FROM stockcountingtrans 
                 WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
+                  AND WASTETYPE = 'Throw Away'
                   AND STORENAME = ?
                   AND CAST(TRANSDATE AS DATE) = ?
             )
@@ -543,12 +544,122 @@ class ApisStockCountingLineController extends Controller
                 SELECT 1 
                 FROM stockcountingtrans 
                 WHERE stockcountingtrans.itemid = inventory_summaries.itemid
+                  AND WASTETYPE = 'Throw Away'
                   AND STORENAME = ?
                   AND CAST(TRANSDATE AS DATE) = ?
             )
         ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
         
         Log::info("Throw away update completed", ['affected_rows' => $affectedRows]);
+
+
+        // Update early_molds
+        Log::info("Updating early_molds for inventory summaries");
+        $affectedRows = DB::statement("
+            UPDATE inventory_summaries 
+            SET early_molds = (
+                SELECT SUM(WASTECOUNT) 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
+                  AND WASTETYPE = 'Early Molds'
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+              AND EXISTS (
+                SELECT 1 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.itemid = inventory_summaries.itemid
+                  AND WASTETYPE = 'Early Molds'
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+        ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+        
+        Log::info("Early Molds update completed", ['affected_rows' => $affectedRows]);
+
+
+        // Update pull_out
+        Log::info("Updating pull_out for inventory summaries");
+        $affectedRows = DB::statement("
+            UPDATE inventory_summaries 
+            SET pull_out = (
+                SELECT SUM(WASTECOUNT) 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
+                  AND WASTETYPE = 'Pull Out'
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+              AND EXISTS (
+                SELECT 1 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.itemid = inventory_summaries.itemid
+                  AND WASTETYPE = 'Pull Out'
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+        ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+        
+        Log::info("Pull Out update completed", ['affected_rows' => $affectedRows]);
+
+
+        // Update rat_bites
+        Log::info("Updating rat_bites for inventory summaries");
+        $affectedRows = DB::statement("
+            UPDATE inventory_summaries 
+            SET rat_bites = (
+                SELECT SUM(WASTECOUNT) 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
+                  AND WASTETYPE = 'Rat Bites'
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+              AND EXISTS (
+                SELECT 1 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.itemid = inventory_summaries.itemid
+                  AND WASTETYPE = 'Rat Bites'
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+        ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+        
+        Log::info("Rat Bites update completed", ['affected_rows' => $affectedRows]);
+
+
+        // Update ant_bites
+        Log::info("Updating rat_bites for inventory summaries");
+        $affectedRows = DB::statement("
+            UPDATE inventory_summaries 
+            SET ant_bites = (
+                SELECT SUM(WASTECOUNT) 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.ITEMID = inventory_summaries.itemid
+                  AND WASTETYPE = 'Ant Bites'
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+            WHERE CAST(report_date AS DATE) = ?
+              AND storename = ?
+              AND EXISTS (
+                SELECT 1 
+                FROM stockcountingtrans 
+                WHERE stockcountingtrans.itemid = inventory_summaries.itemid
+                  AND WASTETYPE = 'Ant Bites'
+                  AND STORENAME = ?
+                  AND CAST(TRANSDATE AS DATE) = ?
+            )
+        ", [$storename, $currentDateTime, $currentDateTime, $storename, $storename, $currentDateTime]);
+        
+        Log::info("Ant Bites update completed", ['affected_rows' => $affectedRows]);
+
 
         // Update received_delivery
         Log::info("Updating received_delivery for inventory summaries");

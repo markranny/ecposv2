@@ -818,22 +818,22 @@ public function tsales(Request $request)
     $role = Auth::user()->role;
     $userStoreId = Auth::user()->storeid;
 
-    DB::statement("
-        DELETE t1
-        FROM rbotransactionsalestrans t1
-        JOIN rbotransactionsalestrans t2
-        ON t1.transactionid = t2.transactionid
-        AND t1.linenum = t2.linenum
-        AND t1.id > t2.id
-    ");
+      DB::statement("
+         DELETE t1
+         FROM rbotransactionsalestrans t1
+         JOIN rbotransactionsalestrans t2
+         ON t1.transactionid = t2.transactionid
+         AND t1.linenum = t2.linenum
+         AND t1.id > t2.id
+     ");
 
-    DB::statement("
-        DELETE t1
-        FROM rbotransactiontables t1
-        JOIN rbotransactiontables t2
-        ON t1.transactionid = t2.transactionid
-        AND t1.id > t2.id
-    "); 
+     DB::statement("
+         DELETE t1
+         FROM rbotransactiontables t1
+         JOIN rbotransactiontables t2
+         ON t1.transactionid = t2.transactionid
+         AND t1.id > t2.id
+     "); 
 
     $query = DB::table('rbotransactionsalestrans')
         ->select(
@@ -843,6 +843,7 @@ public function tsales(Request $request)
             DB::raw("REGEXP_REPLACE(rbotransactionsalestrans.receiptid, '[^0-9]', '') as receiptid"),
             DB::raw('rbotransactionsalestrans.grossamount as total_grossamount'),
             DB::raw('rbotransactionsalestrans.costamount as total_costamount'),
+            'rbotransactionsalestrans.paymentmethod',
             'rbotransactionsalestrans.itemgroup',
             'rbotransactionsalestrans.itemname',
             'rbotransactionsalestrans.qty',
@@ -855,32 +856,13 @@ public function tsales(Request $request)
             DB::raw('rbotransactionsalestrans.netamountnotincltax as vatablesales'),
             DB::raw('rbotransactionsalestrans.taxinclinprice as vat'),
             'rbotransactionsalestrans.store as storename',
-            'rbotransactionsalestrans.staff',
-            'rbotransactionsalestrans.remarks',
-            // Add payment method columns from rbotransactiontables
-            'rbotransactiontables.charge',
-            'rbotransactiontables.gcash',
-            'rbotransactiontables.paymaya',
-            'rbotransactiontables.cash',
-            'rbotransactiontables.card',
-            'rbotransactiontables.loyaltycard',
-            'rbotransactiontables.foodpanda',
-            'rbotransactiontables.grabfood',
-            'rbotransactiontables.representation'
+            'rbotransactionsalestrans.staff'
         )
         ->leftJoin('rbostoretables', 'rbotransactionsalestrans.store', '=', 'rbostoretables.STOREID')
-        ->leftJoin('rbotransactiontables', 'rbotransactionsalestrans.transactionid', '=', 'rbotransactiontables.transactionid')
         ->orderBy('rbotransactionsalestrans.transactionid', 'DESC');
 
-    // Auto-apply current date filter if no dates are provided
-    if (!$request->filled('startDate') && !$request->filled('endDate')) {
-        $currentDate = Carbon::today()->format('Y-m-d');
-        $query->whereBetween('rbotransactionsalestrans.createddate', [
-            $currentDate . ' 00:00:00',
-            $currentDate . ' 23:59:59',
-        ]);
-    } elseif ($request->filled(['startDate', 'endDate'])) {
-        $query->whereBetween('rbotransactionsalestrans.createddate', [
+    if ($request->filled(['startDate', 'endDate'])) {
+        $query->whereBetween('createddate', [
             $request->startDate . ' 00:00:00',
             $request->endDate . ' 23:59:59',
         ]);
@@ -898,133 +880,22 @@ public function tsales(Request $request)
         ->orderBy('NAME')
         ->get();
 
-    $ec = $query->orderBy('rbotransactionsalestrans.createddate', 'desc')->get();
-
-    // Group items by transaction to calculate proportional payment methods
-    $transactionTotals = $ec->groupBy('transactionid')->map(function($transactionItems) {
-        return $transactionItems->sum('total_netamount');
-    });
-
-    // Process the data to add commission calculation, discount logic, and proportional payment methods
-    $processedData = $ec->map(function($item) use ($transactionTotals) {
-        // Calculate commission: netamount - 0.75 if remarks is 'qrph', otherwise 0
-        $commission = 0;
-        if (strtolower($item->remarks ?? '') === 'qrph') {
-            $commission = (float)($item->total_netamount ?? 0) - 0.75;
-        }
-
-        // Handle discount logic - UPDATED TO FIX 20% EMPLOYEE DISCOUNT
-        $rddisc = 0;
-        $mrktgdisc = 0;
-        
-        $discAmount = (float)($item->total_discamount ?? 0);
-        $chargeAmount = (float)($item->charge ?? 0);
-        $discofferid = strtolower($item->discofferid ?? '');
-        
-        // Check for 20% employee discount - this goes to RD DISC
-        if ($discofferid === '20% employee discount') {
-            $rddisc = $discAmount;
-        }
-        // Check if charge has amount and discount is '20% employee charge'
-        else if ($chargeAmount > 0 && $discofferid === '20% employee charge') {
-            $rddisc = $discAmount;
-        }
-        // Senior and PWD discounts go to RD DISC
-        else if (in_array($discofferid, ['senior discount', 'pwd discount'])) {
-            $rddisc = $discAmount;
-        }
-        // All other discounts go to Marketing discount
-        else if ($discAmount > 0) {
-            $mrktgdisc = $discAmount;
-        }
-
-        // Handle product classifications
-        $bw_products = 0;
-        $merchandise = 0;
-        $partycakes = 0;
-        
-        $itemGroupValue = strtoupper($item->itemgroup ?? '');
-        $itemName = strtoupper($item->itemname ?? '');
-        $grossAmount = (float)($item->total_grossamount ?? 0);
-
-        if ($itemName === 'PARTY CAKES') {
-            $partycakes = $grossAmount;
-        } else if (strpos($itemGroupValue, 'BW') !== false || 
-                   strpos($itemGroupValue, 'CEBU') !== false || 
-                   strpos($itemGroupValue, 'SVN') !== false) {
-            $bw_products = $grossAmount;
-        } else if ($itemGroupValue) {
-            $merchandise = $grossAmount;
-        }
-
-        // Calculate proportional payment method amounts
-        $itemNetAmount = (float)($item->total_netamount ?? 0);
-        $transactionTotal = $transactionTotals[$item->transactionid] ?? 0;
-        $proportion = $transactionTotal > 0 ? $itemNetAmount / $transactionTotal : 0;
-
-        // Apply proportion to each payment method from rbotransactiontables
-        $proportionalCash = ((float)($item->cash ?? 0)) * $proportion;
-        $proportionalCharge = ((float)($item->charge ?? 0)) * $proportion;
-        $proportionalRepresentation = ((float)($item->representation ?? 0)) * $proportion;
-        $proportionalGcash = ((float)($item->gcash ?? 0)) * $proportion;
-        $proportionalPaymaya = ((float)($item->paymaya ?? 0)) * $proportion;
-        $proportionalCard = ((float)($item->card ?? 0)) * $proportion;
-        $proportionalLoyaltycard = ((float)($item->loyaltycard ?? 0)) * $proportion;
-        $proportionalFoodpanda = ((float)($item->foodpanda ?? 0)) * $proportion;
-        $proportionalGrabfood = ((float)($item->grabfood ?? 0)) * $proportion;
-
-        return [
-            'storename' => $item->storename,
-            'staff' => $item->staff,
-            'createddate' => $item->createddate,
-            'timeonly' => $item->timeonly,
-            'transactionid' => $item->transactionid,
-            'receiptid' => $item->receiptid,
-            'custaccount' => $item->custaccount,
-            'itemname' => $item->itemname,
-            'itemgroup' => $item->itemgroup,
-            'discofferid' => $item->discofferid,
-            'qty' => $item->qty,
-            'total_costprice' => $item->total_costprice,
-            'total_grossamount' => $item->total_grossamount,
-            'total_costamount' => $item->total_costamount,
-            'total_discamount' => $item->total_discamount,
-            'total_netamount' => $item->total_netamount,
-            'vatablesales' => $item->vatablesales,
-            'vat' => $item->vat,
-            'cash' => round($proportionalCash, 2),
-            'charge' => round($proportionalCharge, 2),
-            'representation' => round($proportionalRepresentation, 2),
-            'gcash' => round($proportionalGcash, 2),
-            'paymaya' => round($proportionalPaymaya, 2),
-            'card' => round($proportionalCard, 2),
-            'loyaltycard' => round($proportionalLoyaltycard, 2),
-            'foodpanda' => round($proportionalFoodpanda, 2),
-            'grabfood' => round($proportionalGrabfood, 2),
-            'mrktgdisc' => $mrktgdisc,
-            'rddisc' => $rddisc,
-            'bw_products' => $bw_products,
-            'merchandise' => $merchandise,
-            'partycakes' => $partycakes,
-            'commission' => $commission,
-            'remarks' => $item->remarks
-        ];
-    });
+    $ec = $query->orderBy('createddate', 'desc')->get();
 
     $totals = [
-        'grossamount' => $processedData->sum('total_grossamount'),
-        'discamount' => $processedData->sum('total_discamount'),
-        'netamount' => $processedData->sum('total_netamount'),
+        'grossamount' => $ec->sum('grossamount'),
+        'discamount' => $ec->sum('discamount'),
+        'netamount' => $ec->sum('netamount'),
     ];
 
     return Inertia::render('Reports/TSales', [
-        'ec' => $processedData,
+        'ec' => $ec,
         'stores' => $stores,
         'userRole' => $role,
         'totals' => $totals,
         'filters' => [
-            'startDate' => $request->startDate ?? Carbon::today()->format('Y-m-d'),
-            'endDate' => $request->endDate ?? Carbon::today()->format('Y-m-d'),
+            'startDate' => $request->startDate,
+            'endDate' => $request->endDate,
             'selectedStores' => $request->stores ?? [],
         ],
     ]);
