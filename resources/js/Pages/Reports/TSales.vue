@@ -1,745 +1,427 @@
-/* General Styling for DataTable */
-table.dataTable {
-    width: 100% !important;
-    border-collapse: collapse;
-    border-spacing: 0;
-    font-family: 'Arial', sans-serif;
-    margin-top: 60px;
-    table-layout: fixed; /* Fixed layout for better column control */
-}
-
-table.dataTable thead {
-    background-color: #343a40;
-    color: #ffffff;
-    text-align: center;
-}
-
-table.dataTable thead th {
-    background-color: #f3f4f6;
-    padding: 8px 6px; /* Reduced padding for tighter spacing */
-    border-bottom: 2px solid #e5e7eb;
-    font-weight: 600;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    color: #374151;
-    font-size: 12px; /* Smaller font for headers */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-table.dataTable tbody {
-    background-color: #f8f9fa;
-}
-
-table.dataTable tbody tr:nth-child(odd) {
-    background-color: #ffffff;
-}
-
-table.dataTable tbody tr:nth-child(even) {
-    background-color: #f8f9fa;
-}
-
-table.dataTable tbody tr:hover {
-    background-color: #e3f2fd;
-    cursor: pointer;
-}
-
-table.dataTable tbody tr {
-    border-bottom: 1px solid #e5e7eb;
-}
-
-table.dataTable th, table.dataTable td {
-    padding: 6px 4px; /* Reduced padding for tighter spacing */
-    text-align: left;
-    border: 1px solid #dee2e6;
-    font-size: 11px; /* Smaller font size */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Text alignment classes */
-table.dataTable .text-right {
-    text-align: right !important;
-}
-
-table.dataTable .text-center {
-    text-align: center !important;
-}
-
-/* Specific column width constraints */
-table.dataTable th:nth-child(1), table.dataTable td:nth-child(1) { 
-    width: 80px !important; 
-    max-width: 80px !important; 
-}
-table.dataTable th:nth-child(2), table.dataTable td:nth-child(2) { 
-    width: 100px !important; 
-    max-width: 100px !important; 
-}
-table.dataTable th:nth-child(3), table.dataTable td:nth-child(3) { 
-    width: 80px !important; 
-    max-width: 80px !important; 
-}
-table.dataTable th:nth-child(4), table.dataTable td:nth-child(4) { 
-    width: 60px !important; 
-    max-width: 60px !important; 
-}
-table.dataTable th:nth-child(5), table.dataTable td:nth-child(5) { 
-    width: 120px !important; 
-    max-width: 120px !important; 
-}
-table.dataTable th:nth-child(6), table.dataTable td:nth-child(6) { 
-    width: 100px !important; 
-    max-width: 100px !important; 
-}
-table.dataTable th:nth-child(7), table.dataTable td:nth-child(7) { 
-    width: 120px !important; 
-    max-width: 120px !important; 
-}
-table.dataTable th:nth-child(8), table.dataTable td:nth-child(8) { 
-    width: 150px !important; 
-    max-width: 150px !important; 
-}
-table.dataTable th:nth-child(9), table.dataTable td:nth-child(9) { 
-    width: 90px !important; 
-    max-width: 90px !important; 
-}
-table.dataTable th:nth-child(10), table.dataTable td:nth-child(10) { 
-    width: 90px !important; 
-    max-width: 90px !important; 
-}
-
-/* Numeric columns - smaller widths */
-table.dataTable th:nth-child(11), table.dataTable td:nth-child(11),
-table.dataTable th:nth-child(12), table.dataTable td:nth-child(12),
-table.dataTable th:nth-child(13), table.dataTable td:nth-child(13),
-table.dataTable th:nth-child(14), table.dataTable td:nth-child(14),
-table.dataTable th:nth-child(15), table.dataTable td:nth-child(15),
-table.dataTable th:nth-child(16), table.dataTable td:nth-child(16),
-table.dataTable th:nth-child(17), table.dataTable td:nth-child(17),
-table.dataTable th:nth-child(18), table.dataTable td:nth-child(18),
-table.dataTable th:nth-child(19), table.dataTable td:nth-child(19),
-table.dataTable th:nth-child(20), table.dataTable td:nth-child(20),
-table.dataTable th:nth-child(21), table.dataTable td:nth-child(21),
-table.dataTable th:nth-child(22), table.dataTable td:nth-child(22),
-table.dataTable th:nth-child(23), table.dataTable td:nth-child(23),
-table.dataTable th:nth-child(24), table.dataTable td:nth-child(24),
-table.dataTable th:nth-child(25), table.dataTable td:nth-child(25),
-table.dataTable th:nth-child(26), table.dataTable td:nth-child(26),
-table.dataTable th:nth-child(27), table.dataTable td:nth-child(27),
-table.dataTable th:nth-child(28), table.dataTable td:nth-child(28),
-table.dataTable th:nth-child(29), table.dataTable td:nth-child(29),
-table.dataTable th:nth-child(30), table.dataTable td:nth-child(30),
-table.dataTable th:nth-child(31), table.dataTable td:nth-child(31),
-table.dataTable th:nth-child(32), table.dataTable td:nth-child(32),
-table.dataTable th:nth-child(33), table.dataTable td:nth-child(33) {
-    width: 70px !important;
-    max-width: 70px !important;
-    min-width: 70px !important;
-}
-
-/* Last column (NOTE) - wider */
-table.dataTable th:nth-child(34), table.dataTable td:nth-child(34) { 
-    width: 120px !important; 
-    max-width: 120px !important; 
-}
-
-table.dataTable th {
-    font-size: 11px;
-    font-weight: bold;
-}
-
-table.dataTable td {
-    font-size: 10px;
-}
-
-/* Styling for Footer */
-.dataTable tfoot {
-    background-color: #007bff;
-    color: white;
-    font-weight: bold;
-    text-align: center;
-}
-
-.dataTable tfoot td {
-    padding: 8px 4px;
-    font-size: 10px;
-}
-
-/* Styling for DataTable Buttons */
-.dt-buttons {
-    display: flex;               
-    justify-content: flex-end;
-    align-items: center;    
-    position: absolute;
-    z-index: 1;
-    margin: 10px;
-    right: 0;
-}
-
-.dt-button, 
-.dt-buttons .buttons-copy,
-.dt-buttons .buttons-print {
-    padding: 6px 10px;
-    background-color: #3b82f6;
-    margin-left: 6px;
-    border-radius: 4px;
-    color: white;
-    transition: background-color 0.2s;
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
-}
-
-.dt-button:hover, 
-.dt-buttons .buttons-copy:hover,
-.dt-buttons .buttons-print:hover {
-    background-color: #2563eb;
-}
-
-.dataTables_filter {
-    float: right;
-    padding: 15px;
-    position: relative;
-    z-index: 999;
-    margin-right: 180px;
-}
-
-.dataTables_filter input {
-    padding: 6px;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    margin-left: 6px;
-    font-size: 12px;
-}
-
-.dataTables_wrapper .dataTables_paginate {
-    padding: 10px;
-    text-align: right;
-}
-
-.dataTables_wrapper .dataTables_paginate .paginate_button {
-    margin-left: 3px;
-    padding: 4px 8px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 11px;
-}
-
-.dataTables_wrapper .dataTables_paginate .paginate_button.current {
-    background-color: #3b82f6;
-    color: white !important;
-}
-
-.dataTables_wrapper .dataTables_info {
-    padding: 10px;
-    font-size: 12px;
-}
-
-/* DataTable wrapper improvements */
-.dataTables_wrapper {
-    overflow-x: auto;
-    white-space: nowrap;
-}
-
-/* Header improvements */
-.dataTables_wrapper .dataTables_length,
-.dataTables_wrapper .dataTables_filter {
-    margin-bottom: 8px;
-}
-
-/* Compact view adjustments */
-.dt-buttons .dt-button {
-    margin: 0 2px;
-    padding: 4px 8px;
-    font-size: 11px;
-}
-
-/* Table container improvements */
-.table-container {
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-/* Scrollbar styling */
-.dataTables_scrollBody::-webkit-scrollbar {
-    height: 8px;
-    width: 8px;
-}
-
-.dataTables_scrollBody::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-
-.dataTables_scrollBody::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-}
-
-.dataTables_scrollBody::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* Mobile responsive adjustments */
-@media (max-width: 768px) {
-    .dt-buttons {
-        display: none; /* Hide DataTable buttons on mobile */
-    }
-    
-    .dataTables_filter {
-        display: none; /* Hide DataTable search on mobile */
-    }
-
-    table.dataTable {
-        margin-top: 20px;
-    }
-
-    /* Mobile card styling improvements */
-    .mobile-card {
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Responsive grid adjustments */
-    .grid-mobile {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
-    }
-
-    .grid-mobile-3 {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 0.25rem;
-    }
-
-    /* Text size adjustments for mobile */
-    .text-mobile-sm {
-        font-size: 0.75rem;
-    }
-
-    .text-mobile-xs {
-        font-size: 0.6875rem;
-    }
-
-    /* Floating action button positioning */
-    .floating-menu {
-        bottom: 5rem;
-        right: 0;
-        min-width: 14rem;
-    }
-
-    /* Mobile filters */
-    .mobile-filters {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .mobile-filters > div {
-        min-width: 100%;
-    }
-
-    /* Store dropdown mobile optimization */
-    .store-dropdown-mobile {
-        max-height: 50vh;
-        overflow-y: auto;
-    }
-}
-
-/* Small mobile screens (portrait) */
-@media (max-width: 480px) {
-    .filter-container {
-        padding: 1rem;
-        gap: 0.75rem;
-    }
-
-    .filter-container > div {
-        min-width: 100%;
-        flex: none;
-    }
-
-    .summary-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
-    }
-
-    .mobile-item-card {
-        padding: 0.75rem;
-    }
-
-    .floating-action-button {
-        bottom: 1rem;
-        right: 1rem;
-        width: 3.5rem;
-        height: 3.5rem;
-    }
-
-    .floating-menu {
-        bottom: 4.5rem;
-        right: 0.5rem;
-        width: 13rem;
-    }
-
-    /* Smaller text on very small screens */
-    .mobile-text-adjust {
-        font-size: 0.8125rem;
-    }
-
-    .mobile-text-adjust-sm {
-        font-size: 0.75rem;
-    }
-}
-
-/* Loading spinner */
-.loading-spinner {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-/* Smooth transitions */
-.transition-smooth {
-    transition: all 0.2s ease-in-out;
-}
-
-/* Currency styling */
-.currency-positive {
-    color: #059669;
-    font-weight: 600;
-}
-
-.currency-negative {
-    color: #dc2626;
-    font-weight: 600;
-}
-
-/* Card hover effects */
-.card-hover:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Store dropdown styling */
-.store-dropdown-container .relative > div {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-/* Floating menu animation */
-.floating-menu-enter-active,
-.floating-menu-leave-active {
-    transition: all 0.2s ease;
-}
-
-.floating-menu-enter-from,
-.floating-menu-leave-to {
-    opacity: 0;
-    transform: translateY(10px) scale(0.95);
-}<style>
-/* General Styling for DataTable */
-table.dataTable {
-    width: 100%;
-    border-collapse: collapse;
-    border-spacing: 0;
-    font-family: 'Arial', sans-serif;
-    margin-top: 60px;
-}
-
-table.dataTable thead {
-    background-color: #343a40;
-    color: #ffffff;
-    text-align: center;
-}
-
-table.dataTable thead th {
-    background-color: #f3f4f6;
-    padding: 12px;
-    border-bottom: 2px solid #e5e7eb;
-    font-weight: 600;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    color: #374151;
-}
-
-table.dataTable tbody {
-    background-color: #f8f9fa;
-}
-
-table.dataTable tbody tr:nth-child(odd) {
-    background-color: #e9ecef;
-}
-
-table.dataTable tbody tr:hover {
-    background-color: #f9fafb;
-    cursor: pointer;
-}
-
-table.dataTable tbody tr {
-    padding: 12px;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-table.dataTable th, table.dataTable td {
-    padding: 12px 15px;
-    text-align: left;
-    border: 1px solid #dee2e6;
-}
-
-table.dataTable th {
-    font-size: 14px;
-    font-weight: bold;
-}
-
-table.dataTable td {
-    font-size: 13px;
-}
-
-/* Styling for Footer */
-.dataTable tfoot {
-    background-color: #007bff;
-    color: white;
-    font-weight: bold;
-    text-align: center;
-}
-
-.dataTable tfoot td {
-    padding: 12px 15px;
-}
-
-/* Styling for DataTable Buttons */
-.dt-buttons {
-    display: flex;               
-    justify-content: flex-end;
-    align-items: center;    
-    position: absolute;
-    z-index: 1;
-    margin: 10px;
-    right: 0;
-}
-
-.dt-button, 
-.dt-buttons .buttons-copy,
-.dt-buttons .buttons-print {
-    padding: 8px 12px;
-    background-color: #3b82f6;
-    margin-left: 8px;
-    border-radius: 5px;
-    color: white;
-    transition: background-color 0.2s;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.dt-button:hover, 
-.dt-buttons .buttons-copy:hover,
-.dt-buttons .buttons-print:hover {
-    background-color: #2563eb;
-}
-
-.dataTables_filter {
-    float: right;
-    padding: 20px;
-    position: relative;
-    z-index: 999;
-    margin-right: 200px;
-}
-
-.dataTables_filter input {
-    padding: 8px;
-    border: 1px solid #e5e7eb;
-    border-radius: 5px;
-    margin-left: 8px;
-}
-
-.dataTables_wrapper .dataTables_paginate {
-    padding: 15px;
-    text-align: right;
-}
-
-.dataTables_wrapper .dataTables_paginate .paginate_button {
-    margin-left: 5px;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.dataTables_wrapper .dataTables_paginate .paginate_button.current {
-    background-color: #3b82f6;
-    color: white !important;
-}
-
-.dataTables_wrapper .dataTables_info {
-    padding: 15px;
-}
-
-/* Mobile responsive adjustments */
-@media (max-width: 768px) {
-    .dt-buttons {
-        display: none; /* Hide DataTable buttons on mobile */
-    }
-    
-    .dataTables_filter {
-        display: none; /* Hide DataTable search on mobile */
-    }
-
-    table.dataTable {
-        margin-top: 20px;
-    }
-
-    /* Mobile card styling improvements */
-    .mobile-card {
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Responsive grid adjustments */
-    .grid-mobile {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
-    }
-
-    .grid-mobile-3 {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 0.25rem;
-    }
-
-    /* Text size adjustments for mobile */
-    .text-mobile-sm {
-        font-size: 0.75rem;
-    }
-
-    .text-mobile-xs {
-        font-size: 0.6875rem;
-    }
-
-    /* Floating action button positioning */
-    .floating-menu {
-        bottom: 5rem;
-        right: 0;
-        min-width: 14rem;
-    }
-
-    /* Mobile filters */
-    .mobile-filters {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .mobile-filters > div {
-        min-width: 100%;
-    }
-
-    /* Store dropdown mobile optimization */
-    .store-dropdown-mobile {
-        max-height: 50vh;
-        overflow-y: auto;
-    }
-}
-
-/* Small mobile screens (portrait) */
-@media (max-width: 480px) {
-    .filter-container {
-        padding: 1rem;
-        gap: 0.75rem;
-    }
-
-    .filter-container > div {
-        min-width: 100%;
-        flex: none;
-    }
-
-    .summary-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
-    }
-
-    .mobile-item-card {
-        padding: 0.75rem;
-    }
-
-    .floating-action-button {
-        bottom: 1rem;
-        right: 1rem;
-        width: 3.5rem;
-        height: 3.5rem;
-    }
-
-    .floating-menu {
-        bottom: 4.5rem;
-        right: 0.5rem;
-        width: 13rem;
-    }
-
-    /* Smaller text on very small screens */
-    .mobile-text-adjust {
-        font-size: 0.8125rem;
-    }
-
-    .mobile-text-adjust-sm {
-        font-size: 0.75rem;
-    }
-}
-
-/* Loading spinner */
-.loading-spinner {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-/* Smooth transitions */
-.transition-smooth {
-    transition: all 0.2s ease-in-out;
-}
-
-/* Currency styling */
-.currency-positive {
-    color: #059669;
-    font-weight: 600;
-}
-
-.currency-negative {
-    color: #dc2626;
-    font-weight: 600;
-}
-
-/* Card hover effects */
-.card-hover:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Store dropdown styling */
-.store-dropdown-container .relative > div {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-/* Floating menu animation */
-.floating-menu-enter-active,
-.floating-menu-leave-active {
-    transition: all 0.2s ease;
-}
-
-.floating-menu-enter-from,
-.floating-menu-leave-to {
-    opacity: 0;
-    transform: translateY(10px) scale(0.95);
-}
-</style><script setup>
+<template>
+    <component :is="layoutComponent" active-tab="REPORTS">
+        <template v-slot:main>
+            <!-- Filters Section -->
+            <div class="mb-4 flex flex-wrap gap-4 p-4 bg-white rounded-lg shadow z-[999]">
+                <!-- Store Selection with Search -->
+                <div 
+                    v-if="userRole.toUpperCase() === 'ADMIN' || userRole.toUpperCase() === 'SUPERADMIN'" 
+                    class="flex-1 min-w-[200px] store-dropdown-container relative"
+                >
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Stores</label>
+                    <div class="relative">
+                        <button
+                            @click="showStoreDropdown = !showStoreDropdown"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-left bg-white"
+                        >
+                            <span v-if="selectedStores.length === 0" class="text-gray-500">Select stores...</span>
+                            <span v-else-if="selectedStores.length === 1">{{ selectedStores[0] }}</span>
+                            <span v-else>{{ selectedStores.length }} stores selected</span>
+                            <svg class="float-right mt-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Dropdown -->
+                        <div v-if="showStoreDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
+                            <!-- Search input -->
+                            <div class="p-2 border-b border-gray-200 sticky top-0 bg-white">
+                                <input
+                                    ref="storeSearchInput"
+                                    v-model="storeSearchQuery"
+                                    type="text"
+                                    placeholder="Search stores..."
+                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    @click.stop
+                                    @input="handleStoreSearch"
+                                >
+                            </div>
+
+                            <!-- Action buttons -->
+                            <div class="p-2 border-b border-gray-200 flex gap-2 sticky top-[46px] bg-white">
+                                <button
+                                    @click="selectAllStores"
+                                    class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                                >
+                                    Select All
+                                </button>
+                                <button
+                                    @click="clearStoreSelection"
+                                    class="px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+
+                            <!-- Store options -->
+                            <div class="max-h-40 overflow-y-auto">
+                                <label 
+                                    v-for="store in filteredStores" 
+                                    :key="store"
+                                    class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        :checked="isStoreSelected(store)"
+                                        @change="toggleStoreSelection(store)"
+                                        class="mr-2 form-checkbox h-4 w-4 text-blue-600"
+                                    >
+                                    <span class="text-sm">{{ store }}</span>
+                                </label>
+                            </div>
+
+                            <div v-if="filteredStores.length === 0" class="p-3 text-sm text-gray-500 text-center">
+                                No stores found
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date filters -->
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-sm font-medium text-gray-700">Start Date</label>
+                    <input
+                        type="date"
+                        v-model="startDate"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                    >
+                </div>
+                
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-sm font-medium text-gray-700">End Date</label>
+                    <input
+                        type="date"
+                        v-model="endDate"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                    >
+                </div>
+
+                <!-- Clear filters button -->
+                <div class="flex items-end">
+                    <button
+                        @click="clearFilters"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-md text-sm"
+                    >
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Section for Mobile -->
+            <div v-if="isMobile" class="mb-4 bg-white rounded-lg shadow p-4">
+                <h3 class="text-lg font-medium text-gray-900 mb-3">Sales Summary</h3>
+                <div v-if="isTableLoading" class="flex justify-center items-center py-4">
+                    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+                    <span class="ml-3">Loading data...</span>
+                </div>
+                <div v-else class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="bg-gray-50 p-3 rounded">
+                        <p class="text-xs text-gray-600">Total Qty</p>
+                        <p class="text-lg font-bold">{{ footerTotals.total_qty.toLocaleString() }}</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded">
+                        <p class="text-xs text-gray-600">Gross Amount</p>
+                        <p class="text-lg font-bold">₱{{ footerTotals.total_grossamount.toFixed(2) }}</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded">
+                        <p class="text-xs text-gray-600">Net Amount</p>
+                        <p class="text-lg font-bold">₱{{ footerTotals.total_netamount.toFixed(2) }}</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded">
+                        <p class="text-xs text-gray-600">Total Cash</p>
+                        <p class="text-lg font-bold">₱{{ footerTotals.cash.toFixed(2) }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Display -->
+            <div class="bg-white rounded-lg shadow">
+                <div v-if="isTableLoading" class="flex justify-center items-center py-12">
+                    <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500"></div>
+                    <span class="ml-4 text-lg">Loading sales data...</span>
+                </div>
+                
+                <!-- Mobile View with Long Press -->
+                <div v-if="isMobile && !isTableLoading" class="overflow-hidden">
+                    <div class="max-h-96 overflow-y-auto">
+                        <div v-for="(item, index) in filteredData" :key="`${item.transactionid}-${index}`" 
+                             class="border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors cursor-pointer select-none mobile-sales-item"
+                             @touchstart="handleTouchStart(item, $event)"
+                             @touchend="handleTouchEnd($event)"
+                             @touchcancel="handleTouchEnd($event)">
+                            
+                            <div class="space-y-3">
+                                <!-- Header Info -->
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-medium text-gray-900 truncate">{{ item?.itemname || '' }}</div>
+                                        <div class="text-sm text-gray-500">{{ item?.storename || '' }}</div>
+                                        <div class="text-xs text-blue-600 mt-1">Long press for details</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm text-gray-500">{{ item?.createddate || '' }}</div>
+                                        <div class="text-xs text-gray-400">{{ item?.timeonly || '' }}</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Transaction Details -->
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <span class="text-gray-600">Receipt:</span>
+                                        <span class="font-medium ml-1">{{ item?.receiptid || '' }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Staff:</span>
+                                        <span class="font-medium ml-1">{{ item?.staff || '' }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Qty:</span>
+                                        <span class="font-medium ml-1">{{ Math.round(item?.qty || 0) }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Customer:</span>
+                                        <span class="font-medium ml-1">{{ item?.custaccount || 'N/A' }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Financial Details -->
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <span class="text-gray-600">Gross:</span>
+                                        <span class="font-medium ml-1">₱{{ Number(item?.total_grossamount || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Discount:</span>
+                                        <span class="font-medium ml-1">₱{{ Number(item?.total_discamount || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Net:</span>
+                                        <span class="font-bold ml-1 text-green-600">₱{{ Number(item?.total_netamount || 0).toFixed(2) }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">VAT:</span>
+                                        <span class="font-medium ml-1">₱{{ Number(item?.vat || 0).toFixed(2) }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Payment Methods (only show if has value) -->
+                                <div v-if="Number(item?.cash || 0) > 0 || Number(item?.gcash || 0) > 0 || Number(item?.card || 0) > 0" 
+                                     class="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                                    <div v-if="Number(item?.cash || 0) > 0">Cash: ₱{{ Number(item.cash).toFixed(2) }}</div>
+                                    <div v-if="Number(item?.gcash || 0) > 0">GCash: ₱{{ Number(item.gcash).toFixed(2) }}</div>
+                                    <div v-if="Number(item?.card || 0) > 0">Card: ₱{{ Number(item.card).toFixed(2) }}</div>
+                                    <div v-if="Number(item?.paymaya || 0) > 0">PayMaya: ₱{{ Number(item.paymaya).toFixed(2) }}</div>
+                                    <div v-if="Number(item?.foodpanda || 0) > 0">FoodPanda: ₱{{ Number(item.foodpanda).toFixed(2) }}</div>
+                                    <div v-if="Number(item?.grabfood || 0) > 0">GrabFood: ₱{{ Number(item.grabfood).toFixed(2) }}</div>
+                                </div>
+
+                                <!-- Additional Info -->
+                                <div v-if="item?.itemgroup || item?.discofferid" class="text-xs text-gray-500">
+                                    <span v-if="item.itemgroup">Group: {{ item.itemgroup }}</span>
+                                    <span v-if="item.itemgroup && item.discofferid"> • </span>
+                                    <span v-if="item.discofferid">Promo: {{ item.discofferid }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div v-if="filteredData.length === 0" class="text-center py-8 text-gray-500">
+                            No sales data available for the selected filters.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desktop DataTable -->
+                <TableContainer v-if="!isMobile" class="max-h-[80vh] overflow-x-auto overflow-y-auto">
+                    <DataTable 
+                        v-if="filteredData.length > 0"
+                        :data="filteredData" 
+                        :columns="columns" 
+                        class="w-full relative display compact-table" 
+                        :options="options"
+                    />
+
+                    <!-- Fallback message when no data is available -->
+                    <p v-else class="text-center py-8 text-gray-500">No data available for the selected filters.</p>
+                </TableContainer>
+            </div>
+
+            <!-- Mobile Floating Action Button and Menu -->
+            <div v-if="isMobile" class="fixed bottom-6 right-6 z-40">
+                <!-- Floating Menu Options -->
+                <div v-if="showFloatingMenu" class="absolute bottom-16 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-56 transform transition-all duration-200 ease-out">
+                    
+                    <!-- Export Options -->
+                    <div class="px-4 py-2 border-b border-gray-200">
+                        <p class="text-sm font-medium text-gray-700">Export Data</p>
+                    </div>
+                    
+                    <button
+                        @click="exportToCsv"
+                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                        <svg class="h-4 w-4 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export CSV
+                    </button>
+
+                    <button
+                        @click="exportToExcel"
+                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                        <svg class="h-4 w-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export Excel
+                    </button>
+
+                    <button
+                        @click="exportToPdf"
+                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                        <svg class="h-4 w-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export PDF
+                    </button>
+
+                    <button
+                        @click="printReport"
+                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                        <svg class="h-4 w-4 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Print Report
+                    </button>
+
+                    <div class="border-t border-gray-200 my-2"></div>
+
+                    <!-- Filter Options -->
+                    <button
+                        @click="clearFilters"
+                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                        <svg class="h-4 w-4 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
+                        </svg>
+                        Clear All Filters
+                    </button>
+                </div>
+
+                <!-- Main Floating Action Button -->
+                <button
+                    @click="toggleFloatingMenu"
+                    class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 ease-out transform hover:scale-105"
+                    :class="{ 'rotate-45': showFloatingMenu }"
+                >
+                    <MenuIcon v-if="!showFloatingMenu" class="h-6 w-6" />
+                    <CloseIcon v-else class="h-6 w-6" />
+                </button>
+            </div>
+
+            <!-- Overlay to close floating menu -->
+            <div v-if="showFloatingMenu" @click="closeFloatingMenu" class="fixed inset-0 bg-black bg-opacity-25 z-30"></div>
+
+            <!-- Mobile Item Detail Modal -->
+            <div v-if="showItemDetail && selectedItem" 
+                 class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+                 @click="closeItemDetail">
+                <div class="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto" @click.stop>
+                    <div class="p-4">
+                        <!-- Header -->
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Item Details</h3>
+                            <button @click="closeItemDetail" class="text-gray-500 hover:text-gray-700">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Item Information -->
+                        <div class="space-y-4">
+                            <!-- Basic Info -->
+                            <div class="border-b pb-4">
+                                <h4 class="font-medium text-gray-900 mb-2">{{ selectedItem.itemname }}</h4>
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    <div><span class="font-medium">Store:</span> {{ selectedItem.storename }}</div>
+                                    <div><span class="font-medium">Staff:</span> {{ selectedItem.staff }}</div>
+                                    <div><span class="font-medium">Date:</span> {{ selectedItem.createddate }}</div>
+                                    <div><span class="font-medium">Time:</span> {{ selectedItem.timeonly }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Transaction Details -->
+                            <div class="border-b pb-4">
+                                <h4 class="font-medium text-gray-900 mb-2">Transaction</h4>
+                                <div class="grid grid-cols-1 gap-2 text-sm">
+                                    <div><span class="font-medium">Transaction ID:</span> {{ selectedItem.transactionid }}</div>
+                                    <div><span class="font-medium">Receipt ID:</span> {{ selectedItem.receiptid }}</div>
+                                    <div><span class="font-medium">Customer:</span> {{ selectedItem.custaccount || 'Walk-in Customer' }}</div>
+                                    <div><span class="font-medium">Item Group:</span> {{ selectedItem.itemgroup }}</div>
+                                    <div><span class="font-medium">Promo:</span> {{ selectedItem.discofferid || 'None' }}</div>
+                                    <div><span class="font-medium">Quantity:</span> {{ Math.round(selectedItem.qty || 0) }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Financial Details -->
+                            <div class="border-b pb-4">
+                                <h4 class="font-medium text-gray-900 mb-2">Financial</h4>
+                                <div class="grid grid-cols-1 gap-2 text-sm">
+                                    <div><span class="font-medium">Cost Price:</span> ₱{{ Number(selectedItem.total_costprice || 0).toFixed(2) }}</div>
+                                    <div><span class="font-medium">Gross Amount:</span> ₱{{ Number(selectedItem.total_grossamount || 0).toFixed(2) }}</div>
+                                    <div><span class="font-medium">Cost Amount:</span> ₱{{ Number(selectedItem.total_costamount || 0).toFixed(2) }}</div>
+                                    <div><span class="font-medium">Discount Amount:</span> ₱{{ Number(selectedItem.total_discamount || 0).toFixed(2) }}</div>
+                                    <div class="text-lg"><span class="font-medium">Net Amount:</span> <span class="font-bold text-green-600">₱{{ Number(selectedItem.total_netamount || 0).toFixed(2) }}</span></div>
+                                    <div><span class="font-medium">Vatable Sales:</span> ₱{{ Number(selectedItem.vatablesales || 0).toFixed(2) }}</div>
+                                    <div><span class="font-medium">VAT:</span> ₱{{ Number(selectedItem.vat || 0).toFixed(2) }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Payment Methods -->
+                            <div class="border-b pb-4">
+                                <h4 class="font-medium text-gray-900 mb-2">Payment Methods</h4>
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    <div v-if="Number(selectedItem.cash || 0) > 0"><span class="font-medium">Cash:</span> ₱{{ Number(selectedItem.cash).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.charge || 0) > 0"><span class="font-medium">Charge:</span> ₱{{ Number(selectedItem.charge).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.representation || 0) > 0"><span class="font-medium">Representation:</span> ₱{{ Number(selectedItem.representation).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.gcash || 0) > 0"><span class="font-medium">GCash:</span> ₱{{ Number(selectedItem.gcash).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.paymaya || 0) > 0"><span class="font-medium">PayMaya:</span> ₱{{ Number(selectedItem.paymaya).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.card || 0) > 0"><span class="font-medium">Card:</span> ₱{{ Number(selectedItem.card).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.loyaltycard || 0) > 0"><span class="font-medium">Loyalty Card:</span> ₱{{ Number(selectedItem.loyaltycard).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.foodpanda || 0) > 0"><span class="font-medium">FoodPanda:</span> ₱{{ Number(selectedItem.foodpanda).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.grabfood || 0) > 0"><span class="font-medium">GrabFood:</span> ₱{{ Number(selectedItem.grabfood).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.mrktgdisc || 0) > 0"><span class="font-medium">Marketing Disc:</span> ₱{{ Number(selectedItem.mrktgdisc).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.rddisc || 0) > 0"><span class="font-medium">RD Disc:</span> ₱{{ Number(selectedItem.rddisc).toFixed(2) }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Product Categories -->
+                            <div class="pb-4">
+                                <h4 class="font-medium text-gray-900 mb-2">Product Categories</h4>
+                                <div class="grid grid-cols-1 gap-2 text-sm">
+                                    <div v-if="Number(selectedItem.bw_products || 0) > 0"><span class="font-medium">BW Products:</span> ₱{{ Number(selectedItem.bw_products).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.merchandise || 0) > 0"><span class="font-medium">Merchandise:</span> ₱{{ Number(selectedItem.merchandise).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.partycakes || 0) > 0"><span class="font-medium">Party Cakes:</span> ₱{{ Number(selectedItem.partycakes).toFixed(2) }}</div>
+                                    <div v-if="Number(selectedItem.commission || 0) > 0"><span class="font-medium">Commission:</span> ₱{{ Number(selectedItem.commission).toFixed(2) }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Notes -->
+                            <div v-if="selectedItem.remarks" class="pb-4">
+                                <h4 class="font-medium text-gray-900 mb-2">Notes</h4>
+                                <p class="text-sm text-gray-600">{{ selectedItem.remarks }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </component>
+</template>
+
+<script setup>
 import Main from "@/Layouts/AdminPanel.vue";
 import StorePanel from "@/Layouts/Main.vue";
 import TableContainer from "@/Components/Tables/TableContainer.vue";
@@ -767,6 +449,11 @@ const isTableLoading = ref(true);
 // Mobile responsive state
 const showFloatingMenu = ref(false);
 const isMobile = ref(false);
+
+// Mobile item detail modal
+const showItemDetail = ref(false);
+const selectedItem = ref(null);
+const longPressTimer = ref(null);
 
 // Store search functionality
 const storeSearchQuery = ref('');
@@ -824,6 +511,46 @@ const props = defineProps({
 const layoutComponent = computed(() => {
     return props.userRole.toUpperCase() === 'STORE' ? StorePanel : Main;
 });
+
+// Mobile long press handlers with better visual feedback
+const handleTouchStart = (item, event) => {
+    event.preventDefault();
+    
+    // Add visual feedback class
+    const element = event.currentTarget;
+    element.classList.add('touching', 'long-press-indicator', 'pressing');
+    
+    longPressTimer.value = setTimeout(() => {
+        selectedItem.value = item;
+        showItemDetail.value = true;
+        
+        // Remove visual feedback
+        element.classList.remove('touching', 'pressing');
+        
+        // Add haptic feedback if available
+        if (navigator.vibrate) {
+            navigator.vibrate([50, 30, 50]); // More sophisticated vibration pattern
+        }
+    }, 500); // 500ms long press
+};
+
+const handleTouchEnd = (event) => {
+    if (longPressTimer.value) {
+        clearTimeout(longPressTimer.value);
+        longPressTimer.value = null;
+    }
+    
+    // Remove visual feedback classes
+    if (event && event.currentTarget) {
+        const element = event.currentTarget;
+        element.classList.remove('touching', 'long-press-indicator', 'pressing');
+    }
+};
+
+const closeItemDetail = () => {
+    showItemDetail.value = false;
+    selectedItem.value = null;
+};
 
 // Filtered stores based on search - handle both string and object formats
 const filteredStores = computed(() => {
@@ -996,6 +723,9 @@ const handleClickOutside = (event) => {
 onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside);
     window.removeEventListener('resize', checkScreenSize);
+    if (longPressTimer.value) {
+        clearTimeout(longPressTimer.value);
+    }
 });
 
 const filteredData = computed(() => {
@@ -1321,7 +1051,7 @@ const options = {
     pageLength: 25,
     dom: 'Bfrtip',
     scrollX: true,
-    scrollY: "50vh",
+    scrollY: "60vh",
     autoWidth: false,
     columnDefs: [
         // Numeric columns - right align
@@ -1332,20 +1062,7 @@ const options = {
         // Date column - center align
         { targets: [2], className: 'text-center' },
         // Time column - center align  
-        { targets: [3], className: 'text-center' },
-        // Specific width constraints for better spacing
-        { targets: [0], width: '100px' }, // Store
-        { targets: [1], width: '120px' }, // Staff
-        { targets: [2], width: '90px' },  // Date
-        { targets: [3], width: '70px' },  // Time
-        { targets: [4], width: '130px' }, // Transaction ID
-        { targets: [5], width: '110px' }, // Receipt ID
-        { targets: [6], width: '140px' }, // Customer
-        { targets: [7], width: '180px' }, // Item Name
-        { targets: [8], width: '110px' }, // Item Group
-        { targets: [9], width: '110px' }, // PROMO
-        { targets: [10], width: '70px' }, // Qty
-        { targets: [33], width: '140px' }, // NOTE
+        { targets: [3], className: 'text-center' }
     ],
     buttons: [
         'copy',
@@ -1392,14 +1109,30 @@ const options = {
         // Calculate totals only for filtered/searched rows
         api.rows({ search: 'applied' }).every(function(rowIdx) {
             const data = this.data();
-            // Update numerical totals
-            Object.keys(filteredTotals).forEach(key => {
-                if (key === 'total_qty') {
-                    filteredTotals[key] += Math.round(Number(data[key]) || 0);
-                } else {
-                    filteredTotals[key] += Number(data[key]) || 0;
-                }
-            });
+            // Update numerical totals - fix qty calculation
+            filteredTotals.total_qty += Math.round(Number(data.qty) || 0);
+            filteredTotals.total_costprice += Number(data.total_costprice) || 0;
+            filteredTotals.total_grossamount += Number(data.total_grossamount) || 0;
+            filteredTotals.total_costamount += Number(data.total_costamount) || 0;
+            filteredTotals.total_discamount += Number(data.total_discamount) || 0;
+            filteredTotals.total_netamount += Number(data.total_netamount) || 0;
+            filteredTotals.vatablesales += Number(data.vatablesales) || 0;
+            filteredTotals.vat += Number(data.vat) || 0;
+            filteredTotals.cash += Number(data.cash) || 0;
+            filteredTotals.charge += Number(data.charge) || 0;
+            filteredTotals.representation += Number(data.representation) || 0;
+            filteredTotals.gcash += Number(data.gcash) || 0;
+            filteredTotals.paymaya += Number(data.paymaya) || 0;
+            filteredTotals.card += Number(data.card) || 0;
+            filteredTotals.loyaltycard += Number(data.loyaltycard) || 0;
+            filteredTotals.foodpanda += Number(data.foodpanda) || 0;
+            filteredTotals.grabfood += Number(data.grabfood) || 0;
+            filteredTotals.mrktgdisc += Number(data.mrktgdisc) || 0;
+            filteredTotals.rddisc += Number(data.rddisc) || 0;
+            filteredTotals.bw_products += Number(data.bw_products) || 0;
+            filteredTotals.merchandise += Number(data.merchandise) || 0;
+            filteredTotals.partycakes += Number(data.partycakes) || 0;
+            filteredTotals.commission += Number(data.commission) || 0;
         });
 
         // Update footer with new totals
@@ -1740,339 +1473,297 @@ const printReport = () => {
 const formatCurrency = (value) => {
     return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 };
-
 </script>
 
-<template>
-    <component :is="layoutComponent" active-tab="REPORTS">
-        <template v-slot:main>
-            <!-- Filters Section -->
-            <div class="mb-4 flex flex-wrap gap-4 p-4 bg-white rounded-lg shadow z-[999]">
-                <!-- Store Selection with Search -->
-                <div 
-                    v-if="userRole.toUpperCase() === 'ADMIN' || userRole.toUpperCase() === 'SUPERADMIN'" 
-                    class="flex-1 min-w-[200px] store-dropdown-container relative"
-                >
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Stores</label>
-                    <div class="relative">
-                        <button
-                            @click="showStoreDropdown = !showStoreDropdown"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-left bg-white"
-                        >
-                            <span v-if="selectedStores.length === 0" class="text-gray-500">Select stores...</span>
-                            <span v-else-if="selectedStores.length === 1">{{ selectedStores[0] }}</span>
-                            <span v-else>{{ selectedStores.length }} stores selected</span>
-                            <svg class="float-right mt-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
+<style scoped>
+/* Better spacing for desktop table */
 
-                        <!-- Dropdown -->
-                        <div v-if="showStoreDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
-                            <!-- Search input -->
-                            <div class="p-2 border-b border-gray-200 sticky top-0 bg-white">
-                                <input
-                                    ref="storeSearchInput"
-                                    v-model="storeSearchQuery"
-                                    type="text"
-                                    placeholder="Search stores..."
-                                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    @click.stop
-                                    @input="handleStoreSearch"
-                                >
-                            </div>
 
-                            <!-- Action buttons -->
-                            <div class="p-2 border-b border-gray-200 flex gap-2 sticky top-[46px] bg-white">
-                                <button
-                                    @click="selectAllStores"
-                                    class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                                >
-                                    Select All
-                                </button>
-                                <button
-                                    @click="clearStoreSelection"
-                                    class="px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
-                                >
-                                    Clear
-                                </button>
-                            </div>
+.compact-table {
+    font-size: 13px;
+}
 
-                            <!-- Store options -->
-                            <div class="max-h-40 overflow-y-auto">
-                                <label 
-                                    v-for="store in filteredStores" 
-                                    :key="store"
-                                    class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        :checked="isStoreSelected(store)"
-                                        @change="toggleStoreSelection(store)"
-                                        class="mr-2 form-checkbox h-4 w-4 text-blue-600"
-                                    >
-                                    <span class="text-sm">{{ store }}</span>
-                                </label>
-                            </div>
+.compact-table :deep(.dataTable) {
+    width: 100% !important;
+    border-collapse: collapse;
+    border-spacing: 0;
+    font-family: 'Arial', sans-serif;
+    margin-top: 20px;
+    table-layout: auto;
+}
 
-                            <div v-if="filteredStores.length === 0" class="p-3 text-sm text-gray-500 text-center">
-                                No stores found
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Date filters -->
-                <div class="flex-1 min-w-[150px]">
-                    <label class="block text-sm font-medium text-gray-700">Start Date</label>
-                    <input
-                        type="date"
-                        v-model="startDate"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                    >
-                </div>
-                
-                <div class="flex-1 min-w-[150px]">
-                    <label class="block text-sm font-medium text-gray-700">End Date</label>
-                    <input
-                        type="date"
-                        v-model="endDate"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                    >
-                </div>
+.compact-table :deep(.dataTable thead th) {
+    background-color: #1f2937;
+    color: #ffffff;
+    padding: 12px 8px;
+    border-bottom: 2px solid #e5e7eb;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    font-size: 13px;
+    white-space: nowrap;
+    text-align: center;
+}
 
-                <!-- Clear filters button -->
-                <div class="flex items-end">
-                    <button
-                        @click="clearFilters"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-md text-sm"
-                    >
-                        Clear Filters
-                    </button>
-                </div>
+.compact-table :deep(.dataTable tbody tr) {
+    border-bottom: 1px solid #e5e7eb;
+}
 
-                <!-- Hidden sync button -->
-                <button 
-                    @click="syncPaymentMethods"
-                    :disabled="isLoading"
-                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center hidden"
-                >
-                    <span v-if="!isLoading">Sync</span>
-                    <span v-else>Syncing...</span>
-                </button>
-            </div>
+.compact-table :deep(.dataTable tbody tr:nth-child(odd)) {
+    background-color: #ffffff;
+}
 
-            <!-- Summary Section for Mobile -->
-            <div v-if="isMobile" class="mb-4 bg-white rounded-lg shadow p-4">
-                <h3 class="text-lg font-medium text-gray-900 mb-3">Sales Summary</h3>
-                <div v-if="isTableLoading" class="flex justify-center items-center py-4">
-                    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-                    <span class="ml-3">Loading data...</span>
-                </div>
-                <div v-else class="grid grid-cols-2 gap-3 text-sm">
-                    <div class="bg-gray-50 p-3 rounded">
-                        <p class="text-xs text-gray-600">Total Qty</p>
-                        <p class="text-lg font-bold">{{ footerTotals.total_qty.toLocaleString() }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded">
-                        <p class="text-xs text-gray-600">Gross Amount</p>
-                        <p class="text-lg font-bold">₱{{ footerTotals.total_grossamount.toFixed(2) }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded">
-                        <p class="text-xs text-gray-600">Net Amount</p>
-                        <p class="text-lg font-bold">₱{{ footerTotals.total_netamount.toFixed(2) }}</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded">
-                        <p class="text-xs text-gray-600">Total Cash</p>
-                        <p class="text-lg font-bold">₱{{ footerTotals.cash.toFixed(2) }}</p>
-                    </div>
-                </div>
-            </div>
+.compact-table :deep(.dataTable tbody tr:nth-child(even)) {
+    background-color: #f8f9fa;
+}
 
-            <!-- Data Display -->
-            <div class="bg-white rounded-lg shadow">
-                <div v-if="isTableLoading" class="flex justify-center items-center py-12">
-                    <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500"></div>
-                    <span class="ml-4 text-lg">Loading sales data...</span>
-                </div>
-                
-                <!-- Mobile View -->
-                <div v-if="isMobile && !isTableLoading" class="overflow-hidden">
-                    <div class="max-h-96 overflow-y-auto">
-                        <div v-for="(item, index) in filteredData" :key="`${item.transactionid}-${index}`" 
-                             class="border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors">
-                            
-                            <div class="space-y-3">
-                                <!-- Header Info -->
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <div class="font-medium text-gray-900">{{ item?.itemname || '' }}</div>
-                                        <div class="text-sm text-gray-500">{{ item?.storename || '' }}</div>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-sm text-gray-500">{{ item?.createddate || '' }}</div>
-                                        <div class="text-xs text-gray-400">{{ item?.timeonly || '' }}</div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Transaction Details -->
-                                <div class="grid grid-cols-2 gap-2 text-sm">
-                                    <div>
-                                        <span class="text-gray-600">Receipt:</span>
-                                        <span class="font-medium ml-1">{{ item?.receiptid || '' }}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-600">Staff:</span>
-                                        <span class="font-medium ml-1">{{ item?.staff || '' }}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-600">Qty:</span>
-                                        <span class="font-medium ml-1">{{ Math.round(item?.qty || 0) }}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-600">Customer:</span>
-                                        <span class="font-medium ml-1">{{ item?.custaccount || 'N/A' }}</span>
-                                    </div>
-                                </div>
+.compact-table :deep(.dataTable tbody tr:hover) {
+    background-color: #e3f2fd;
+    cursor: pointer;
+}
 
-                                <!-- Financial Details -->
-                                <div class="grid grid-cols-2 gap-2 text-sm">
-                                    <div>
-                                        <span class="text-gray-600">Gross:</span>
-                                        <span class="font-medium ml-1">₱{{ Number(item?.total_grossamount || 0).toFixed(2) }}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-600">Discount:</span>
-                                        <span class="font-medium ml-1">₱{{ Number(item?.total_discamount || 0).toFixed(2) }}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-600">Net:</span>
-                                        <span class="font-bold ml-1 text-green-600">₱{{ Number(item?.total_netamount || 0).toFixed(2) }}</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-600">VAT:</span>
-                                        <span class="font-medium ml-1">₱{{ Number(item?.vat || 0).toFixed(2) }}</span>
-                                    </div>
-                                </div>
+.compact-table :deep(.dataTable th),
+.compact-table :deep(.dataTable td) {
+    padding: 10px 8px;
+    text-align: left;
+    border: 1px solid #dee2e6;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-                                <!-- Payment Methods (only show if has value) -->
-                                <div v-if="Number(item?.cash || 0) > 0 || Number(item?.gcash || 0) > 0 || Number(item?.card || 0) > 0" 
-                                     class="grid grid-cols-3 gap-2 text-xs text-gray-600">
-                                    <div v-if="Number(item?.cash || 0) > 0">Cash: ₱{{ Number(item.cash).toFixed(2) }}</div>
-                                    <div v-if="Number(item?.gcash || 0) > 0">GCash: ₱{{ Number(item.gcash).toFixed(2) }}</div>
-                                    <div v-if="Number(item?.card || 0) > 0">Card: ₱{{ Number(item.card).toFixed(2) }}</div>
-                                    <div v-if="Number(item?.paymaya || 0) > 0">PayMaya: ₱{{ Number(item.paymaya).toFixed(2) }}</div>
-                                    <div v-if="Number(item?.foodpanda || 0) > 0">FoodPanda: ₱{{ Number(item.foodpanda).toFixed(2) }}</div>
-                                    <div v-if="Number(item?.grabfood || 0) > 0">GrabFood: ₱{{ Number(item.grabfood).toFixed(2) }}</div>
-                                </div>
+/* Right align numeric columns */
+.compact-table :deep(.dataTable .text-right) {
+    text-align: right !important;
+}
 
-                                <!-- Additional Info -->
-                                <div v-if="item?.itemgroup || item?.discofferid" class="text-xs text-gray-500">
-                                    <span v-if="item.itemgroup">Group: {{ item.itemgroup }}</span>
-                                    <span v-if="item.itemgroup && item.discofferid"> • </span>
-                                    <span v-if="item.discofferid">Promo: {{ item.discofferid }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div v-if="filteredData.length === 0" class="text-center py-8 text-gray-500">
-                            No sales data available for the selected filters.
-                        </div>
-                    </div>
-                </div>
+.compact-table :deep(.dataTable .text-center) {
+    text-align: center !important;
+}
 
-                <!-- Desktop DataTable -->
-                <TableContainer v-if="!isMobile" class="max-h-[80vh] overflow-x-auto overflow-y-auto">
-                    <DataTable 
-                        v-if="filteredData.length > 0"
-                        :data="filteredData" 
-                        :columns="columns" 
-                        class="w-full relative display" 
-                        :options="options"
-                    />
+/* Footer styling - Maroon background */
+.compact-table :deep(.dataTable tfoot) {
+    background-color: #800020 !important; /* Maroon background */
+    color: white !important;
+    font-weight: bold;
+    text-align: center;
+}
 
-                    <!-- Fallback message when no data is available -->
-                    <p v-else class="text-center py-8 text-gray-500">No data available for the selected filters.</p>
-                </TableContainer>
-            </div>
+.compact-table :deep(.dataTable tfoot td),
+.compact-table :deep(.dataTable tfoot th) {
+    padding: 12px 8px !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    background-color: #800020 !important;
+    color: white !important;
+    border: 1px solid #600018 !important;
+}
 
-            <!-- Mobile Floating Action Button and Menu -->
-            <div v-if="isMobile" class="fixed bottom-6 right-6 z-40">
-                <!-- Floating Menu Options -->
-                <div v-if="showFloatingMenu" class="absolute bottom-16 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-56 transform transition-all duration-200 ease-out">
-                    
-                    <!-- Export Options -->
-                    <div class="px-4 py-2 border-b border-gray-200">
-                        <p class="text-sm font-medium text-gray-700">Export Data</p>
-                    </div>
-                    
-                    <button
-                        @click="exportToCsv"
-                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    >
-                        <svg class="h-4 w-4 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Export CSV
-                    </button>
+/* DataTable controls styling - Button design */
+.compact-table :deep(.dt-buttons) {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    position: absolute;
+    z-index: 1000;
+    margin: 15px;
+    right: 0;
+    top: 0;
+    gap: 8px;
+}
 
-                    <button
-                        @click="exportToExcel"
-                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    >
-                        <svg class="h-4 w-4 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Export Excel
-                    </button>
+.compact-table :deep(.dt-button),
+.compact-table :deep(.buttons-copy),
+.compact-table :deep(.buttons-print),
+.compact-table :deep(.buttons-excel) {
+    padding: 10px 16px !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    margin: 0 !important;
+    border-radius: 8px !important;
+    color: white !important;
+    border: 2px solid #1d4ed8 !important;
+    cursor: pointer !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 80px !important;
+}
 
-                    <button
-                        @click="exportToPdf"
-                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    >
-                        <svg class="h-4 w-4 mr-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Export PDF
-                    </button>
+.compact-table :deep(.dt-button:hover),
+.compact-table :deep(.buttons-copy:hover),
+.compact-table :deep(.buttons-print:hover),
+.compact-table :deep(.buttons-excel:hover) {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4) !important;
+}
 
-                    <button
-                        @click="printReport"
-                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    >
-                        <svg class="h-4 w-4 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                        </svg>
-                        Print Report
-                    </button>
+.compact-table :deep(.dt-button:active),
+.compact-table :deep(.buttons-copy:active),
+.compact-table :deep(.buttons-print:active),
+.compact-table :deep(.buttons-excel:active) {
+    transform: translateY(0px) !important;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3) !important;
+}
 
-                    <div class="border-t border-gray-200 my-2"></div>
+.compact-table :deep(.dataTables_filter) {
+    float: right;
+    padding: 15px;
+    position: relative;
+    z-index: 999;
+    margin-right: 200px;
+}
 
-                    <!-- Filter Options -->
-                    <button
-                        @click="clearFilters"
-                        class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    >
-                        <svg class="h-4 w-4 mr-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
-                        </svg>
-                        Clear All Filters
-                    </button>
-                </div>
+.compact-table :deep(.dataTables_filter input) {
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 5px;
+    margin-left: 8px;
+    font-size: 13px;
+}
 
-                <!-- Main Floating Action Button -->
-                <button
-                    @click="toggleFloatingMenu"
-                    class="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 ease-out transform hover:scale-105"
-                    :class="{ 'rotate-45': showFloatingMenu }"
-                >
-                    <MenuIcon v-if="!showFloatingMenu" class="h-6 w-6" />
-                    <CloseIcon v-else class="h-6 w-6" />
-                </button>
-            </div>
+.compact-table :deep(.dataTables_wrapper .dataTables_paginate) {
+    padding: 15px;
+    text-align: right;
+}
 
-            <!-- Overlay to close floating menu -->
-            <div v-if="showFloatingMenu" @click="closeFloatingMenu" class="fixed inset-0 bg-black bg-opacity-25 z-30"></div>
-        </template>
-    </component>
-</template>
+.compact-table :deep(.dataTables_wrapper .dataTables_paginate .paginate_button) {
+    margin-left: 5px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.compact-table :deep(.dataTables_wrapper .dataTables_paginate .paginate_button.current) {
+    background-color: #3b82f6;
+    color: white !important;
+}
+
+.compact-table :deep(.dataTables_wrapper .dataTables_info) {
+    padding: 15px;
+    font-size: 13px;
+}
+
+/* Mobile long press visual feedback */
+@media (max-width: 768px) {
+    .mobile-item:active,
+    .mobile-item.touching {
+        background-color: #e3f2fd !important;
+        transform: scale(0.98);
+        transition: all 0.1s ease;
+    }
+    
+    /* Better mobile card interaction */
+    .mobile-sales-item {
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .mobile-sales-item:active {
+        background-color: #e3f2fd !important;
+        transform: scale(0.98);
+    }
+    
+    /* Long press indicator */
+    .long-press-indicator {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .long-press-indicator::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    .long-press-indicator.pressing::before {
+        left: 100%;
+    }
+}
+
+/* Scrollbar styling for desktop */
+.compact-table :deep(.dataTables_scrollBody::-webkit-scrollbar) {
+    height: 8px;
+    width: 8px;
+}
+
+.compact-table :deep(.dataTables_scrollBody::-webkit-scrollbar-track) {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.compact-table :deep(.dataTables_scrollBody::-webkit-scrollbar-thumb) {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.compact-table :deep(.dataTables_scrollBody::-webkit-scrollbar-thumb:hover) {
+    background: #a8a8a8;
+}
+
+/* Loading spinner */
+.loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Smooth transitions */
+.transition-smooth {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Currency styling */
+.currency-positive {
+    color: #059669;
+    font-weight: 600;
+}
+
+.currency-negative {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+/* Card hover effects */
+.card-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Store dropdown styling */
+.store-dropdown-container .relative > div {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Floating menu animation */
+.floating-menu-enter-active,
+.floating-menu-leave-active {
+    transition: all 0.2s ease;
+}
+
+.floating-menu-enter-from,
+.floating-menu-leave-to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+}
+</style>

@@ -872,8 +872,15 @@ public function tsales(Request $request)
         ->leftJoin('rbotransactiontables', 'rbotransactionsalestrans.transactionid', '=', 'rbotransactiontables.transactionid')
         ->orderBy('rbotransactionsalestrans.transactionid', 'DESC');
 
-    if ($request->filled(['startDate', 'endDate'])) {
-        $query->whereBetween('createddate', [
+    // Auto-apply current date filter if no dates are provided
+    if (!$request->filled('startDate') && !$request->filled('endDate')) {
+        $currentDate = Carbon::today()->format('Y-m-d');
+        $query->whereBetween('rbotransactionsalestrans.createddate', [
+            $currentDate . ' 00:00:00',
+            $currentDate . ' 23:59:59',
+        ]);
+    } elseif ($request->filled(['startDate', 'endDate'])) {
+        $query->whereBetween('rbotransactionsalestrans.createddate', [
             $request->startDate . ' 00:00:00',
             $request->endDate . ' 23:59:59',
         ]);
@@ -891,7 +898,7 @@ public function tsales(Request $request)
         ->orderBy('NAME')
         ->get();
 
-    $ec = $query->orderBy('createddate', 'desc')->get();
+    $ec = $query->orderBy('rbotransactionsalestrans.createddate', 'desc')->get();
 
     // Group items by transaction to calculate proportional payment methods
     $transactionTotals = $ec->groupBy('transactionid')->map(function($transactionItems) {
@@ -906,7 +913,7 @@ public function tsales(Request $request)
             $commission = (float)($item->total_netamount ?? 0) - 0.75;
         }
 
-        // Handle discount logic
+        // Handle discount logic - UPDATED TO FIX 20% EMPLOYEE DISCOUNT
         $rddisc = 0;
         $mrktgdisc = 0;
         
@@ -914,16 +921,21 @@ public function tsales(Request $request)
         $chargeAmount = (float)($item->charge ?? 0);
         $discofferid = strtolower($item->discofferid ?? '');
         
-        // Check if charge has amount and discount is '20% employee charge'
-        if ($chargeAmount > 0 && $discofferid === '20% employee charge') {
+        // Check for 20% employee discount - this goes to RD DISC
+        if ($discofferid === '20% employee discount') {
             $rddisc = $discAmount;
-        } else {
-            // Apply existing logic for other discount types
-            if (in_array($discofferid, ['senior discount', 'pwd discount'])) {
-                $rddisc = $discAmount;
-            } else if ($discAmount > 0) {
-                $mrktgdisc = $discAmount;
-            }
+        }
+        // Check if charge has amount and discount is '20% employee charge'
+        else if ($chargeAmount > 0 && $discofferid === '20% employee charge') {
+            $rddisc = $discAmount;
+        }
+        // Senior and PWD discounts go to RD DISC
+        else if (in_array($discofferid, ['senior discount', 'pwd discount'])) {
+            $rddisc = $discAmount;
+        }
+        // All other discounts go to Marketing discount
+        else if ($discAmount > 0) {
+            $mrktgdisc = $discAmount;
         }
 
         // Handle product classifications
@@ -1011,8 +1023,8 @@ public function tsales(Request $request)
         'userRole' => $role,
         'totals' => $totals,
         'filters' => [
-            'startDate' => $request->startDate,
-            'endDate' => $request->endDate,
+            'startDate' => $request->startDate ?? Carbon::today()->format('Y-m-d'),
+            'endDate' => $request->endDate ?? Carbon::today()->format('Y-m-d'),
             'selectedStores' => $request->stores ?? [],
         ],
     ]);
