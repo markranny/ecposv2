@@ -1023,7 +1023,7 @@ const columns = [
         data: 'discofferid', 
         title: 'PROMO', 
         footer: '',
-        className: 'min-w-[100px] max-w-[120px] text-sm'
+        className: 'min-w-[100px] max-w-[200px] text-sm'
     },
     
     // Columns with footer calculations
@@ -1300,6 +1300,17 @@ const options = {
             filteredTotals.partycakes += Number(data.partycakes) || 0;
         });
 
+        // Helper function to format numbers with commas and 2 decimal places
+        function formatNumber(num, isInteger = false) {
+            if (isInteger) {
+                return Math.round(num).toLocaleString('en-US');
+            }
+            return num.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
         // Update footer with new totals
         const footerRow = api.table().footer();
         if (footerRow) {
@@ -1336,9 +1347,7 @@ const options = {
             columnMappings.forEach(({ index, key, round }) => {
                 const total = filteredTotals[key];
                 if (footerCells[index]) {
-                    footerCells[index].textContent = round ? 
-                        Math.round(total).toString() : 
-                        total.toFixed(2);
+                    footerCells[index].textContent = formatNumber(total, round);
                 }
             });
         }

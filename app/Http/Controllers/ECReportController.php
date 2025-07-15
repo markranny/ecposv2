@@ -906,25 +906,26 @@ public function tsales(Request $request)
                 END as mrktgdisc
             "),
             
-            // Product categories
+            // FIXED: Product categories based on your requirements
             DB::raw("
                 CASE 
-                    WHEN rbotransactionsalestrans.itemgroup = 'BW PRODUCTS' 
-                    THEN rbotransactionsalestrans.netamount 
+                    WHEN UPPER(rbotransactionsalestrans.itemgroup) LIKE '%BW%' 
+                    THEN rbotransactionsalestrans.grossamount 
                     ELSE 0 
                 END as bw_products
             "),
             DB::raw("
                 CASE 
-                    WHEN rbotransactionsalestrans.itemgroup = 'MERCHANDISE' 
-                    THEN rbotransactionsalestrans.netamount 
+                    WHEN UPPER(rbotransactionsalestrans.itemgroup) NOT LIKE '%BW%' 
+                      AND UPPER(rbotransactionsalestrans.itemname) != 'PARTYCAKES'
+                    THEN rbotransactionsalestrans.grossamount 
                     ELSE 0 
                 END as merchandise
             "),
             DB::raw("
                 CASE 
-                    WHEN rbotransactionsalestrans.itemgroup = 'PARTYCAKES' 
-                    THEN rbotransactionsalestrans.netamount 
+                    WHEN UPPER(rbotransactionsalestrans.itemname) = 'PARTY CAKES' 
+                    THEN rbotransactionsalestrans.grossamount 
                     ELSE 0 
                 END as partycakes
             ")
