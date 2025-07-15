@@ -26,6 +26,7 @@ use App\Http\Controllers\AttendanceRecordController;
 
 use App\Http\Controllers\ApisStockCountingController;
 use App\Http\Controllers\ApisStockCountingLineController;
+use App\Http\Controllers\AttendanceApiController;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -235,8 +236,13 @@ Route::delete('/attendance/{id}', [AttendanceRecordController::class, 'destroy']
   
   Route::post('line/{itemid}/{storeid}/{journalid}/{adjustment}/{receivedcount}/{transfercount}/{wastecount}/{wastetype}/{counted}', [ApisStockCountingLineController::class, 'postbatchline']);
   
-  
-  
+  Route::get('/api-attendance', [AttendanceApiController::class, 'index']);
+  Route::get('/staff-date', [AttendanceApiController::class, 'getByStaffAndDate']);
+  Route::get('/date-range', [AttendanceApiController::class, 'getByDateRange']);
+  Route::get('/summary', [AttendanceApiController::class, 'getSummary']);
+  Route::get('/staff/{staffId}', [AttendanceApiController::class, 'getByStaff']);
+  Route::get('api-attendance/store/{storeId}', [AttendanceApiController::class, 'getByStore']);
+  Route::get('/{id}', [AttendanceApiController::class, 'show']);
   
   
   

@@ -61,34 +61,74 @@ class Discountv2Controller extends Controller
     public function store(Request $request)
     {
         try {
-            $request->validate([
+            $rules = [
                 'DISCOFFERNAME' => 'required|string|max:255|unique:discounts,DISCOFFERNAME',
                 'PARAMETER' => 'required|numeric|min:0',
-                'DISCOUNTTYPE' => 'required|in:FIXED,FIXEDTOTAL,PERCENTAGE'
-            ], [
+                'DISCOUNTTYPE' => 'required|in:FIXED,FIXEDTOTAL,PERCENTAGE',
+                'GRABFOOD_PARAMETER' => 'nullable|numeric|min:0',
+                'FOODPANDA_PARAMETER' => 'nullable|numeric|min:0',
+                'FOODPANDAMALL_PARAMETER' => 'nullable|numeric|min:0',
+                'GRABFOODMALL_PARAMETER' => 'nullable|numeric|min:0',
+                'MANILAPRICE_PARAMETER' => 'nullable|numeric|min:0',
+                'MALLPRICE_PARAMETER' => 'nullable|numeric|min:0'
+            ];
+
+            $messages = [
                 'DISCOFFERNAME.required' => 'Discount name is required',
                 'DISCOFFERNAME.unique' => 'Discount name already exists',
-                'PARAMETER.required' => 'Discount value is required',
-                'PARAMETER.numeric' => 'Discount value must be a number',
-                'PARAMETER.min' => 'Discount value must be greater than or equal to 0',
+                'PARAMETER.required' => 'Default discount value is required',
+                'PARAMETER.numeric' => 'Default discount value must be a number',
+                'PARAMETER.min' => 'Default discount value must be greater than or equal to 0',
                 'DISCOUNTTYPE.required' => 'Discount type is required',
-                'DISCOUNTTYPE.in' => 'Invalid discount type selected'
-            ]);
+                'DISCOUNTTYPE.in' => 'Invalid discount type selected',
+                '*.numeric' => 'Platform discount value must be a number',
+                '*.min' => 'Platform discount value must be greater than or equal to 0'
+            ];
+
+            $request->validate($rules, $messages);
 
             // Additional validation for percentage
-            if ($request->DISCOUNTTYPE === 'PERCENTAGE' && $request->PARAMETER > 100) {
-                throw ValidationException::withMessages([
-                    'PARAMETER' => ['Percentage discount cannot exceed 100%']
-                ]);
+            $parametersToCheck = [
+                'PARAMETER' => $request->PARAMETER,
+                'GRABFOOD_PARAMETER' => $request->GRABFOOD_PARAMETER,
+                'FOODPANDA_PARAMETER' => $request->FOODPANDA_PARAMETER,
+                'FOODPANDAMALL_PARAMETER' => $request->FOODPANDAMALL_PARAMETER,
+                'GRABFOODMALL_PARAMETER' => $request->GRABFOODMALL_PARAMETER,
+                'MANILAPRICE_PARAMETER' => $request->MANILAPRICE_PARAMETER,
+                'MALLPRICE_PARAMETER' => $request->MALLPRICE_PARAMETER
+            ];
+
+            if ($request->DISCOUNTTYPE === 'PERCENTAGE') {
+                $errors = [];
+                foreach ($parametersToCheck as $field => $value) {
+                    if ($value !== null && $value > 100) {
+                        $fieldName = $field === 'PARAMETER' ? 'Default discount' : ucfirst(strtolower(str_replace('_PARAMETER', '', $field)));
+                        $errors[$field] = [$fieldName . ' percentage cannot exceed 100%'];
+                    }
+                }
+                
+                if (!empty($errors)) {
+                    throw ValidationException::withMessages($errors);
+                }
             }
 
             DB::beginTransaction();
 
-            $discount = discounts::create([
+            $discountData = [
                 'DISCOFFERNAME' => strtoupper(trim($request->DISCOFFERNAME)),
                 'PARAMETER' => $request->PARAMETER,
                 'DISCOUNTTYPE' => $request->DISCOUNTTYPE
-            ]);
+            ];
+
+            // Add platform-specific parameters if provided
+            foreach (['GRABFOOD_PARAMETER', 'FOODPANDA_PARAMETER', 'FOODPANDAMALL_PARAMETER', 
+                     'GRABFOODMALL_PARAMETER', 'MANILAPRICE_PARAMETER', 'MALLPRICE_PARAMETER'] as $param) {
+                if ($request->has($param) && $request->$param !== null && $request->$param !== '') {
+                    $discountData[$param] = $request->$param;
+                }
+            }
+
+            $discount = discounts::create($discountData);
 
             DB::commit();
 
@@ -168,34 +208,74 @@ class Discountv2Controller extends Controller
         try {
             $discount = discounts::findOrFail($id);
             
-            $request->validate([
+            $rules = [
                 'DISCOFFERNAME' => 'required|string|max:255|unique:discounts,DISCOFFERNAME,' . $discount->id,
                 'PARAMETER' => 'required|numeric|min:0',
-                'DISCOUNTTYPE' => 'required|in:FIXED,FIXEDTOTAL,PERCENTAGE'
-            ], [
+                'DISCOUNTTYPE' => 'required|in:FIXED,FIXEDTOTAL,PERCENTAGE',
+                'GRABFOOD_PARAMETER' => 'nullable|numeric|min:0',
+                'FOODPANDA_PARAMETER' => 'nullable|numeric|min:0',
+                'FOODPANDAMALL_PARAMETER' => 'nullable|numeric|min:0',
+                'GRABFOODMALL_PARAMETER' => 'nullable|numeric|min:0',
+                'MANILAPRICE_PARAMETER' => 'nullable|numeric|min:0',
+                'MALLPRICE_PARAMETER' => 'nullable|numeric|min:0'
+            ];
+
+            $messages = [
                 'DISCOFFERNAME.required' => 'Discount name is required',
                 'DISCOFFERNAME.unique' => 'Discount name already exists',
-                'PARAMETER.required' => 'Discount value is required',
-                'PARAMETER.numeric' => 'Discount value must be a number',
-                'PARAMETER.min' => 'Discount value must be greater than or equal to 0',
+                'PARAMETER.required' => 'Default discount value is required',
+                'PARAMETER.numeric' => 'Default discount value must be a number',
+                'PARAMETER.min' => 'Default discount value must be greater than or equal to 0',
                 'DISCOUNTTYPE.required' => 'Discount type is required',
-                'DISCOUNTTYPE.in' => 'Invalid discount type selected'
-            ]);
+                'DISCOUNTTYPE.in' => 'Invalid discount type selected',
+                '*.numeric' => 'Platform discount value must be a number',
+                '*.min' => 'Platform discount value must be greater than or equal to 0'
+            ];
+
+            $request->validate($rules, $messages);
 
             // Additional validation for percentage
-            if ($request->DISCOUNTTYPE === 'PERCENTAGE' && $request->PARAMETER > 100) {
-                throw ValidationException::withMessages([
-                    'PARAMETER' => ['Percentage discount cannot exceed 100%']
-                ]);
+            $parametersToCheck = [
+                'PARAMETER' => $request->PARAMETER,
+                'GRABFOOD_PARAMETER' => $request->GRABFOOD_PARAMETER,
+                'FOODPANDA_PARAMETER' => $request->FOODPANDA_PARAMETER,
+                'FOODPANDAMALL_PARAMETER' => $request->FOODPANDAMALL_PARAMETER,
+                'GRABFOODMALL_PARAMETER' => $request->GRABFOODMALL_PARAMETER,
+                'MANILAPRICE_PARAMETER' => $request->MANILAPRICE_PARAMETER,
+                'MALLPRICE_PARAMETER' => $request->MALLPRICE_PARAMETER
+            ];
+
+            if ($request->DISCOUNTTYPE === 'PERCENTAGE') {
+                $errors = [];
+                foreach ($parametersToCheck as $field => $value) {
+                    if ($value !== null && $value > 100) {
+                        $fieldName = $field === 'PARAMETER' ? 'Default discount' : ucfirst(strtolower(str_replace('_PARAMETER', '', $field)));
+                        $errors[$field] = [$fieldName . ' percentage cannot exceed 100%'];
+                    }
+                }
+                
+                if (!empty($errors)) {
+                    throw ValidationException::withMessages($errors);
+                }
             }
 
             DB::beginTransaction();
 
-            $discount->update([
+            $updateData = [
                 'DISCOFFERNAME' => strtoupper(trim($request->DISCOFFERNAME)),
                 'PARAMETER' => $request->PARAMETER,
                 'DISCOUNTTYPE' => $request->DISCOUNTTYPE
-            ]);
+            ];
+
+            // Update platform-specific parameters
+            foreach (['GRABFOOD_PARAMETER', 'FOODPANDA_PARAMETER', 'FOODPANDAMALL_PARAMETER', 
+                     'GRABFOODMALL_PARAMETER', 'MANILAPRICE_PARAMETER', 'MALLPRICE_PARAMETER'] as $param) {
+                if ($request->has($param)) {
+                    $updateData[$param] = $request->$param !== '' ? $request->$param : null;
+                }
+            }
+
+            $discount->update($updateData);
 
             DB::commit();
 
@@ -288,41 +368,21 @@ class Discountv2Controller extends Controller
         try {
             $request->validate([
                 'discount_id' => 'required|exists:discounts,id',
-                'amount' => 'required|numeric|min:0'
+                'amount' => 'required|numeric|min:0',
+                'platform' => 'nullable|string|in:grabfood,foodpanda,foodpandamall,grabfoodmall,manila,mall'
             ]);
 
             $discount = discounts::findOrFail($request->discount_id);
-            $originalAmount = $request->amount;
-            $discountAmount = 0;
-            $finalAmount = $originalAmount;
-
-            switch ($discount->DISCOUNTTYPE) {
-                case 'FIXED':
-                    $discountAmount = min($discount->PARAMETER, $originalAmount);
-                    $finalAmount = $originalAmount - $discountAmount;
-                    break;
-                    
-                case 'FIXEDTOTAL':
-                    $discountAmount = $discount->PARAMETER;
-                    $finalAmount = max(0, $originalAmount - $discountAmount);
-                    break;
-                    
-                case 'PERCENTAGE':
-                    $discountAmount = ($originalAmount * $discount->PARAMETER) / 100;
-                    $finalAmount = $originalAmount - $discountAmount;
-                    break;
-            }
+            $platform = $request->platform;
+            $result = $discount->calculateDiscount($request->amount, $platform);
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'original_amount' => $originalAmount,
-                    'discount_amount' => round($discountAmount, 2),
-                    'final_amount' => round($finalAmount, 2),
+                'data' => array_merge($result, [
                     'discount_name' => $discount->DISCOFFERNAME,
                     'discount_type' => $discount->DISCOUNTTYPE,
-                    'discount_value' => $discount->PARAMETER
-                ]
+                    'discount_value' => $result['parameter_used']
+                ])
             ]);
 
         } catch (\Exception $e) {
