@@ -22,5 +22,6 @@ class Nubersequencevalues extends Model
         'DISCOUNTNEXTREC',
         'STOREID',
         'TONEXTREC',
+        'STOCKNEXTREC',
     ];
 }
