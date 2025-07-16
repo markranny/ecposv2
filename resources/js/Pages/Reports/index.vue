@@ -57,14 +57,13 @@ const cards = ref([
     route: 'reports.ec',
     /* stats: '32 active employees' */
   },
-  {
+  /* {
     id: 4,
     title: 'BAD ORDERS',
     description: 'Monitor and analyze rejected orders',
     icon: '⚠️',
     animationClass: 'bad-orders-animation',
     route: 'reports.bo',
-    /* stats: '0.5% rejection rate' */
   },
   {
     id: 5,
@@ -73,7 +72,6 @@ const cards = ref([
     icon: '🏷️',
     animationClass: 'discount-animation',
     route: 'reports.rd',
-    /* stats: '10% avg. discount' */
   },
   {
     id: 6,
@@ -82,8 +80,7 @@ const cards = ref([
     icon: '📢',
     animationClass: 'marketing-animation',
     route: 'reports.md',
-    /* stats: '15 active promos' */
-  },
+  }, */
   {
     id: 7,
     title: 'SALES',
