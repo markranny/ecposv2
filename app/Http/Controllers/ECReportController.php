@@ -860,16 +860,73 @@ public function tsales(Request $request)
             'rbotransactionsalestrans.staff',
             'rbotransactionsalestrans.remarks',
             
-            // Payment methods from rbotransactiontables
-            DB::raw('COALESCE(rbt.charge, 0) as charge'),
-            DB::raw('COALESCE(rbt.gcash, 0) as gcash'),
-            DB::raw('COALESCE(rbt.paymaya, 0) as paymaya'),
-            DB::raw('COALESCE(rbt.cash, 0) as cash'),
-            DB::raw('COALESCE(rbt.card, 0) as card'),
-            DB::raw('COALESCE(rbt.loyaltycard, 0) as loyaltycard'),
-            DB::raw('COALESCE(rbt.foodpanda, 0) as foodpanda'),
-            DB::raw('COALESCE(rbt.grabfood, 0) as grabfood'),
-            DB::raw('COALESCE(rbt.representation, 0) as representation'),
+            // Get transaction totals for percentage calculation
+            DB::raw('rbt.netamount as transaction_total_netamount'),
+            
+            // Calculate proportional payment methods based on item's netamount vs transaction total
+            DB::raw('
+                CASE 
+                    WHEN rbt.netamount > 0 
+                    THEN ROUND((rbotransactionsalestrans.netamount / rbt.netamount) * COALESCE(rbt.charge, 0), 2)
+                    ELSE 0 
+                END as charge
+            '),
+            DB::raw('
+                CASE 
+                    WHEN rbt.netamount > 0 
+                    THEN ROUND((rbotransactionsalestrans.netamount / rbt.netamount) * COALESCE(rbt.gcash, 0), 2)
+                    ELSE 0 
+                END as gcash
+            '),
+            DB::raw('
+                CASE 
+                    WHEN rbt.netamount > 0 
+                    THEN ROUND((rbotransactionsalestrans.netamount / rbt.netamount) * COALESCE(rbt.paymaya, 0), 2)
+                    ELSE 0 
+                END as paymaya
+            '),
+            DB::raw('
+                CASE 
+                    WHEN rbt.netamount > 0 
+                    THEN ROUND((rbotransactionsalestrans.netamount / rbt.netamount) * COALESCE(rbt.cash, 0), 2)
+                    ELSE 0 
+                END as cash
+            '),
+            DB::raw('
+                CASE 
+                    WHEN rbt.netamount > 0 
+                    THEN ROUND((rbotransactionsalestrans.netamount / rbt.netamount) * COALESCE(rbt.card, 0), 2)
+                    ELSE 0 
+                END as card
+            '),
+            DB::raw('
+                CASE 
+                    WHEN rbt.netamount > 0 
+                    THEN ROUND((rbotransactionsalestrans.netamount / rbt.netamount) * COALESCE(rbt.loyaltycard, 0), 2)
+                    ELSE 0 
+                END as loyaltycard
+            '),
+            DB::raw('
+                CASE 
+                    WHEN rbt.netamount > 0 
+                    THEN ROUND((rbotransactionsalestrans.netamount / rbt.netamount) * COALESCE(rbt.foodpanda, 0), 2)
+                    ELSE 0 
+                END as foodpanda
+            '),
+            DB::raw('
+                CASE 
+                    WHEN rbt.netamount > 0 
+                    THEN ROUND((rbotransactionsalestrans.netamount / rbt.netamount) * COALESCE(rbt.grabfood, 0), 2)
+                    ELSE 0 
+                END as grabfood
+            '),
+            DB::raw('
+                CASE 
+                    WHEN rbt.netamount > 0 
+                    THEN ROUND((rbotransactionsalestrans.netamount / rbt.netamount) * COALESCE(rbt.representation, 0), 2)
+                    ELSE 0 
+                END as representation
+            '),
             
             // Commission calculation based on remarks
             DB::raw("
@@ -887,6 +944,8 @@ public function tsales(Request $request)
                       OR rbotransactionsalestrans.discofferid LIKE '%PWD%'
                       OR rbotransactionsalestrans.discofferid = '25% One Day Before'
                       OR rbotransactionsalestrans.discofferid = '20% EMPLOYEE DISCOUNT'
+                      OR rbotransactionsalestrans.discofferid = '40% OFF'
+                      OR rbotransactionsalestrans.discofferid = '50% OFF'
                     THEN rbotransactionsalestrans.discamount 
                     ELSE 0 
                 END as rddisc
@@ -901,12 +960,14 @@ public function tsales(Request $request)
                       AND rbotransactionsalestrans.discofferid NOT LIKE '%PWD%'
                       AND rbotransactionsalestrans.discofferid != '25% One Day Before'
                       AND rbotransactionsalestrans.discofferid != '20% EMPLOYEE DISCOUNT'
+                      AND rbotransactionsalestrans.discofferid != '40% OFF'
+                      AND rbotransactionsalestrans.discofferid != '50% OFF'
                     THEN rbotransactionsalestrans.discamount 
                     ELSE 0 
                 END as mrktgdisc
             "),
             
-            // FIXED: Product categories based on your requirements
+            // Product categories based on your requirements
             DB::raw("
                 CASE 
                     WHEN UPPER(rbotransactionsalestrans.itemgroup) LIKE '%BW%' 
